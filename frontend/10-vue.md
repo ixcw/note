@@ -3623,8 +3623,3 @@ template.defaults.imports.dateFormat = function (date) {
 ```html
 <h3>{{regTime | dateFormat}}</h3>
 ```
-
-
-
-
-

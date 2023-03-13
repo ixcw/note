@@ -195,9 +195,9 @@ numOrStr = '123'
 
 #### 5 接口
 
-接口与类型别名类似，都是用于起别名，但是接口只能表示对象或者函数等复杂类型，而类型别名除了表示复杂类型，还可以表示基础类型
+接口与类型别名类似，都是用于起别名
 
-> ts规范是能用接口表示的尽量用接口表示
+> 但是接口只能表示对象或者函数等复杂类型，而类型别名除了表示复杂类型，还可以表示基础类型，ts规范是能用接口表示的尽量用接口表示
 
 ```ts
 interface Person {
@@ -212,6 +212,245 @@ const setPersonName = (person: Person, name: string) => {
   person.name = name
 }
 ```
+
+##### 5.1 接口属性类型
+
+如果接口中的某个属性不是必须的，那么可以在属性名后加`?`
+
+```ts
+interface Person {
+  name: string,
+  age?: number
+}
+
+const person = {
+  name: 'michael'
+}
+
+const getPersonName = (person: Person) => {
+  return person.name
+}
+
+const setPersonName = (person: Person, name: string) => {
+  person.name = name
+}
+
+getPersonName(person)
+setPersonName(person, 'james')
+```
+
+也可以将接口属性设置为只读属性，不允许赋值
+
+```ts
+interface Person {
+  readonly name: string,
+  age?: number
+}
+
+const person = {
+  name: 'michael'
+}
+
+const getPersonName = (person: Person) => {
+  return person.name
+}
+
+const setPersonName = (person: Person, name: string) => {
+  person.name = name  // 无法为“name”赋值，因为它是只读属性。
+}
+
+getPersonName(person)
+setPersonName(person, 'james')
+```
+
+如果在未来还有可能有新的属性加进来，那么可以提前在接口中定义好
+
+```ts
+interface Person {
+  name: string,
+  age?: number,
+  [propName: string]: any
+}
+
+const person = {
+  name: 'michael',
+  sex: 'male'
+}
+
+const getPersonName = (person: Person) => {
+  return person.name
+}
+
+const setPersonName = (person: Person, name: string) => {
+  person.name = name
+}
+
+getPersonName(person)
+getPersonName({
+  name: 'michael',
+  sex: 'male'
+})  // 直接传对象进来会强校验每个属性
+setPersonName(person, 'james')
+```
+
+##### 5.2 接口函数 
+
+接口可以定义函数，在接口内部定义函数的形参和返回值类型
+
+```ts
+interface sayHi {
+  (word: string): string
+}
+```
+
+##### 5.3 继承与实现 
+
+接口可以被类实现，也可以被接口继承
+
+```ts
+class User implements Person {
+  name = 'james'
+  say(): string {
+    return 'hello'
+  }
+}
+
+interface Teacher extends Person {
+  teach(): string
+}
+```
+
+#### 6 类
+
+##### 6.1 继承与重写
+
+类可以继承，子类中可以重写父类的方法，如果在子类中需要调用父类的方法要使用关键字`super`来代替父类
+
+```ts
+class Person {
+  name = 'dell'
+  getName() {
+    return this.name
+  }
+}
+
+class Teacher extends Person {
+  getTeacherName() {
+    return 'Teacher'
+  }
+  getName() {
+    return super.getName() + 'lee'
+  }
+}
+
+const teacher = new Teacher()
+console.log(teacher.getName()) // delllee
+console.log(teacher.getTeacherName()) // Teacher
+```
+
+##### 6.2 访问类型与构造函数
+
+访问类型分为三种：`private` 、`protected`、`public`
+
+1. public：允许我在类的内外部被调用
+2. private：允许在类内部被使用
+3. protected：允许在类内部及其子类内部使用
+
+构造函数会在类被实例化时被调用，按照传统写法是这样写的：
+
+```ts
+class Person {
+  public name: string
+  constructor(name: string) {
+    this.name = name
+  }
+}
+```
+
+在ts中可以简化写法：
+
+```ts
+class Person {
+  constructor(public name: string) {}
+}
+```
+
+在子类中如果有构造函数，那么构造函数中**必须先调用**父类的构造函数（先用父，后有子）
+
+> 如果父类没有显式定义构造函数，则子类调用无参数的父类构造函数`super()`
+
+```ts
+class Person {
+  constructor(public name: string) {}
+}
+
+class Teacher extends Person {
+  constructor(public age: number) {
+    super('dell');
+  }
+}
+```
+
+##### 6.3 getter和setter
+
+ts中的getter和setter函数可以加关键字`get`和`set`，然后调用的时候可以不加`()`，setter函数的调用是直接赋值的方式
+
+```ts
+class Person {
+  constructor(private name: string) { }
+  
+  get getName() {
+    return this.name
+  }
+
+  set setName(name: string) {
+    this.name = name
+  }
+}
+
+const person = new Person('james')
+person.setName = 'michael'
+console.log(person.getName)
+```
+
+单例模式：一个类只允许创建一个实例
+
+```ts
+class Demo {
+  private static instance: Demo // 用于存储第一次实例化的对象，只实例化第一次
+  private constructor() {} // 通过私有化构造函数，使得不能直接通过 new 关键字来实例化对象
+
+  static getInstance() {
+    if (!this.instance) {
+      this.instance = new Demo()
+    }
+    return this.instance
+  } // 静态属性，直接挂载到类上面访问，而不必实例化对象
+}
+
+const demo1 = Demo.getInstance()
+const demo2 = Demo.getInstance()
+
+console.log(demo1 === demo2) // true，两个对象是同一个对象
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

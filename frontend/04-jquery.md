@@ -753,7 +753,7 @@ jQuery 中的 Ajax 主要有3个函数：
 ```js
 // 获取 xhr 实例
 const xhr = new XMLHttpRequest()
-// 第三个参数是 async，默认不写为 true，表示异步执行
+// 第三个参数是 async，默认不写为 true，表示异步执行，false 为同步请求
 xhr.open('GET', '/JavaScript/myFolder/myFile.json', true)
 xhr.onreadystatechange = function () {
   // 只有当准备状态为 4 且状态码为 200 时才视为返回请求数据成功
@@ -762,6 +762,7 @@ xhr.onreadystatechange = function () {
     console.log(JSON.parse(xhr.responseText))
   }
 }
+// 如果 body 没有指定值，则默认值为 null
 xhr.send(null)
 ```
 
@@ -789,11 +790,13 @@ xhr.send(null)
 
 ###### 14.5.4 URL编码
 
-在 URL 地址中只允许出现英文字母标点符号和数字，不允许出现中文，如果确实需要出现中文，则需要进行转义，也就是编码，用安全的字符去表示不安全的字符
+在 URL 地址中只允许出现 **英文字母、标点符号、数字**，不允许出现中文
+
+如果确实需要出现中文，则需要进行转义，也就是编码（用安全的字符去表示不安全的字符）
 
 > 安全字符：特殊字符，看不懂的无意义的字符
 >
-> 不安全字符：比如中文
+> 不安全的字符：比如中文
 
 浏览器提供了原生的编解码函数，分别是 `encodeURI()` 和 `decodeURI()`，由于浏览器会自动对 URL 地址进行编码，我们一般不必将其强行解码为中文
 
