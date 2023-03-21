@@ -457,6 +457,7 @@ git stash list
 git stash pop
 # 恢复指定的进度到工作区,id由list命令获得
 git stash pop stash@{1}
+git stash pop stash@`{1`}  # 注意在vscode中{}需要转义
 ```
 
 ##### 5.16 拉取其它分支的某个文件
