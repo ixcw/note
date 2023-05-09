@@ -2209,57 +2209,106 @@ grid网格布局，将网页划分为网格，然后任意组合网格实现布�
 - 单元格：行和列的交叉区域，称为"单元格"（cell），正常情况下，`n`行和`m`列会产生`n x m`个单元格。比如，3行3列会产生9个单元格
 - 网格线：划分网格的线，称为"网格线"（grid line），正常情况下，`n`行有`n + 1`根水平网格线，`m`列有`m + 1`根垂直网格线，比如三行就有四根水平网格线
 
-1. 容器属性
+###### 15.5.1 容器属性
 
-   ```css
-   display: grid; // 设置显示模式为grid模式
-   
-   // 划分行和列
-   grid-template-rows: 50px 50px 50px; // 设置行显示，定义每一行的行高，这里是划分三行，每行的行高是50px
-   grid-template-columns: 50px 50px 50px; // 设置列显示，定义每一列的列宽，这里是划分三列，每列的列宽是50px
-   ```
-   如果行列的高宽度是一样的，那么定义几行就要写几次行高，列同理，如上面的代码写了三次，如果更多次呢？这样很麻烦
+```css
+display: grid; // 设置显示模式为grid模式
 
-   所以css定义了 `repeat()` 函数给我们调用，函数接收两个参数，第一个参数定义重复几次，第二个参数定义每次重复的高宽度
+// 划分行和列
+grid-template-rows: 50px 50px 50px; // 设置行显示，定义每一行的行高，这里是划分三行，每行的行高是50px
+grid-template-columns: 50px 50px 50px; // 设置列显示，定义每一列的列宽，这里是划分三列，每列的列宽是50px
+```
+如果行列的高宽度是一样的，那么定义几行就要写几次行高，列同理，如上面的代码写了三次，如果更多次呢？这样很麻烦
 
-   上面的代码可简化如下：
+所以css定义了 `repeat()` 函数给我们调用，函数接收两个参数，第一个参数定义重复几次，第二个参数定义每次重复的高宽度
+
+上面的代码可简化如下：
+
+```css
+display: grid;
+grid-template-rows: repeat(3, 50px);
+grid-template-columns: repeat(3, 50px);
+```
+
+也许你想问，如果特定的行列高宽度不一样，那怎么重复呢？没关系，`repeat()`还能重复某种特定模式
+
+下面的代码表示第一行行高是100px，第二行行高是80px，第三行行高是50px，然后重复三次共九行，列同理
+
+```css
+display: grid;
+grid-template-rows: repeat(3, 100px 80px 50px);
+grid-template-columns: repeat(3, 100px 80px 50px);
+```
+如果单元格的大小是一定的，但是容器的大小不是，这是可以使用 `auto-fill` 关键字，让容器**自适应**单元格的宽高
+
+```css
+display: grid;
+grid-template-columns: repeat(auto-fill, 100px);
+```
+
+为方便表示比例关系，网格布局提供了 `fr` 单位，这是 `fraction` 单词的缩写，意为一小部分、分数、片段，在代码里面用于表示比例关系
+
+```css
+display: grid;
+grid-template-columns: 1fr 2fr; // 第2列的列宽是第1列的2倍，分为两列
+
+grid-template-columns: 100px 1fr 2fr; // 第1列的列宽固定为100px，第3列的列宽是第2列的2倍，分为三列
+```
+
+`minmax()`函数设定取值范围
+
+```css
+display: grid;
+grid-template-columns: 150px minmax(100px, 1fr) 2fr; // 第二列最小列宽100px，最大列宽1fr
+```
+
+`auto`关键字设定自适应宽度
+
+```css
+display: grid;
+grid-template-columns: 150px auto 100px; // 第二列宽度自适应
+```
+
+可以给网格线设定名称，方便后续引用，下面的网格布局表示3行3列，4根行网格线名称分别是r1、r2、r3、r4，列同理
+
+```css
+display: grid;
+grid-template-rows: [r1] 100px [r2] 100px [r3] auto [r4];
+grid-template-columns: [c1] 100px [c2] 100px [c3] auto [c4];
+```
+
+布局实例：
+
+1. 两栏布局
 
    ```css
    display: grid;
-   grid-template-rows: repeat(3, 50px);
-   grid-template-columns: repeat(3, 50px);
+   grid-template-columns: 70% 30%;
    ```
 
-   也许你想问，如果特定的行列高宽度不一样，那怎么重复呢？没关系，`repeat()`还能重复某种特定模式
-
-   下面的代码表示第一行行高是100px，第二行行高是80px，第三行行高是50px，然后重复三次共九行，列同理
+2. 十二网格布局
 
    ```css
    display: grid;
-   grid-template-rows: repeat(3, 100px 80px 50px);
-   grid-template-columns: repeat(3, 100px 80px 50px);
-   ```
-   如果单元格的大小是一定的，但是容器的大小不是，这是可以使用 `auto-fill` 关键字，让容器**自适应**单元格的宽高
-
-   ```css
-   display: grid;
-   grid-template-columns: repeat(auto-fill, 100px);
+   grid-template-columns: repeat(12, 1fr);
    ```
 
-   为方便表示比例关系，网格布局提供了 `fr` 单位，这是 `fraction` 单词的缩写，意为一小部分、分数、片段，在代码里面用于表示比例关系
+`gap`和`grid-gap`、`grid-row-gap`、`grid-column-gap`，表示行列之间的间距大小
 
-   ```css
-   display: grid;
-   grid-template-columns: 1fr 2fr; // 第2列的列宽是第1列的2倍，分为两列
-   
-   grid-template-columns: 100px 1fr 2fr; // 第1列的列宽固定为100px，第3列的列宽是第2列的2倍，分为三列
-   ```
+```css
+grid-row-gap: 20px; // 行间距大小20px
+grid-column-gap: 20px; // 列间距大小20px
+grid-gap: 20px 30px; // 简写，行间距大小20px，列间距大小30px
+grid-gap: 20px; // 简写，行列间距大小20px
 
-   
+// 新标准写法，去掉 grid- 前缀
+row-gap: 20px; // 行间距大小20px
+column-gap: 20px; // 列间距大小20px
+gap: 20px 30px; // 简写，行间距大小20px，列间距大小30px
+gap: 20px; // 简写，行列间距大小20px
+```
 
-   
-
-2. 项目属性
+###### 15.5.2 项目属性
 
 ##### 15.6 rem布局单位
 百分比布局的缺点：某些属性不能跟随屏幕大小变化而变化，比如文字大小、盒子高度、盒子宽高等比例变化等等
