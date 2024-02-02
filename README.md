@@ -1,2 +1,2 @@
 # note
-my technical notes
+my study notes
