@@ -45,7 +45,7 @@ vm.$data.msg = 'haha'
 
 vue的生命周期函数可以理解为在vue运行时的某一**特定时期**会**自动执行**的函数，见下图
 
-![lifecycle](https://cdn.jsdelivr.net/gh/ixcw/note/images/vue3/lifecycle.png)
+![lifecycle](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/frontend/vue3/lifecycle.png)
 
 > 并不是`mounted`要等到`created`中所有的代码执行结束后才执行，注意`created`中的异步任务仍然比`mounted`中的同步代码后执行
 

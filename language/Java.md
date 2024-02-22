@@ -1,3 +1,26 @@
+#### 0 环境配置
+
+1. 右击我的电脑依次点击`属性\高级系统设置\环境变量\系统变量`
+
+2. 新建如下变量：
+
+变量名|变量值|说明
+-|-|-
+JAVA_HOME|C:\Software\Java\jdk1.7.0_79|jdk的安装目录，目的是为了配置其他变量路径时用%%引用，故此变量也可不设
+classpath|.;%JAVA_HOME%\lib\dt.jar;%JAVA_HOME%\lib\tools.jar|.代表当前路径，dt.jar是关于运行环境的类库，tools.jar是关于工具的类库
+Path|%JAVA_HOME%\bin|指明了系统能在任何路径下识别java命令
+
+3. 测试：按下win+r输入cmd回车，依次输入java、javac，显示帮助文档
+
+4. 使用cmd编译java：
+- 新建java源文件：HelloWorld.java
+- 打开cmd切换工作目录到java源文件目录
+- 输入命令：
+```sh
+javac HelloWorld.java  # 编译java源文件
+java HelloWorld   # 执行字节码文件,边解释边执行，注意执行别跟.class后缀
+```
+
 #### 1 基础语法
 
 一个Java源码文件只能定义一个`public`类型的class，并且class名称和文件名要完全一致。
@@ -287,7 +310,7 @@ Date days[] = {new Date(1, 2, 3),...,...};  //Date为自定义的类
 
    Class是JVM中代表“类和接口”的类，而实例化的Class对象包含了某个特定的类的结构信息，通过Class对象可以获取到特定类的构造方法、方法、成员变量
 
-   ![](https://cdn.jsdelivr.net/gh/ixcw/blog-image/img/Class核心方法.png)
+   ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/language/java/Class核心方法.png)
 
 2. Constructor构造方法类
 

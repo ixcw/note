@@ -232,7 +232,7 @@ git status
 
 表示所有的文件已被Git管理且处于未修改状态
 
-![](../images/git/git1.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/tool/git/git1.png)
 
 
 
@@ -759,7 +759,7 @@ Git中有分支的概念，类似于平行宇宙，不同的分支可用于开�
 
    我们在master分支下手动打开index.html文件，发现vscode已经帮我们贴心地标记出了产生冲突的地方，如下图所示
 
-   ![](../images/git/git2.png)
+   ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/tool/git/git2.png)
 
    并且vscode为我们提供了选项，是保留当前修改，还是保留合并分支的修改，还是保留双方的修改，都由我们自己判断选择，甚至为了帮助我们判断，还有比较文件改变的选项，那我们自然要用一用了，点击比较改变，这时编辑器会分裂为2部分，左边显示当前修改，右边显示合并分支的修改，同时标记出不同点，然后我们就根据自己的需要去判断解决冲突
 

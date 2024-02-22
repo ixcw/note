@@ -591,7 +591,7 @@ ul li {
 
 盒子模型就是**将网页元素看做是一个盒子**，盒子由内容、边框和内外边距组成，如图所示
 
-![](../images/css/盒子模型.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/web/css/盒子模型.png)
 
 - 外边距（margin）：盒子的外边距，盒子与盒子之间的距离**通常**等于两个盒子的外边距之和
 - 边框（border）：盒子的边框，默认无宽度，无样式，黑色

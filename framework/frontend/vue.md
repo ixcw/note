@@ -3168,7 +3168,7 @@ module.exports = {
 
 在我们的组件之间共享数据的方式中，父组件向子组件传值是通过v-bind属性绑定的方式，子传父是通过事件绑定的方式，兄弟组件是通过事件处理中心的方式，但是这些都是组件之间的小范围的数据共享，**而且某些时候数据共享会变得很麻烦，比如组价数量很多的时候，一个组件向另一个组件传值可能需要通过好几个组件进行中介传值**，如果要实现大范围的、频繁地进行数据共享，单单用组件传值是不够的，vuex就是专门用来解决这个问题的，vuex是实现组件全局状态管理的一种机制，状态其实也就是数据，通过vuex可以方便地实现组件之间的数据共享
 
-![](../images/vue/vuex.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/frontend/vue/vuex.png)
 
 使用vuex的好处：
 
@@ -3501,11 +3501,9 @@ module.exports = {
      </template>
      ```
 
-#### 11 动画与过渡
+#### 11 常用技巧
 
-#### 12 常用
-
-##### 12.1 自定义样式
+##### 11.1 自定义样式
 
 Vue 的官网解释：[子组件的根元素](https://vue-loader.vuejs.org/zh/guide/scoped-css.html#子组件的根元素)
 
@@ -3525,101 +3523,6 @@ Vue 的官网解释：[子组件的根元素](https://vue-loader.vuejs.org/zh/gu
 .a[data-v-f3f3eg9] .b { /* ... */ }
 ```
 
-有些像 Sass 之类的预处理器无法正确解析 `>>>`。这种情况下你可以使用 `/deep/` 或 `::v-deep` 操作符取而代之——两者都是 `>>>` 的别名，同样可以正常工作。
+> 有些像 Sass 之类的预处理器无法正确解析 `>>>`。这种情况下你可以使用 `/deep/` 或 `::v-deep` 操作符取而代之——两者都是 `>>>` 的别名，同样可以正常工作。
 
-#### 1 模板引擎
 
-原本的操作DOM的方式需要我们拼接字符串，字符串中写上HTML，如果说UI结构很复杂的情况下，则拼接字符串需要注意引号的嵌套，且一旦需求发生变化，维护修改起来特别麻烦，模板引擎就是为了解决这个问题诞生的，模板引擎可以根据指定的**模板结构**和**数据**生成HTML页面，我们不再需要手动书写HTML，不再需要拼接字符串，而是把这个工作交给模板引擎，由它去完成创建HTML的工作，我们只需提供模板结构和数据，这样代码结构清晰，有利于后期维护修改
-
-#### 2 art-template
-
-art-template是一个简约、超快的模板引擎，[官网](http://aui.github.io/art-template/zh-cn/)，在官网上下载`template-web.js`文件引入到页面中即可使用
-
-1. 首先模板结构需要写在script标签中，但不是作为JavaScript，而是作为HTML
-
-   ```html
-   <script type="text/html" id="tpl-user">
-   	<!-- 模板结构 -->
-   </script>
-   ```
-
-2. 写好模板结构后，在js中调用`template()`函数，将模板结构和数据传给函数，完成模板引擎的渲染，生成HTML字符串
-
-   ```js
-   var data = { name: '张三' }
-   var strHtml = template('tpl-user', data)
-   ```
-
-3. 将生成的HTML字符串赋值给指定的DOM容器
-
-   ```js
-   $('#container').html(strHtml)
-   ```
-
-#### 3 模板引擎语法
-
-art-template提供了`{{}}`的语法，在其中可以输出变量、循环数组等等，比如
-
-```html
-{{value}}
-{{obj.key}}
-{{obj['key']}}
-{{a ? b : c}}
-{{a || b}}
-{{a + b}}
-```
-
-##### 3.1 原文输出
-
-如果要输出的变量中包含了HTML标签，则需要原文输出才能正常解析
-
-```js
-var data = { test: '<h1>test</h1>' }
-```
-
-```html
-{{@ test}}
-```
-
-##### 3.2 条件输出
-
-可以进行条件判断
-
-```html
-{{if flag === 0}} flag的值是0 {{else if flag === 1}} flag的值是1 {{/if}}
-```
-
-##### 3.3 循环输出
-
-可以循环输出，循环项的索引是`$index`，循环项是`$value`
-
-```js
-let hobby = ['吃饭', '睡觉', '写代码']
-```
-
-```html
-<ul>
-{{each hobby}}
-	<li>索引是:{{$index}}，循环项是:{{$value}}</li>
-{{/each}}
-</ul>
-```
-
-##### 3.4 过滤器
-
-有时候希望对数据进行过滤，可以编写过滤函数处理数据，利用类似于Linux的管道操作符，将上一个数据作为输入传给函数进行处理
-
-```js
-var regTime = new Date()
-template.defaults.imports.dateFormat = function (date) {
-    var y = date.getFullYear()
-    var m = date.getMonth() + 1
-    var d = date.getDate()
-
-    return y + '-' + m + '-' + d
-}
-```
-
-```html
-<h3>{{regTime | dateFormat}}</h3>
-```
