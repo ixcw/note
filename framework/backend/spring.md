@@ -1,10 +1,10 @@
 #### 1 Spring简介
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/Spring IoC.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/SpringIoC.png)
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/Spring AOP.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/SpringAOP.png)
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/Spring JDBC 声明式事务.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/SpringJDBC声明式事务.png)
 
 - IoC（Inverse of Control）控制反转，将控制权交由别人控制，是一种设计理念，由代理人来创建管理对象，消费者通过代理人获取对象，目的是为了降低对象之间的耦合，加入IoC容器将对象统一管理
 - DI（Dependency Injection）依赖注入，IoC是设计理念，是程序设计遵循的标准，是宏观的目标，而DI则是具体的技术实现，是微观实现，可理解为IoC的具体实现，在运行时完成对象的创建绑定工作，在Java中利用反射技术实现对象注入
@@ -12,7 +12,7 @@
 
 #### 2 传统开发的缺点
 对象直接引用导致对象硬性关联，难以维护，对象是直接new出来的，比如new一个service，然后在service里面又new一个dao，如果将来dao变了，又要去修改service的源码，然后编译测试发布上线，整套流程繁琐复杂，如果采用spring，则由spring ioc创建管理对象的依赖，使用者直接从ioc容器提取就可以了
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/spring ioc容器.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/springioc容器.png)
 
 ioc容器相当于在内存里开辟了一段空间，由spring管理，上图中A对象依赖于B对象，ioc容器通过反射技术将A的依赖B注入到A中
 
@@ -154,7 +154,7 @@ String[] {"classpath:applicationContext.xml", "classpath:applicationContext-1.xm
 ApplicationContext context = new ClassPathXmlApplicationContext(configLocations);
 ```
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/spring 路径表达式.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/spring路径表达式.png)
 
 4. ioc容器还可以维护对象之间的关联关系，继续在`applicationContext.xml`中配置bean，这里apple属性由于是一个apple对象，这里就不直接赋值了，而是指明这里引用的是哪一个对象，ioc容器会通过反射技术将对象赋予到apple属性中
 
@@ -667,7 +667,7 @@ System.out.println(userService.getUserDao());
 
 3. 因为使用了Java代码配置，在编译时就能检查依赖，不易出错
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/Java Config核心注解.png)
+![](https://cdn.jsdelivr.net/gh/ixcw/note/images/framework/backend/spring/JavaConfig核心注解.png)
 
 首先，新增一个类用于替代xml文件：
 
