@@ -13,11 +13,11 @@
 `Ctrl + D`         | 复制
 `Ctrl + Y`         | 删除
 `Alt + Shift + ↓` or `Alt + Shift + ↑`  | 移动一行，会与下（上）一行互换位置
-`Ctrl + Shift + ↓` or `Ctrl + Shift + ↑`  | 移动整个方法
+`Ctrl + Shift + ↓` or `Ctrl + Shift + ↑`  | 移动整个方法，光标应该在方法上 
 `Ctrl + -` or `Ctrl + +` | 折叠或者展开方法 
 `Ctrl + Shift + -` or `Ctrl + Shift + +` | 折叠或者展开整个文件中的方法 
 `Ctrl + Alt + T`         | 选中代码，添加 try catch
-`Ctrl + Alt + Delete`   | 选中代码，取消 try catch
+`Ctrl + shift + Delete`   | 选中代码，取消 try catch
 `Alt + J`         | 选中标签
 `Alt + Shift + J`         | 取消选中标签
 `Ctrl + Alt + Shift + J`         | 选中文件中的所有相同标签（然后可以打字替换）
@@ -26,6 +26,7 @@
 `Ctrl + O`         |      重写方法
 `Ctrl + I`         |      实现方法
 `Ctrl + E`         |      最近使用的文件
+`Shift + F6` | 智能重命名变量 
 
 #### 2 代码快速生成
 
