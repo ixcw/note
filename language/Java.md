@@ -281,11 +281,122 @@ int n = m;     // 自动拆箱  自动装箱和自动拆箱只发生在编译阶
    long m = (long) n; // m的范围是[10,50)的整数
    ```
    `SecureRandom`类可以产生安全的真随机数
-##### 1.9 static静态关键字
-
-
 
 #### 2 面向对象
+
+##### 2.1 基础概念
+
+java最重要的特征就是面向对象，而面向对象离不开类和对象的概念
+
+**对象：**可理解为一个具体的事物或物体，比如一只狗、一个人、一台电脑
+
+**类：**从一类对象中抽象出来的共性，是对象的模板，比如狗、人 、电脑
+
+对象具有属性和方法，类似于一个人的高矮胖瘦等特征，和吃饭走路等行为
+
+由于对象是从类这个模板中诞生的，所以在类中会定义初始的**成员变量**和**成员方法**
+
+首先定义一个类
+
+```java
+public class Person {
+    String name;
+    double height;
+    double weight;
+
+    public void eat() {
+        System.out.println("吃饭");
+    }
+
+    public void walk() {
+        System.out.println("走路");
+    }
+
+    public void walk(String name) {
+        System.out.println(name + "走路");
+    }
+}
+```
+
+然后实例化出一个对象使用其中的方法，或给其创建属性
+
+```java
+public class StudyTest {
+    public static void main(String[] args) {
+        Person jack = new Person();
+        jack.name = "jack";
+        jack.height = 180;
+        jack.weight = 60;
+        jack.walk();
+        jack.walk(jack.name);
+    }
+}
+```
+
+> **单一职责原则：**在设计类或方法时，尽量只设计一个功能，避免功能耦合
+>
+> 在一个类中调用其他类时，会先在当前包中进行查找
+
+实例化对象会经历两个阶段，一个是声明对象，此时是在**栈内存**中开辟了一块空间用于存储声明，另一个是实例化对象，此时会在**堆内存**中开辟一块空间用于存储对象，最后将声明指向创建的对象
+
+```java
+Person jack  // 声明对象，名为jack
+new Person()  // 实例化对象
+Person jack = new Person();  // 将声明指向实例化的对象
+```
+
+在用类实例化对象时，类会调用了自己的构造方法，该方法与类同名，无返回值，方法参数可有可无
+
+如果没有显式编写构造方法，则会默认存在一个无参的构造方法，若显式编写了构造方法，则默认的构造方法被覆盖，不再生效
+
+构造方法的作用是什么呢？一般是用来执行一些初始化操作，比如给属性赋初值
+
+```java
+public class Person {
+    String name;
+    double height;
+    double weight;
+
+    public Person(String name, double height, double weight) {
+        this.name = name;
+        this.height = height;  // this表示当前对象，也就是实例化出来的那个对象
+        this.weight = weight;
+    }
+
+    public void eat() {
+        System.out.println("吃饭");
+    }
+
+    public void walk() {
+        System.out.println("走路");
+    }
+
+    public void walk(String name) {
+        System.out.println(name + "走路");
+    }
+}
+```
+
+##### 2.2 封装
+
+封装就是将类的某些成员变量变为私有的，不允许外界直接对其进行操作，而是得通过对外提供的方法进行操作，封装能对数据合法性进行校验，杜绝外界对数据的不合理修改
+
+
+
+
+
+##### 2.3 继承
+
+##### 2.4 多态
+
+
+
+
+
+
+
+
+
 - 类里面的成员变量可以不初始化赋值，系统自动初始化赋值，而局部变量必须先初始化赋值才能使用
 - 同一个类的不同对象有不同的成员变量存储空间，而不同对象共享该类的同一个方法
 - 除基本数据类型外，其余都是引用数据类型，类似于C++的指针，对象的名字本质上就是指针，指针存储在栈区，对象存储在堆区
