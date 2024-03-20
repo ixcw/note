@@ -3572,7 +3572,7 @@ Son.prototype.constructor = Son
 
 1. `Object.keys()`
 
-   用于获取对象所有的属性，返回一个由属性名组成的数组，这个方法比forin的好处在于直接返回数组，可以在需要的时候调用
+   用于获取对象所有的属性，返回一个由属性名组成的**数组**，这个方法比forin的好处在于直接返回数组，可以在需要的时候调用
 
    ```js
    var obj = {
@@ -4043,72 +4043,79 @@ console.log(fb(5)) // 3
 
 ##### 16.6 深浅拷贝
 
-浅拷贝只能拷贝对象的简单属性，对于复杂属性拷贝的是地址，所以浅拷贝之后修改拷贝的对象的复杂数据类型的属性会影响**被拷贝的对象**
+**拷贝：**将一个对象复制给另一个对象，包括对象的属性和属性值
+
+###### 16.6.1 浅拷贝
+
+浅拷贝就是将对象的属性循环遍历赋值给另一个对象的属性，从而达到拷贝属性的目的
+
+但是这样做只是简单的属性之间的赋值，基础数据类型没问题，但是对于引用数据类型来说由于赋值的是地址，所以浅拷贝之后**拷贝对象**里的引用数据类型属性所指向的还是**被拷贝对象**里的属性，修改其内容，将会影响**被拷贝对象**里的属性值
+
+利用es6提供的函数`Object.assign()`，可以直接实现浅拷贝
+
+如下，修改了obj1的age，obj2的age不会受影响，但是修改obj1的study对象的属性，obj2也受到了影响
 
 ```js
-var obj = {
-  id: 1,
-  name: 'ldh',
-  msg: {
-    age: 18
+const obj1 = {
+  name: 'jack',
+  age: 18,
+  study: {
+    book: 'javascript'
   }
 }
-var o = {}
-for (const k in obj) {
-  o[k] = obj[k]
-}
-console.log(o)
-o.msg.age = 20
-console.log(obj) // age变为20
-
-// ES6新增了浅拷贝函数assign()，不用使用forin遍历拷贝了
-Object.assign(o, obj)
-console.log(o)
-o.msg.age = 20
-console.log(obj) // age变为20
+const obj2 = {}
+Object.assign(obj2, obj1)
+obj1.age = 16
+obj1.study.book = 'js'
+console.log(obj2)  // { name: 'jack', age: 18, study: { book: 'js' } }
 ```
 
-深拷贝则在拷贝时会重新开辟一块内存空间给复杂数据类型的属性，然后把地址赋值给新拷贝的对象，这样对新拷贝对象的修改就不会影响被拷贝的对象了
+可以用for in循环遍历对象手动实现浅拷贝
 
 ```js
-// 递归实现深拷贝
+for (const k in obj1) {
+  obj2[k] = obj1[k]
+}
+```
+
+###### 16.6.2 深拷贝
+
+深拷贝，顾名思义，和浅拷贝一样，只不过解决了浅拷贝对引用数据类型的属性拷贝不完全的问题
+
+则在拷贝时会重新开辟一块内存空间给复杂数据类型的属性，然后把地址赋值给新拷贝的对象
+
+可以利用`JSON`直接实现，但是`JSON`不能拷贝函数，故此处只考虑对象和数组的情况
+
+```js
+const objStr = JSON.stringify(obj1)
+const obj2 = JSON.parse(objStr)
+```
+
+利用递归手动实现深拷贝
+
+```js
+// 双参数
 function deepCopy(newObj, oldObj) {
-  for (var k in oldObj) {
-    var item = oldObj[k]
-    if (item instanceof Array) {
+  for (let k in oldObj) {
+    if (oldObj[k] instanceof Array) {
       newObj[k] = []
-      deepCopy(newObj[k], item)
-    } else if (item instanceof Object) {
+      deepCopy(newObj[k], oldObj[k])
+    } else if (oldObj[k] instanceof Object) {
       newObj[k] = {}
-      deepCopy(newObj[k], item)
+      deepCopy(newObj[k], oldObj[k])
     } else {
-      newObj[k] = item
+      newObj[k] = oldObj[k]
     }
   }
 }
-deepCopy(o, obj)
-console.log(o)
-o.msg.age = 20
-console.log(obj) // 依然是18，没有受到影响
 
-// 更严谨一点的写法
+// 单参数
 function deepClone(obj) {
-  // 为null或者不是对象（数组或对象）直接返回
-  if (obj == null || typeof obj !== 'object') {
-    return obj
+  if (obj == null || typeof obj !== 'object') return obj
+  const newObj = obj instanceof Array ? [] : {}
+  for (const k in obj) {
+    if (obj.hasOwnProperty(k)) newObj[k] = deepClone(obj[k])
   }
-
-  // 如果obj是数组
-  let newObj = obj instanceof Array ? [] : {}
-
-  for (const key in obj) {
-    // 确保不是原型上的属性
-    if (obj.hasOwnProperty(key)) {
-      // 递归调用
-      newObj[key] = deepClone(obj[key])
-    }
-  }
-
   return newObj
 }
 ```
@@ -4470,13 +4477,17 @@ ES6新增的const用于声明常量，常量是指一旦被声明赋值的变量
 
 ##### 18.3 箭头函数
 
-ES6推出了箭头函数，用于简化函数的定义语法，形如
+ES6推出了箭头函数，主要用于简化函数的定义语法，同时也有一些新的特性
 
 ```js
 () => {}
 ```
 
-小括号中依然放置函数的形参，大括号是函数体，箭头是固定语法，你可能会问箭头函数怎么没有名字呢？那我怎么调用呢？通常我们会将其赋值给一个变量，通过变量名来调用
+箭头函数没有名称，小括号中依然是函数形参，大括号是函数体
+
+由于箭头函数没有名称，所以通常我们会将其赋值给一个变量，然后通过变量名来调用
+
+当箭头函数作为参数进行传递时，不需要函数名称
 
 ```js
 const fn = () => {
@@ -4485,7 +4496,9 @@ const fn = () => {
 fn() // 23
 ```
 
-箭头函数既然是用来简化函数定义的，那肯定还有更简洁的写法，当函数体中只有一句代码，且代码执行结果就是返回值时，可以省略大括号和return
+当函数体中只有一句代码时，可以省略大括号
+
+此时箭头函数会将表达式作为返回值进行返回，因此return关键字也可以省略
 
 ```js
 const fn = () => console.log(23)
@@ -4495,36 +4508,44 @@ const sum = (num1, num2) => num1 + num2
 console.log(sum(1, 2)) // 3
 ```
 
-同时如果形参个数只有一个，小括号也可以省略
+当只有一个形参时，小括号也可以省略
 
 ```js
 const fn = v => v
-console.log(fn('=>')) // =>
+console.log(fn(6)) // 6
 ```
 
-要注意箭头函数中的this指向的是**词法作用域**，也就是箭头函数的**上下文的this**
+要注意箭头函数中的this指向的是**词法作用域**，也就是箭头函数所在的**上下文的this**
+
+> 解释一下为什么say打印的this是{}，因为是在node环境下运行的，如果是浏览器环境则是window
+>
+> 那为什么没有指向global？因为在Node.js的模块作用域中，this默认指向module.exports，而不是全局对象global
 
 ```js
-function fn() {
-  console.log(this)
-  return () => { console.log(this) }
+const obj = {
+  uname: 'jack',
+  sing: function() {
+    console.log(this, this.uname)
+  },
+  say: () => console.log(this, this.uname)
 }
-let obj = { uname: '张三' }
-const fn1 = fn.call(obj) // Object { uname: "张三" }
-fn1() // Object { uname: "张三" }
+obj.sing()  // { uname: 'jack', sing: [Function: sing], say: [Function: say] } jack
+obj.say()  // {} undefined
+```
+此外还需注意，箭头函数不能用作构造函数，在箭头函数内部也不能使用默认的类数组arguments
 
-var obj = {
-  uname: '张三',
-  say: () => { console.log(this.uname) }
-}
-obj.say() // undefined
+可以看到浏览器环境下arguments未定义，node环境虽然打印了arguments，却不是我们希望的内容
 
-var uname = '法外狂徒'
-var obj = {
-  uname: '张三',
-  say: () => { console.log(this.uname) } // this指向的是window
+```js
+const fun1 = function() {
+  console.log(arguments)
 }
-obj.say() // 法外狂徒
+fun1(1, 2, 3)  // [Arguments] { '0': 1, '1': 2, '2': 3 }
+
+const fun2 = () => console.log(arguments)
+// Uncaught ReferenceError: arguments is not defined  浏览器环境
+// [Arguments] { '0': {}, '1': [Function: require] ... }  node环境
+fun2(1, 2, 3)
 ```
 
 ##### 18.4 解构赋值
@@ -4614,14 +4635,54 @@ function foo({age, sex, uname}) {
 foo(person)  // 张三 18 男
 ```
 
+##### 18.5 拓展运算符
 
-
-##### 18.5 剩余参数
-
-剩余参数就是将**数量不确定的参数**表示为一个数组
+将数组或者对象转化为以**逗号**分隔的参数序列
 
 ```js
-const sum = (...args) => {
+const arr = [1, 2, 3]
+console.log(...arr) // 1 2 3  // 逗号成了参数分隔符
+```
+
+利用拓展运算符可以很方便地合并数组
+
+```js
+const arr1 = [1, 2, 3]
+const arr2 = [4, 5, 6]
+const arr3 = [...arr1, ...arr2]
+console.log(arr3) // Array(6) [ 1, 2, 3, 4, 5, 6 ]
+arr1.push(...arr2)
+console.log(arr1) // Array(6) [ 1, 2, 3, 4, 5, 6 ]
+```
+
+将伪数组转换为真正的数组
+
+```js
+const divs = document.getElementsByTagName('div')
+console.log(divs) // HTMLCollection { 0: div, 1: div, 2: div, length: 3 }
+const divsArr = [...divs]
+console.log(divsArr) // Array(3) [ div, div, div ]
+```
+
+字符串也是可以使用拓展运算符的
+
+```js
+const str = 'spread'
+const arr = [...str]
+console.log(arr)  // [ 's', 'p', 'r', 'e', 'a', 'd' ]
+```
+
+
+##### 18.6 剩余参数
+
+剩余（rest）参数就是在函数传参时把**数量不确定的参数**组合成一个数组，可看成是拓展运算符的逆运算
+
+剩余参数与拓展运算符写法都是一样的，如何区分呢？
+
+看是什么时候用，用作形参时，就是剩余参数，用作实参时就是拓展运算符
+
+```js
+const sum = (...args) => {  // 作为形参使用，此时是剩余参数
   let total = 0
   args.forEach(item => total += item)
   return total
@@ -4629,44 +4690,11 @@ const sum = (...args) => {
 console.log(sum(10, 20)) // 30
 console.log(sum(10, 20, 30)) // 60
 
-let arr = [1, 2, 3]
-let [s1, ...s2] = arr
-console.log(s1) // 1
-console.log(s2) // Array [ 2, 3 ]
-```
 
-##### 18.6 展开语法
-
-展开语法也叫拓展运算符，可以将数组或者对象转化为用逗号分隔的参数序列
-
-```js
-// 之所以输出没有逗号，是因为被log当成了参数分隔符
-let arr = [1, 2, 3]
-console.log(...arr) // 1 2 3
-```
-
-利用其特性可以很方便地用来合并数组
-
-```js
-let arr1 = [1, 2, 3]
-let arr2 = [4, 5, 6]
-let arr3 = [...arr1, ...arr2]
-console.log(arr3) // Array(6) [ 1, 2, 3, 4, 5, 6 ]
-
-// 使用push也是一样的效果
-let arr1 = [1, 2, 3]
-let arr2 = [4, 5, 6]
-arr1.push(...arr2)
-console.log(arr1) // Array(6) [ 1, 2, 3, 4, 5, 6 ]
-```
-
-还可以将伪数组转换为真正的数组
-
-```js
-var divs = document.getElementsByTagName('div')
-console.log(divs) // HTMLCollection { 0: div, 1: div, 2: div, length: 3 }
-var divsArr = [...divs]
-console.log(divsArr) // Array(3) [ div, div, div ]
+const arr = [1, 2, 3]
+const [x, ...y] = arr  // 此时可理解为形参，接收参数2和3，然后组合成了数组
+console.log(x)  // 1
+console.log(y)  // [ 2, 3 ]
 ```
 
 ##### 18.7 ES6新增函数
@@ -4817,7 +4845,31 @@ console.log(divsArr) // Array(3) [ div, div, div ]
    console.log(result2) // hello world!hello world!hello world!
    ```
 
-##### 18.8 Set
+##### 18.8 对象属性
+
+当对象属性的名称与其值的名称相同时，可以简写
+
+```js
+const name = 'jack'
+const age = 18
+const stu = { name, age }
+console.log(stu)  // { name: 'jack', age: 18 }
+```
+
+如果对象属性的名称想使用变量的值的话，可以加`[]`
+
+```js
+const name = 'jack'
+const age = 18
+const sch = 'school'
+const fruit = 'cherry'
+const stu = { name, age, [sch]: fruit }
+console.log(stu)  // { name: 'jack', age: 18, school: 'cherry' }
+```
+
+
+
+##### 18.9 Set
 
 Set 是 ES6 提供的新的数据结构，类似于数组，但是其元素的值是唯一的，Set 对象允许你存储任何类型的唯一值，无论是[原始值](https://developer.mozilla.org/zh-CN/docs/Glossary/Primitive)或者是对象引用
 
@@ -4861,7 +4913,7 @@ s.forEach(val => console.log(val))
 // c
 ```
 
-##### 18.9 Promise
+##### 18.10 Promise
 
 Promise 是es6 引进的 api，专门用于处理 js 中的异步编程的问题
 我们先看看下面的例子，Ajax 接口返回的是一个字符串 helloworld，我们期望打印的是 helloworld
@@ -5127,7 +5179,7 @@ Promise 对象方法可以直接通过 Promise 调用
    })
    ```
 
-##### 18.20 Class
+##### 18.11 Class
 参见本文 [14 面向对象](#)
 
 #### 19 ES7

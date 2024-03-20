@@ -79,6 +79,10 @@ MVVM即Model、View、ViewModel，传统的View和Model之间的交流互动需�
   `color`：tabBar项目未被选中时的默认文字颜色
 
   `selectedColor`：tabBar项目被选中时的文字颜色
+  
+- resolveAlias：
+
+  配置绝对路径的别名
 
 ```json
 {
@@ -112,6 +116,9 @@ MVVM即Model、View、ViewModel，传统的View和Model之间的交流互动需�
         ],
         "color": "#515151",
         "selectedColor": "#d81e06"
+    },
+    "resolveAlias": {
+        "@/*": "/*"
     }
 }
 ```
@@ -230,6 +237,12 @@ block 并不是一个组件，它仅仅是一个包装元素，**不会在页面
 #### 8 事件
 
 参见 [事件系统](https://developers.weixin.qq.com/miniprogram/dev/framework/view/wxml/event.html)
+
+常用事件：
+
+`onTabItemTap`：Page事件，在tabbar点击时触发，需要当前页面是tabbar页面才能触发
+
+`wx.vibrateShort`：手机振动
 
 #### 9 自定义组件
 
