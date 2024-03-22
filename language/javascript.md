@@ -2969,7 +2969,9 @@ class Car {
 var obj = new Car()
 ```
 
-类有默认的构造方法`constructor()`，通过new关键字去实例化对象时会自动调用该方法，如果没有显式地定义构造函数，则会有一个默认的构造方法
+类有默认的构造函数`constructor()`，通过new关键字去实例化对象时会自动调用该函数
+
+如果没有显式地去定义构造函数，则会有一个默认的构造方法
 
 ```js
 class Car {
@@ -3036,17 +3038,17 @@ class Father {
 }
 
 class Son extends Father {
-  constructor(x, y) {
-    // this.x = x
-    // this.y = y
+  constructor(x, y, z) {
     super(x, y) // 调用父类的构造函数
+    this.z = z
   }
   say() {
     console.log('i am son')
     super.say()  // 调用父类的普通方法
   }
 }
-var son = new Son(1, 2)
+var son = new Son(1, 2, 3)
+console.log(son)  // Son { x: 1, y: 2, z: 3 }
 son.sum() // 3
 son.say() // i am son  i am father
 ```
@@ -3135,6 +3137,55 @@ class Star {
 var ldh = new Star('刘德华')
 ldh.sing() // 刘德华
 ```
+静态方法的定义：
+
+和别的语言一样，使用关键字static
+
+```js
+class Father {
+  constructor(x, y) {
+    this.x = x
+    this.y = y
+  }
+  sum() {
+    console.log(this.x + this.y)
+  }
+  say() {
+    console.log('i am father')
+  }
+  static getX() {
+    return 'x'
+  }
+}
+
+console.log(Father.getX())  // x
+```
+
+子类可以继承父类的静态方法
+
+```js
+class Father {
+  constructor(x, y) {
+    this.x = x
+    this.y = y
+  }
+  sum() {
+    console.log(this.x + this.y)
+  }
+  say() {
+    console.log('i am father')
+  }
+  static getX() {
+    return 'x'
+  }
+}
+
+class Son extends Father {}
+
+console.log(Father.getX())  // x
+console.log(Son.getX())  // x
+```
+
 
 ##### 14.3 ES5构造函数
 
@@ -3153,12 +3204,14 @@ console.log(typeof Student)  // function
 
 在 ES6 之前是没有类的，创建对象不是基于类创建的，而是基于构造函数来创建的
 
+**构造函数：**是js中一种特殊的函数，主要用于模拟类，构造函数的命名应该和类一样，**首字母大写**，同类一样，创建对象时要使用 `new` 关键字
+
 ```js
 // 1. 通过new Object创建对象
 var obj1 = new Object()
 // 2. 通过对象字面量创建对象
 var obj2 = {}
-// 3. 通过自定义构造函数创建对象
+// 3. 通过构造函数创建对象
 function Star(uname, age) {
   this.uname = uname
   this.age = age
@@ -3170,13 +3223,9 @@ var ldh = new Star('刘德华', 18)
 console.log(ldh)
 ```
 
-> 构造函数是一种特殊的函数，主要用于初始化对象，**首字母应该大写**，初始化对象时要用 `new` 关键字
->
-> 与类一样，可以将公共的属性和方法抽取到里面封装起来
+**实例成员属性：**在构造函数内部通过this添加的成员，只能通过实例对象访问
 
-**实例成员：**在构造函数内部通过this添加的成员，只能通过实例对象访问
-
-**静态成员：**给构造函数直接添加的成员，只能通过构造函数来访问
+**静态成员属性：**给构造函数直接添加的成员，只能通过构造函数来访问
 
 ```js
 function Star(uname, age) {
@@ -3191,6 +3240,90 @@ Star.sex = '男'
 console.log(ldh) // Object { uname: "刘德华", age: 18, sing: sing() }
 console.log(Star.sex) // 男
 console.log(ldh.sex) // undefined
+```
+通过构造函数的方式，如何实现类的继承呢，可以通过组合继承的方式
+
+首先调用父构造函数的call方法，改变this指向，指向子类对象，这种方式可以继承父类的属性
+
+```js
+function Star(uname, age) {
+  this.uname = uname
+  this.age = age
+  this.sing = function () {
+    console.log(this.uname)
+  }
+}
+
+function MaleStar(uname, age, sex) {
+  Star.call(this, uname, age)
+  this.sex = sex
+}
+
+let liudehua = new MaleStar('刘德华', 18, 'male')
+console.log(liudehua)
+// MaleStar {
+//   uname: '刘德华',
+//   age: 18,
+//   sing: [Function (anonymous)],
+//   sex: 'male'
+// }
+liudehua.sing()  // 刘德华
+```
+
+但是这种方式是不能继承父类原型上的属性和方法的
+
+```js
+function Star(uname, age) {
+  this.uname = uname
+  this.age = age
+  this.sing = function () {
+    console.log(this.uname)
+  }
+}
+
+Star.prototype.height = 180
+
+Star.prototype.showName = function() {
+  console.log('原型方法showName：', this.uname)
+}
+
+function MaleStar(uname, age, sex) {
+  Star.call(this, uname, age)
+  this.sex = sex
+}
+
+let liudehua = new MaleStar('刘德华', 18, 'male')
+console.log(liudehua.height)  // undefined
+liudehua.showName()  // TypeError: liudehua.showName is not a function
+```
+
+可以通过原型继承实现，首先让子类的原型指向父类的实例，然后让子类的原型的构造属性指向子类
+
+```js
+function Star(uname, age) {
+  this.uname = uname
+  this.age = age
+  this.sing = function () {
+    console.log(this.uname)
+  }
+}
+
+Star.prototype.height = 180
+
+Star.prototype.showName = function() {
+  console.log('原型方法showName：', this.uname)
+}
+
+function MaleStar(uname, age, sex) {
+  Star.call(this, uname, age)
+  this.sex = sex
+}
+MaleStar.prototype = new Star()
+MaleStar.prototype.constructor = MaleStar
+
+let liudehua = new MaleStar('刘德华', 18, 'male')
+console.log(liudehua.height)  // 180
+liudehua.showName()  // 原型方法showName：刘德华
 ```
 
 ##### 14.4 原型

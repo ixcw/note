@@ -90,7 +90,11 @@ node中的es6模块化支持并不好，但是可以通过babel三方库转化es
     console.log('show')
   }
   
-  export default { a, b, show }
+  export default {
+      a,
+      b,
+      show
+  }
   ```
 
   `index.js`文件：
