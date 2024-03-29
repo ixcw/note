@@ -4270,19 +4270,19 @@ var rg = /123/
 console.log(rg)
 ```
 
-测试字符串是否符合正则表达式的匹配规则
+调用test方法测试字符串是否符合正则表达式的匹配规则
 ```js
 var rg = /123/
 console.log(rg.test(123)) // true
 console.log(rg.test('a')) // false
 ```
 
-`^`：以字符开头
+`^`：表示以`^`符号之后的字符为开头进行匹配
 
-`$`：以字符结尾
+`$`：表示以`$`符号之前的字符为结尾进行匹配
 
 ```js
-// 只要包含有abc就行
+// 包含 abc >= 1
 var rg = /abc/
 console.log(rg.test('abc'))
 console.log(rg.test('aabcd123'))
@@ -4299,7 +4299,7 @@ console.log(rg.test('abc')) // true
 console.log(rg.test('aabcd123')) // false
 console.log(rg.test('dabc')) // true
 
-// 精确匹配，必须是abc，只有abc能匹配
+// 同时使用 ^ 和 $ ，则易知此时为精确匹配，只有abc能匹配
 var rg = /^abc$/
 console.log(rg.test('abc')) // true
 console.log(rg.test('aabcd123')) // false
