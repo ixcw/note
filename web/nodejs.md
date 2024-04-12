@@ -1,41 +1,47 @@
-#### 1 Node.js
+#### 1 简介
 
-JavaScript代码之所以能在浏览器中解析执行是因为浏览器中有JavaScript解析引擎，每款浏览器的内核都是不一样的，例如Chrome的是Blink，火狐的是Gecko，苹果是WebKit，而V8是Blink内核内置的JS引擎，性能最好
+JavaScript代码之所以能在浏览器中解析执行是因为浏览器中有JavaScript解析引擎，不同的浏览器的解析引擎内核是不一样的，例如Chrome的是Blink，火狐的是Gecko，苹果是WebKit，V8引擎是Blink内核内置的JS引擎，目前性能是最好的
 
-而之所以 js 可以操作网页元素是因为浏览器提供了DOM和BOM的API供 js 调用，脱离了浏览器环境这些API也就用不上了
+原生js操作网页元素的API就是浏览器的解析引擎内核提供的，脱离了浏览器环境这些API自然也就不管用了
 
-由于JavaScript这门语言的快速发展，人们又将浏览器里的js解析引擎给搬了出来放到了服务器里，这样js有了后端运行环境自然也能用于开发后端应用了，这里面的典型代表就是[Node.js](https://nodejs.org/zh-cn/)，这是一款基于Chrome浏览器的V8引擎开发的js运行环境
+由于js这门语言的快速发展，大家不满足于只在浏览器里使用js，可不可以在后端也使用js呢？可以，有人就把浏览器里的内核引擎给《搬》出来放到了服务器里，这样即使脱离了浏览器环境，只要有内核能够解析js，js就可以执行，[Node.js](https://nodejs.org/zh-cn/)就是这样一款内核，它是从Chrome浏览器里提取出来的，基于V8引擎，性能不错
 
-同样的，除了像浏览器一样提供给js最基本的运行环境之外，NodeJS也提供了一些常用的API，当然这些API是为了帮助后端开发而编写的，所以和浏览器专供一样，这些是后端专供，脱离了NodeJS环境这些API也不能被使用
+浏览器内核有浏览器专用的API，放到服务器上自然就没用了，于是nodejs取消掉了这些API，重新增加了一些给后端专用的API
 
-另外，由于NodeJS的出现，各种强大的工具和框架也应运而生，比如基于express框架可以构建web应用，基于electron框架可以构建跨平台桌面应用，基于restify框架可以构建API接口项目，只要我们有js基础，我们学习NodeJS，也就是在学习它的API和各种框架
+随着nodejs的发展，围绕其生态的工具和框架也越来越多：
+
+- express框架可以用于构建web应用的后台
+- electron框架可以用于构建跨平台的桌面端应用（Windows、Linux、Mac）
+- restify框架可以构建API接口
 
 #### 2 安装
 
 ##### 2.1 普通安装
 
-官网下载安装包，一般安装LTS长期支持版本，比较稳定，一路next安装即可，然后打开cmd或powershell，输入命令
+官网下载安装包，一般安装LTS长期支持版本，比较稳定，一路next安装即可
+
+打开cmd或powershell，输入命令验证安装，打印出版本号即表示安装成功
 
 ```bash
 node -v
 ```
 
-打印出了版本号表示安装成功
-
 ##### 2.2 nvm
 
-某些项目依赖的 node 版本是不一样的，我们安装的 node 版本过高或者过低都是不行的，可以使用 nvm 管理 nodejs 版本
+node有具体的版本，然而不同的项目依赖的node版本可能是不一样的，这就导致只安装单一个版本的node并不能兼容所有的项目，于是就有人就开发了nvm这款工具用来管理node版本
 
-1. 安装 nvm
+1. 安装nvm
 
-   安装包下载地址：`https://github.com/coreybutler/nvm-windows/releases`
+   可以到github上下载[nvm](https://github.com/coreybutler/nvm-windows/releases)，安装完成后打开终端输入命令验证安装
 
-   安装后重新打开终端输入 `nvm` 检测是否安装成功
+   ```powershell
+   nvm
+   ```
 
-2. 使用 nvm 切换 node 版本
+2. 使用nvm切换node版本
 
    ```bash
-   # 查看当前安装的 node 版本
+   # 查看当前安装的node版本
    nvm list
    # 列出可安装的 node 版本
    nvm list available
@@ -45,18 +51,19 @@ node -v
    nvm use 17.9.0
    ```
 
-#### 3 执行js代码
+#### 3 使用
 
-编写js代码，在代码目录打开powershell，然后打开终端输入如下命令
+编写完js代码后，在代码同级目录下打开终端输入如下命令即可使用node去解析执行js代码了
 
 ```sh
-node hellonode.js
-// hello world
+node hellonode.js  # hello node
 ```
 
 #### 4 fs文件系统模块
 
-fs模块是NodeJS官方提供的用于操作文件的模块，想要使用该模块，只需要在代码开头导入该模块
+了解完如何使用node执行js代码，接下来就是学习与node相关的API了，先来学习文件系统相关的API
+
+fs模块是node官方提供的用于操作文件的模块，首先在代码文件开头引入该模块
 
 ```js
 const fs = require('fs')
@@ -77,9 +84,9 @@ fs.readFile(path [,options], callback)
 
 ```js
 const fs = require('fs')
-fs.readFile('./files/1.txt', 'utf8', function (err, dataStr) {
+fs.readFile('./files/1.txt', 'utf8', function (err, res) {
   console.log(err)
-  console.log(dataStr)
+  console.log(res)
 })
 // null
 // test content
@@ -102,8 +109,8 @@ fs.readFile('./files/11.txt', 'utf8', function (err, res) {
 语法：
 
 ```js
-fs.writeFile(file, data [,options], callback)
-// file: 文件路径，字符串
+fs.writeFile(path, data [,options], callback)
+// path: 文件路径，字符串
 // data：要写入的内容
 // options：以什么编码格式写入，默认utf8
 // callback：回调函数，拿到写入结果
@@ -121,7 +128,11 @@ err为null表示写入成功，文件路径如果不存在则会自动新建一�
 
 ##### 4.3 动态路径拼接
 
-在使用fs模块时，如果提供的文件路径是相对路径，很容易发生路径拼接错误，原因是代码运行时，文件路径 = node运行目录 + 相对路径，node运行目录和js文件处于同一目录时没有问题，但目录不同时，拼接的路径就会发生错误
+在使用fs模块时，如果提供的文件路径是相对路径，很容易发生路径的拼接错误
+
+原因是代码运行时，文件路径 = node的运行目录 + 相对路径
+
+node运行目录和js文件处于同一目录时没有问题，但目录不同时，拼接的路径就会发生错误
 
 因此我们可以直接提供绝对路径而不提供相对路径，这样无论node在哪里执行，都不会出错，这就解决了问题
 
@@ -138,9 +149,9 @@ fs.readFile(
 )
 ```
 
-但是直接提供绝对路径的移植性非常差，不利于维护，如果代码未来迁移到别的机器，根路径可能发生改变，但是代码已经写死，修改起来非常麻烦，而且绝对路径提供起来也麻烦，需要慢慢地复制粘贴
+但是只提供绝对路径的话，移植性非常差，不利于维护，原因在于如果代码未来迁移到别的机器，根路径很有可能发生改变，但是绝对路径已经被写死，就会因为路径错误导致读取失败
 
-node自然也想到了这个问题，它给我们提供了一个字符串对象`__dirname`，表示**当前代码文件所处目录**，这个值会动态变化以适应不同的机器，**完美**地解决了文件路径的问题
+node官方自然也考虑到了这个问题，于是给我们提供了一个字符串对象`__dirname`，该对象的值表示**当前的代码文件的所在目录**，这个值会根据机器的不同自动变更为对应的绝对路径，这样就**完美**地解决了路径容易拼错的问题
 
 ```js
 console.log(__dirname) // D:\MEGAsync\技术\前端\NodeJS\code
@@ -155,7 +166,7 @@ fs.readFile(__dirname + '/files/1.txt', 'utf8', function (err, res) {
 
 #### 5 path模块
 
-path模块是NodeJS官方提供的用于处理路径的模块，和fs模块一样，使用前需导入
+path模块是node官方提供的用于处理路径的模块
 
 ##### 5.1 拼接路径
 
@@ -386,11 +397,17 @@ console.log(exports === module.exports) // true，可见指向的是同一个对
 
 #### 8 npm与包
 
-在node中第三方模块又简称为包，node中的包都是免费开源的，可以直接下载使用，非常方便，由于node内置模块毕竟功能有限，只是基于这些API开发效率很低，许多第三方开发者就基于这些基本的内置API，封装出了许多实用的第三方包，包和内置API的关系就类似于jQuery和原生DOMBOM之间的关系
+node中第三方模块可简称为包，node中的包都是免费开源的
 
-[npm](https://www.npmjs.com/)是国外的一家公司，GitHub已于2020年收购npm，但是依然保持免费，npm全称为Node Package Manager，即node包管理，是nodejs默认的包管理工具，npm也是全球最大的包共享平台，各种三方包在上面共享供你免费下载使用
+由于node内置模块的功能有限，仅仅基于这些基础功能开发效率很低，于是许多三方开发者就自己开发封装出了很多实用的三方包，提供了一些拓展功能
 
-先来体验一下自己写自定义模块来格式化时间的做法
+[npm](https://www.npmjs.com/)是国外的一家公司，GitHub已于2020年收购了npm，但是依然保持免费
+
+npm全称为Node Package Manager，即node包管理器，是nodejs默认的包管理器，同时npm也是全球最大的包管理分享平台，各种各样的三方包在上面进行开源分享
+
+为什么要去使用别人分享的包呢？很简单，你不用别人的包那就得自己写，相同的功能，别人已经写好了，为什么不用呢，除非你能写出更好的，不然找不到自己去费时费力手写的理由，这就像你要把钉子砸进墙里，这时别人给你递过来一把锤子，但你说不，我要自己造一把锤子（？）
+
+比方说你需要一个格式化时间的功能，下面是自己手写的过程：
 
 `dateFormat.js`：
 
