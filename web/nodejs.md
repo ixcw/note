@@ -51,7 +51,7 @@ node有具体的版本，然而不同的项目依赖的node版本可能是不一
    nvm use 17.9.0
    ```
 
-#### 3 使用
+#### 3 解析执行
 
 编写完js代码后，在代码同级目录下打开终端输入如下命令即可使用node去解析执行js代码了
 
@@ -438,13 +438,7 @@ console.log(exports === module.exports) // true，可见指向的是同一个对
 
 #### 8 npm
 
-node中第三方模块可简称为包，node中的包都是免费开源的
-
-由于node内置模块的功能有限，仅仅基于这些基础功能开发效率很低，于是许多三方开发者就自己开发封装出了很多实用的三方包，提供了一些拓展功能
-
-[npm](https://www.npmjs.com/)是国外的一家公司，GitHub已于2020年收购了npm，但是依然保持免费
-
-npm全称为Node Package Manager，即node包管理器，是nodejs默认的包管理器，同时npm也是全球最大的包管理分享平台，各种各样的三方包在上面进行开源分享
+由于node内置模块的功能有限，仅仅基于这些基础功能开发效率很低，于是许多三方开发者就自己开发封装出了很多实用的三方模块，提供了一些拓展功能，node中三方模块可简称为包，node中的模块包都是免费开源的
 
 为什么要去使用别人分享的包呢？很简单，你不用别人的包那就得自己写，相同的功能，别人已经写好了，为什么不用呢，除非你能写出更好的，不然找不到自己去费时费力手写的理由，这就像你要把钉子砸进墙里，这时别人给你递过来一把锤子，但你说不，我要自己造一把锤子（？）
 
@@ -502,7 +496,9 @@ const dt = moment().format('YYYY-MM-DD HH:mm:ss')
 console.log(dt) // 2021-12-23 02:05:12
 ```
 
-但是正如前面介绍require时所说，直接require引入三方模块是不行的，因为这不是node官方提供的模块，本地是不存在这个模块的，想要引用，得先把模块下载到本地，怎么下载呢？这个时候就得有请npm了，npm是node官方为我们内置的包管理工具，只要安装了node，就会默认安装npm
+但是正如前面介绍require时所说，直接require引入三方模块是不行的，因为这不是node官方提供的模块，本地是不存在这个模块的，想要引用，得先把模块下载到本地，怎么下载呢？由于大家都是把自己写的模块分享到了一个叫做npm的网站上，所以我们得到这个网站上去下载，npm官方为我们准备好了下载工具，就叫npm
+
+[npm](https://www.npmjs.com/)的全称是Node Package Manager，即node包管理器，npm是node官方为我们内置的包管理器，只要安装了node，就会默认安装npm，使用如下命令下载安装模块：
 
 ```sh
 npm install 模块名称
@@ -857,9 +853,9 @@ npm ls -g # 查看全局模块
 
 #### 9 express模块
 
-express是基于nodejs平台的一款web开发框架，用于创建web服务器，其本质是npm上面的三方模块，对node的http模块进行了封装，可以更加快捷方便地创建web服务器，且功能上更加强大，就类似于jQuery和原生DOM的关系，除了提供网页资源的web服务器，express还可以用于创建API接口服务器
+express是基于nodejs平台的一款web开发框架，用于创建web服务器，其本质是npm上面的三方模块，它对node的http模块进行了封装，使其更加好用，且功能上更加强大，这就类似于jquery和原生js之间的关系
 
-##### 9.1 下载express
+##### 9.1 下载安装express
 
 ```sh
 npm i express
@@ -904,7 +900,9 @@ app.listen(80, () => {
 
 ##### 9.4 获取请求参数
 
-通过`req.query`对象获取请求参数，请求参数需要是通过**请求字符串**的形式发送的参数，该对象默认为空对象
+通过`req.query`对象获取请求参数
+
+> 通过这种方式获取的请求参数必须是通过**请求字符串**的方式发送的请求参数
 
 ```js
 app.get('/', (req, res) => {
@@ -913,9 +911,7 @@ app.get('/', (req, res) => {
 })
 ```
 
-参数会作为对象的键值对属性，通过这个对象就可以使用传递过来的参数了
-
-通过`req.params`对象获取动态参数，默认也是空对象
+通过`req.params`对象获取动态参数
 
 ```js
 // :id 是动态参数，是动态匹配的
@@ -941,13 +937,21 @@ app.get('/user/:id', (req, res) => {
 
 ##### 9.5 托管静态资源
 
-通过`express.static()`可以创建静态资源服务器，传入参数是静态资源的存放目录，然后在网址中不用加上存放目录就能访问静态资源，express会自动去存放静态目录的目录查找静态文件
+通过`express.static()`可以创建静态资源服务器，参数是存放静态资源文件的目录的相对地址
 
 ```js
 app.use(express.static('./static'))
 ```
 
-直接访问`http://localhost/index.html`就可以访问到index.html文件了
+这样就可以了，然后在访问静态资源时，会以静态资源目录作为根目录进行访问，express模块会自动到静态资源目录下去查找对应的静态文件
+
+比如说如果在静态文件目录下存在一个`index.html`文件，则访问地址是：
+
+`http://localhost/index.html`
+
+假如存在二级目录，比如有一个名为`rar`的文件夹，文件夹下有一个`test.rar`文件，则访问地址是：
+
+`http://localhost/rar/test.rar`
 
 如果希望托管多个静态目录，只需要再次调用这个方法就可以了，express会按照调用的顺序去依次查找静态文件
 
@@ -957,26 +961,22 @@ app.use(express.static('./static'))
 app.use('/sta', express.static('./static'))
 ```
 
-这时只有访问这样的网址才能访问到静态资源`http://localhost/sta/index.html`
+这时只有添加`sta`路径才能访问到静态资源：
 
-##### 9.6 nodemon
+`http://localhost/sta/index.html`
 
-前面我们发现，每次修改代码之后都需要手动重启服务器，非常麻烦，我们可以安装一个三方包`nodemon`，它可以帮助我们监听项目文件的变动，不用手动重启项目
+##### 9.6 热重启
+
+在前面的开发中我们发现，每次修改代码之后都需要手动去重启服务器，非常麻烦，我们可以安装一个三方模块`nodemon`，它可以帮助我们监听项目文件的变动，自动热重启项目，手动档变自动档，还是更舒服的
 
 ```sh
 npm i nodemon -g
 ```
 
-使用也很简单，把node改为nodemon就行
+使用时把 node 改为 nodemon 就行
 
 ```sh
 nodemon app.js
-# [nodemon] 2.0.15
-# [nodemon] to restart at any time, enter `rs`
-# [nodemon] watching path(s): *.*
-# [nodemon] watching extensions: js,mjs,json
-# [nodemon] starting `node .\app.js`
-# express is running at localhost
 ```
 
 ##### 9.7 路由
