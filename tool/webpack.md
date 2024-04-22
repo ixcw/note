@@ -1,171 +1,160 @@
 #### 1 前端工程化
 
-前端工程化也叫前端模块化，主要用于解决传统开发模式的两个问题
+前端工程化也叫前端模块化，主要用于解决传统开发模式的两个问题：
 
-- 命名冲突
+1. 命名冲突
 
-  多个js文件之间，如果存在同名变量，可能会发生变量重名的问题
+   如果在多个js文件之间，如果存在同名变量，可能会发生变量重名的问题
 
-- 文件依赖
+2. 文件依赖
 
-  js文件之间无法实现相互引用
+   js文件之间无法实现相互引用的问题
 
-为了解决这两个问题，前端提出了模块化的方式，就是把单独的功能封装到单独的模块中，每个模块是一个单独的js文件，模块之间相互隔离，可以通过特定的接口导出内部成员，模块之间可以相互依赖，这样做的好处在于重用代码、便于维护、提升开发效率
+为了解决这两个问题，前端提出了模块化的方法，就是把单独的一个js文件看成一个模块，将功能封装到模块里面，模块之间的环境是相互隔离的，但是可以通过特定的接口对外暴露内部成员，别的模块就可以导入这些暴露的成员，如此一来模块之间就实现了相互依赖，模块化的好处在于方便了代码重用、便于维护、提升了开发效率等等
 
 #### 2 模块化规范
 
+由于node的出现，js不仅可以在浏览器端使用，也可以在服务端使用，因此前端模块化规范按照类别分为两类：
+
 1. 浏览器端模块化规范
 
-   前端模块化规范主要有AMD（require.js）和CMD（sea.js），目前已经比较落后，有更优的方案代替
+   主要有AMD（require.js）和CMD（sea.js），目前已经比较落后，就不详细介绍了
 
 2. 服务器端模块化规范
 
-   最出名的就是CommonJS规范了，详情参考NodeJS篇
+   CommonJS规范，详情参考nodejs笔记
 
-最新的模块化规范是大一统的**ES6模块化规范**
+显然，各端的模块化规范并不统一，对于前后端来说，虽然都是js开发语言，模块化规范却不一致，这对开发者来说是很不友好的，因此最新的模块化规范是统一了前后端模块化标准的**ES6模块化规范**
 
-前面提到的这三种模块化规范，彼此之间存在着差异和局限性，而且不是浏览器端与服务器端通用的规范
+#### 3 es6模块化
 
-为了解决这些问题，ES6模块化规范在语法层面规定了模块化规范通用标准，是浏览器端和服务器端**通用**的模块化标准
-
-ES6模块化规范主要定义：
+ES6模块化规范：
 
 1. 每个js文件都是一个独立的模块
-2. 导入模块使用 `import` 关键字（而不是 `require` ）
+2. 导入模块使用 `import` 关键字
 3. 暴露内部成员使用 `export` 关键字
 
-#### 3 Node中的ES6模块化
+可以看到，主要变化在于模块成员的导入和导出
 
-node中的es6模块化支持并不好，但是可以通过babel三方库转化es6的代码为兼容性的代码
+##### 3.1 默认导入导出
 
-1. 安装babel三方库
+现有模块文件`m.js`，使用默认导出
 
-   ```sh
-   npm install --save-dev @babel/core @babel/cli @babel/preset-env @babel/node
-   npm install --save @babel/polyfill
-   ```
+```js
+let a = 10
+let b = 20
+let c = 30
 
-2. 在项目根目录新建babel配置文件
+function show() {
+  console.log('show')
+}
 
-   新建`babel.config.js`文件
+export default {
+    a,
+    b,
+    show
+}
+```
 
-   ```js
-   const presets = [
-     [
-       '@babel/env',
-       {
-         targets: {
-           edge: '17',
-           firefox: '60',
-           chrome: '67',
-           safari: '11.1'
-         }
-       }
-     ]
-   ]
-   
-   module.exports = { presets }
-   ```
+在`index.js`中就可以使用`import`关键字进行导入，而不是`require`了
 
-3. 然后就可以通过以下命令执行js文件了，文件现在支持es6高级语法
+```js
+import m1 from './m1.js'
 
-   ```sh
-   npx babel-node .\index.js
-   ```
+console.log(m1) // { a: 10, b: 20, show: [Function: show] }
+```
 
-#### 4 ES6模块化语法
+每个模块中只允许使用唯一一次`export default`，否则会报错
 
-主要是模块的导入与导出
+##### 3.2 按需导入导出
 
-- 默认导入导出
+现有模块文件`m1.js`，使用按需导出，所谓按需导出就是指在模块中定义变量时直接导出变量，而不是在模块最后使用默认导出进行统一导出，如下所示：
 
-  `m1.js`文件：
+```js
+let a = 10
+let b = 20
+let c = 30
 
-  ```js
-  let a = 10
-  let b = 20
-  let c = 30
-  
-  function show() {
+function show() {
     console.log('show')
-  }
-  
-  export default {
-      a,
-      b,
-      show
-  }
-  ```
+}
 
-  `index.js`文件：
+export const s1 = 's1'
+export const s2 = 's2'
+export function say() {
+    console.log('say')
+}
+```
 
-  ```js
-  import m1 from './m1.js'
-  
-  console.log(m1) // { a: 10, b: 20, show: [Function: show] }
-  ```
+然后在`index.js`中进行按需导入，如何按需导入呢，使用es6的解构赋值语法即可
 
-  执行npx命令，得到如上输出
+```js
+import { s1, s2, say } from './m1.js'
 
-  > 每个模块中只允许使用唯一一次`export default`，否则会报错
+console.log(s1) // s1
+console.log(s2) // s2
+console.log(say) // [Function: say]
+say() // say
+```
 
-- 按需导入导出
+在按需导入时，可以使用关键字`as`给变量起别名，起别名后，原变量名失效
 
-  按需导入导出是指在导出时直接在定义的时候导出，导入时使用**解构赋值导入**
+```js
+import { s1, s2 as s22, say } from './m1.js'
 
-  > 默认导入导出和按需导入导出可以同时存在互不影响
+console.log(s1) // s1
+// console.log(s2) // ReferenceError: s2 is not defined
+console.log(s22) // s2
+console.log(say) // [Function: say]
+say() // say
+```
 
-  `m1.js`文件：
+默认导出和按需导出可以同时存在互不影响，比如现有模块文件`m2.js`，同时使用了默认和按需导出：
 
-  ```js
-  let a = 10
-  let b = 20
-  let c = 30
-  
-  function show() {
-      console.log('show')
-  }
-  
-  export let s1 = 's1'
-  export let s2 = 's2'
-  export function say() {
-      console.log('say')
-  }
-  
-  export default { a, b, show }
-  ```
+```js
+let a = 10
+let b = 20
+let c = 30
 
-  `index.js`文件：
+function show() {
+    console.log('show')
+}
 
-  ```js
-  import m1, { s1, s2, say } from './m1.js'
-  
-  console.log(m1) // { a: 10, b: 20, show: [Function: show] }
-  console.log(s1) // s1
-  console.log(s2) // s2
-  console.log(say) // [Function: say]
-  say() // say
-  ```
+export const s1 = 's1'
+export const s2 = 's2'
+export function say() {
+    console.log('say')
+}
 
-  按需导入可以使用as可以起别名
+export default {
+    a,
+    b,
+    show
+}
+```
 
-  ```js
-  import m1, { s1, s2 as s22, say } from './m1.js'
-  
-  console.log(m1) // { a: 10, b: 20, show: [Function: show] }
-  console.log(s1) // s1
-  // console.log(s2) // ReferenceError: s2 is not defined
-  console.log(s22) // s2
-  console.log(say) // [Function: say]
-  say() // say
-  ```
+在导入时可以通过添加逗号的方式同时导入：
+
+```js
+import m1, { s1, s2, say } from './m1.js'
+
+console.log(m1) // { a: 10, b: 20, show: [Function: show] }
+console.log(s1) // s1
+console.log(s2) // s2
+console.log(say) // [Function: say]
+say() // say
+```
+
+##### 3.3 直接导入模块
+
+========TODO=========
 
 - 直接导入模块并执行代码
-  
+
   有时候，我们不需要获得模块中向外暴露的成员，只是想执行模块中的代码，这种情况下往往模块也并没有向外暴露成员，那么可以直接导入模块
-  
+
   `m1.js`文件：
-  
+
   ```js
   let a = 10
   let b = 20
@@ -187,14 +176,53 @@ node中的es6模块化支持并不好，但是可以通过babel三方库转化es
     console.log(i)
   }
   ```
-  
+
   `index.js`文件：
-  
+
   ```js
   import './m1'
   ```
-  
+
   npx执行index文件，发现成功打印了for循环
+
+#### 4 node中的es6模块化
+
+node之前采用的是CommonJS的模块化规范，对es6模块化的支持不是很好，但是可以通过babel这个npm三方模块进行兼容，原理是babel会将es6风格的代码转化为es5或之前兼容的代码
+
+1. 安装babel三方模块
+
+   ```sh
+   npm install --save-dev @babel/core @babel/cli @babel/preset-env @babel/node
+   npm install --save @babel/polyfill
+   ```
+
+2. 创建babel的配置文件
+
+   在项目根目录新建一个名为`babel.config.js`的配置文件，内容如下，可以看到其内容还是采用的旧的CommonJS规范
+
+   ```js
+   const presets = [
+     [
+       '@babel/env',
+       {
+         targets: {
+           edge: '17',
+           firefox: '60',
+           chrome: '67',
+           safari: '11.1'
+         }
+       }
+     ]
+   ]
+   
+   module.exports = { presets }
+   ```
+
+3. 然后就可以通过以下命令去执行用es6语法编写的js文件了
+
+   ```sh
+   npx babel-node .\index.js
+   ```
 
 #### 5 Webpack
 
