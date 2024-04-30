@@ -169,6 +169,42 @@ Page生命周期流程可参考下图
 
 具体参见 [官方文档-组件](https://developers.weixin.qq.com/miniprogram/dev/component/)
 
+##### 6.1 简易双向绑定
+
+input框有简易的双向绑定，可绑定直接定义的值，不支持绑定对象的属性值
+
+```html
+<input 
+  type="number"
+  maxlength="11"
+  placeholder="请输入电话"
+  model:value="{{telephone}}" />
+```
+
+##### 6.2 自定义属性值
+
+获取自定义属性值：
+
+```html
+<view
+  wx:for="{{radioList}}"
+  wx:key="id"
+  data-id="{{item.id}}"
+  bind:tap="radioTap"
+>
+  {{item.name}}
+</view>
+```
+
+可在`radioTap`打印的参数中获取：
+
+```js
+radioTap(e) {
+  const radioId = e.currentTarget.dataset.id
+}
+```
+
+
 #### 7 条件与循环
 
 ##### 7.1 条件判断
@@ -456,6 +492,20 @@ Component({
 <my-comp>
     <view slot="slot3">slot text</view>
 </my-comp>
+```
+
+##### 9.3 启用全局样式
+
+自定义组件默认不启用全局样式，需要自行开启，才能使用`app.wxss`中的样式
+
+```js
+Component({
+
+  options: {
+    addGlobalClass: true
+  }
+    
+})
 ```
 
 #### 10 网络请求
