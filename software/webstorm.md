@@ -51,7 +51,11 @@
 
    编辑器的检查里面取消相关项目的检查
 
+3 常见问题
 
+1. gitlab项目不能更新代码，提示获取accesstoken，但是token版本不对
+
+   卸载webstorm自带插件gitlab，然后更新代码，输入gitlab账号密码并记住
 
 
 
