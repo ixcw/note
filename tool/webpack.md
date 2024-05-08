@@ -22,9 +22,9 @@
 
 2. 服务器端模块化规范
 
-   CommonJS规范，详情参考nodejs笔记
+   CommonJS规范，详情参考 [nodejs笔记](../web/nodejs.md)
 
-显然，各端的模块化规范并不统一，对于前后端来说，虽然都是js开发语言，模块化规范却不一致，这对开发者来说是很不友好的，因此最新的模块化规范是统一了前后端模块化标准的**ES6模块化规范**
+显然，各端的模块化规范并不统一，对于前后端来说，虽然都是js开发语言，模块化规范却不一致，这对开发者来说是很不友好的，因此最新的模块化规范是 **统一** 了前后端模块化标准的 **ES6模块化规范**
 
 #### 3 es6模块化
 
@@ -32,7 +32,7 @@ ES6模块化规范：
 
 1. 每个js文件都是一个独立的模块
 2. 导入模块使用 `import` 关键字
-3. 暴露内部成员使用 `export` 关键字
+3. 导出内部成员使用 `export` 关键字
 
 可以看到，主要变化在于模块成员的导入和导出
 
@@ -41,6 +41,8 @@ ES6模块化规范：
 现有模块文件`m.js`，使用默认导出
 
 ```js
+// m.js
+
 let a = 10
 let b = 20
 let c = 30
@@ -59,18 +61,22 @@ export default {
 在`index.js`中就可以使用`import`关键字进行导入，而不是`require`了
 
 ```js
+// index.js
+
 import m1 from './m1.js'
 
 console.log(m1) // { a: 10, b: 20, show: [Function: show] }
 ```
 
-每个模块中只允许使用唯一一次`export default`，否则会报错
+> 每个模块中只允许使用唯一一次`export default`，否则会报错
 
 ##### 3.2 按需导入导出
 
 现有模块文件`m1.js`，使用按需导出，所谓按需导出就是指在模块中定义变量时直接导出变量，而不是在模块最后使用默认导出进行统一导出，如下所示：
 
 ```js
+// m1.js
+
 let a = 10
 let b = 20
 let c = 30
@@ -86,9 +92,11 @@ export function say() {
 }
 ```
 
-然后在`index.js`中进行按需导入，如何按需导入呢，使用es6的解构赋值语法即可
+如何导入按需导出的成员变量呢，使用es6的解构赋值语法进行按需导入即可，在`index.js`中进行按需导入
 
 ```js
+// index.js
+
 import { s1, s2, say } from './m1.js'
 
 console.log(s1) // s1
@@ -97,9 +105,11 @@ console.log(say) // [Function: say]
 say() // say
 ```
 
-在按需导入时，可以使用关键字`as`给变量起别名，起别名后，原变量名失效
+在按需导入时还可以使用关键字`as`给变量起别名，起别名后，原变量名失效
 
 ```js
+// index.js
+
 import { s1, s2 as s22, say } from './m1.js'
 
 console.log(s1) // s1
@@ -109,9 +119,11 @@ console.log(say) // [Function: say]
 say() // say
 ```
 
-默认导出和按需导出可以同时存在互不影响，比如现有模块文件`m2.js`，同时使用了默认和按需导出：
+默认导出和按需导出可以同时存在互不影响的，比如现有模块文件`m2.js`，同时使用了默认导出和按需导出
 
 ```js
+// m2.js
+
 let a = 10
 let b = 20
 let c = 30
@@ -136,6 +148,8 @@ export default {
 在导入时可以通过添加逗号的方式同时导入：
 
 ```js
+// index.js
+
 import m1, { s1, s2, say } from './m1.js'
 
 console.log(m1) // { a: 10, b: 20, show: [Function: show] }
@@ -147,43 +161,43 @@ say() // say
 
 ##### 3.3 直接导入模块
 
-========TODO=========
+有时候，我们不需要获得模块中向外暴露的成员，只是想执行模块中的代码，这种情况下往往模块也并没有向外暴露成员，那么就可以直接导入模块，在直接导入模块时会执行模块中的代码
 
-- 直接导入模块并执行代码
+`m1.js`文件：
 
-  有时候，我们不需要获得模块中向外暴露的成员，只是想执行模块中的代码，这种情况下往往模块也并没有向外暴露成员，那么可以直接导入模块
+```js
+// m1.js
 
-  `m1.js`文件：
+let a = 10
+let b = 20
+let c = 30
 
-  ```js
-  let a = 10
-  let b = 20
-  let c = 30
-  
-  function show() {
-    console.log('show')
-  }
-  
-  export let s1 = 's1'
-  export let s2 = 's2'
-  export function say() {
-    console.log('say')
-  }
-  
-  export default { a, b, show }
-  
-  for (let i = 0; i < 6; i++) {
-    console.log(i)
-  }
-  ```
+function show() {
+  console.log('show')
+}
 
-  `index.js`文件：
+export let s1 = 's1'
+export let s2 = 's2'
+export function say() {
+  console.log('say')
+}
 
-  ```js
-  import './m1'
-  ```
+export default { a, b, show }
 
-  npx执行index文件，发现成功打印了for循环
+for (let i = 0; i < 6; i++) {
+  console.log(i)
+}
+```
+
+`index.js`文件：
+
+```js
+// index.js
+
+import './m1'
+```
+
+npx执行index文件，会发现成功打印了for循环
 
 #### 4 node中的es6模块化
 
@@ -231,7 +245,7 @@ node之前采用的是CommonJS的模块化规范，对es6模块化的支持不�
 1. 文件依赖关系复杂
 2. 静态资源请求效率低
 3. 模块化支持不友好
-4. **浏览器对js的高级特性兼容性低**
+4. 浏览器对js的高级特性 **兼容性低**
 
 为了解决这些问题，webpack应运而生，webpack是一个流行的**前端项目构建工具**，或者叫做**打包工具**，webpack提供了一系列实用的功能，包括友好的模块化支持、代码混淆压缩、解决js高级特性兼容问题、静态资源优化等等功能，让前端程序员不必过多的为了这些功能无关的东西担忧，从而提高了开发效率和项目可维护性，目前绝大部分的企业都使用了webpack打包构建前端项目，因此webpack是非常重要的前端工具
 
