@@ -144,13 +144,101 @@ npm start
 
 #### 4 JSX
 
+JSX 最初由 Facebook 在2013年创建并使用在 react 中，可以看作是 JavaScript 的一种语法拓展，允许你在 JavaScript 中书写 HTML 等标记语言
 
+咋一看你可能会奇怪，在 js 中写 html ？这不是 UI 和逻辑混在一起了吗？是的，但是我们来看看 react 的解释：
 
+react 的设计理念认为数据渲染逻辑和UI逻辑实际上是 **高度耦合** 的，形如 html 负责 UI，js 负责逻辑这样的分离其实并没有做到真正的分离，相反，这只是 **技术上的分离**，**关注点依然是高度耦合**的，既然如何，何不将他们都放到一起，反而省却了关注点反复在 UI 和 逻辑之间跳转的麻烦，具体可以观看YouTube上的介绍视频 [Pete Hunt: React: Rethinking best practices](https://www.youtube.com/watch?v=x7cQ3mrcKaY)
 
+##### 4.1 变量及表达式
 
+在 jsx 中，你可以直接书写 html，而不用加引号将其变成字符串，html 就是 html
 
+```jsx
+const element = <h1>Hello, James!</h1>
+```
 
+由于 jsx 就是 js 的语法，因此你可以定义普通的 js变量
 
+```jsx
+const name = 'James'
+```
+
+在 jsx 中使用变量时，只需要使用一对大括号将其包括起来就可以了
+
+```jsx
+const name = 'James'
+const element = <h1>Hello, {name}!</h1>
+```
+
+当然，你也可以将 js表达式 放入大括号中，也是可以正常解析的，因为表达式计算出来最终也是一个变量
+
+```jsx
+function formatName(user) {
+  return user.firstName + ' ' + user.lastName
+}
+
+const user = {
+  firstName: 'Harry',
+  lastName: 'Potter'
+}
+
+const element = <h1>Hello, {formatName(user)}!</h1>
+```
+
+由于 jsx 在编译之后就是普通的 js，所以你可以使用 `if` 、`for` 等 js 逻辑判断关键字
+
+```jsx
+function getGreeting(user) {
+  if (user) {
+    return <h1>Hello, {formatName(user)}!</h1>
+  }
+  return <h1>Hello, Stranger.</h1>
+}
+```
+
+普通情况下，html标签的属性是字符串，也就是双引号包括起来的字符串，在 jsx 中你也可以使用大括号使用字符串变量
+
+```jsx
+const element = <a href="https://www.reactjs.org"> link </a>
+const imgEle = <img src={user.avatarUrl}></img>
+const para = <p className={p}></p>
+```
+
+> 1. 双引号和大括号不要一起使用，否则变量就变成字符串了
+> 2. 由于 jsx 更近似于 js，所以 html 中的关键字 `class` 在 jsx 中变成了 `className`
+
+jsx 中的 html标签 是闭合的，单标签也需要闭合
+
+```jsx
+const imgEle = <img src={user.avatarUrl} />
+```
+
+##### 4.2 渲染元素
+
+元素是构建 react 应用的最小单位，但 jsx 中的元素不同于 html 中的元素，只是简单的对象，react 关注的是如何根据 jsx 中的元素去更新 html 中的元素
+
+```jsx
+const element = <h1>Hello, world</h1>
+```
+
+假设 html 中有个元素的 id 为 root
+
+```jsx
+<div id="root"></div>
+```
+
+要渲染元素到这个 root 元素上，首先需要调用 `ReactDOM.createRoot` 去获取这个 root 元素，然后再调用 `render` 方法去渲染元素
+
+```jsx
+const root = ReactDOM.createRoot(
+  document.getElementById('root')
+)
+const element = <h1>Hello, world</h1>
+root.render(element)
+```
+
+https://legacy.reactjs.org/docs/rendering-elements.html
 
 
 
