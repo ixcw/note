@@ -238,7 +238,165 @@ const element = <h1>Hello, world</h1>
 root.render(element)
 ```
 
-https://legacy.reactjs.org/docs/rendering-elements.html
+react 的元素是不可变的，一旦创建，将不能更改其子元素或属性，更新UI的方式是创建一个新的元素并将其传递给 `render` 方法
+
+react 采用了高效的算法，只会更新改变的节点，尽管是创建的完整的新元素放进 `render` 方法，但未改变的节点不会更新
+
+##### 4.3 组件
+
+组件让你可以把UI拆分为独立可复用的片段，从概念上说，组件更像是 js函数，接收任意的参数，然后返回 react元素去描绘UI的样子
+
+定义组件的最简单的方式就是直接写一个 js函数
+
+```jsx
+function Welcome(props) {
+  return <h1>Hello, {props.name}</h1>
+}
+```
+
+也可以通过 es6 的 class 语法定义，两种方式对 react 来说都是一样的
+
+```jsx
+class Welcome extends React.Component {
+  render() {
+    return <h1>Hello, {this.props.name}</h1>
+  }
+}
+```
+
+组件和元素都是一样的渲染方式，组件接收一个名为 `props` 的对象，其包含了传递给组件的属性
+
+> 什么时候有必要写成组件呢？就是当某部分的UI被用到了好几次，或者其本身足够复杂，那么写成组件是个不错的选择
+
+组件的 props 是 **不可变** 的，像下面的函数被称为 **纯净函数**，特点是没有修改传入的参数，相同的输入总有相同的输出
+
+```jsx
+function sum(a, b) {
+  return a + b
+}
+```
+
+react 的组件遵循纯净函数原则，绝对不要修改传入的 props
+
+但是UI总是变动的，我们可以使用 state 去修改组件的输出
+
+##### 4.4 状态和生命周期
+
+状态 state 类似于 props，但是它是组件私有的，被组件完全管理，考虑有这样一个 Clock 组件
+
+```jsx
+class Clock extends React.Component {
+  render() {
+    return (
+      <div>
+        <h1>Hello, world!</h1>
+        <h2>It is {this.props.date.toLocaleTimeString()}.</h2>
+      </div>
+    )
+  }
+}
+```
+
+render 函数在每次组件有更新时都会调用一次，但只要我们每次都把 Clock 组件 渲染进同一个 dom 节点，那么就始终只有一个 Clock 实例会被创建
+
+现在将 Clock 组件从 props 改造成 state 的形式
+
+```jsx
+class Clock extends React.Component {
+  // 添加构造函数，接收 props，调用父构造函数 super，给组件的 state 赋值
+  constructor(props) {    
+    super(props) 
+    this.state = {date: new Date()}
+  }
+  render() {
+    return (
+      <div>
+        <h1>Hello, world!</h1>
+        <h2>It is {this.state.date.toLocaleTimeString()}.</h2>
+      </div>
+    )
+  }
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'))
+root.render(<Clock />)
+```
+
+但截止目前 CLock 组件还是不能自动更新时间，需要添加 **生命周期函数**（到了特定时机自动执行的函数）
+
+比如 `componentDidMount()` 生命周期函数会在组件的输出已经渲染到 dom 上时自动执行，是个添加定时器的好时机
+
+```jsx
+componentDidMount() {
+  this.timerID = setInterval(() => this.tick(), 1000)
+}
+```
+
+`componentWillUnmount()` 生命周期函数会在组件即将卸载时自动执行，这是个销毁定时器的好时机
+
+```jsx
+componentWillUnmount() {
+  clearInterval(this.timerID)
+}
+```
+
+最后，编写 `tick()` 函数使用 `setState()` 函数更新 state 里的数据
+
+```jsx
+class Clock extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = {date: new Date()}
+  }
+
+  componentDidMount() {
+    this.timerID = setInterval(
+      () => this.tick(),
+      1000
+    )
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timerID)
+  }
+
+  tick() {
+    this.setState({ date: new Date() })
+  }
+    
+  render() {
+    return (
+      <div>
+        <h1>Hello, world!</h1>
+        <h2>It is {this.state.date.toLocaleTimeString()}.</h2>
+      </div>
+    )
+  }
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'))
+root.render(<Clock />)
+```
+
+回顾：
+
+1. 当 CLock 组件被传递给 `root.render()` 函数时，react 执行了 CLock 组件的构造函数，初始化了 state 数据
+2. CLock 组件执行内部的 `render()` 函数，输出对应的 jsx 元素对象，react 随后更新网页 dom
+3. 当网页 dom 被更新后，CLock 组件的生命周期函数 `componentDidMount()` 被执行，该方法让浏览器设置了一个定时器用于更新时间
+4. 每秒 `tick()` 函数被执行时，都会调用 `setState()` 函数去更新 state 里的时间值，一旦值发生改变，react 就会重新执行 `render()` 函数，页面重新渲染
+5. 当页面关闭时，CLock 组件被卸载，`componentWillUnmount()` 执行，定时器被销毁
+
+
+
+> 关于 state 应该注意的点：
+>
+> 1. 不要直接修改 state，这将不会触发组件的重新渲染，应该始终使用 `setState()` 函数去更改 state
+> 2. 只能在构造函数里直接对 state 进行赋值
+> 3. state 的更新可能是 **异步** 的
+
+
+
+
 
 
 
