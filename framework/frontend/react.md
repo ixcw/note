@@ -282,6 +282,8 @@ react 的组件遵循纯净函数原则，绝对不要修改传入的 props
 
 ##### 4.4 状态和生命周期
 
+###### 4.4.1 状态更新流程
+
 状态 state 类似于 props，但是它是组件私有的，被组件完全管理，考虑有这样一个 Clock 组件
 
 ```jsx
@@ -392,11 +394,39 @@ root.render(<Clock />)
 >
 > 1. 不要直接修改 state，这将不会触发组件的重新渲染，应该始终使用 `setState()` 函数去更改 state
 > 2. 只能在构造函数里直接对 state 进行赋值
-> 3. state 的更新可能是 **异步** 的
 
+###### 4.4.2 同步异步更新
 
+state 的更新可能是 **异步** 的，因为 react 基于性能考虑可能会将多次 `setState()` 的操作合并为一次更新，由于 `props` 和 `state` 的更新可能是异步的，因此如果 `setState()` 更新的值依赖于这两个值的更新，那么可能会更新失败，比如：
 
+```jsx
+// Wrong
+this.setState({
+  counter: this.state.counter + this.props.increment
+})
+```
 
+如果你想同步更新 state，那么需要换一种写法，`setState()` 不再接收一个对象，而是一个函数，函数的第一个参数是之前的 state，第二个参数是 props （在更新完成时），箭头函数和传统函数都可以
+
+```jsx
+// arrow function
+this.setState((state, props) => ({
+  counter: state.counter + props.increment
+}))
+
+// regular function
+this.setState(function(state, props) {
+  return {
+    counter: state.counter + props.increment
+  }
+})
+```
+
+`setState()` 的更新是合并的，合并是浅合并，只会合并改动的部分
+
+###### 4.4.3 单向数据流
+
+react 中的组件数据是 **单向数据流** 的，react 的组件之间是互相独立的，但是父组件可以向子组件传递一些数据，子组件通过 props 接收这些数据，子组件只负责接收数据，并不关心这些数据是哪儿来的，无论是父组件的 state 或者 props 或者 直接手写的数据，都无所谓
 
 
 
