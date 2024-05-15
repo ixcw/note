@@ -507,6 +507,37 @@ Component({
     
 })
 ```
+##### 9.4 获取组件实例
+
+父组件可以通过 `this.selectComponent()` 获取子组件的组件实例，执行子组件的方法
+
+```js
+const childCom = this.selectComponent('.childCom')  // 类选择器
+const childCom = this.selectComponent('#childCom')  // ID选择器
+```
+
+获取节点状态（位置、高度等），这个需要调用官方Api
+
+```js
+wx.createSelectorQuery().in(this).select('#id').boundingClientRect(rect=>{
+  console.log('rect', rect)  // rect 包含了所需信息
+}).exec()
+```
+
+##### 9.5 组件生命周期
+
+自定义组件有两个生命周期比较有用，分别是 `attached` 和 `detached`
+
+```js
+lifetimes: {
+  attached: function() {
+    // 在组件实例进入页面节点树时执行
+  },
+  detached: function() {
+    // 在组件实例被从页面节点树移除时执行
+  }
+}
+```
 
 #### 10 网络请求
 
