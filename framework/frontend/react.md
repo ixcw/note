@@ -428,15 +428,289 @@ this.setState(function(state, props) {
 
 react 中的组件数据是 **单向数据流** 的，react 的组件之间是互相独立的，但是父组件可以向子组件传递一些数据，子组件通过 props 接收这些数据，子组件只负责接收数据，并不关心这些数据是哪儿来的，无论是父组件的 state 或者 props 或者 直接手写的数据，都无所谓
 
+#### 5 事件处理
 
+react 的事件处理和原生 dom 事件处理是非常相似的
 
+原生：
 
+```html
+<button onclick="activateLasers()">
+  Activate Lasers
+</button>
+```
 
+react：
 
+```jsx
+<button onClick={activateLasers}>  Activate Lasers
+</button>
+```
 
+可以看到 react 使用了驼峰命名，使用大括号传递了函数名称，也不用使用小括号
 
+另外在 react 中阻止默认事件不能像原生一样简单的返回一个 false，必须明确指出 preventDefault
 
+原生：
 
+```html
+<form onsubmit="console.log('You clicked submit.'); return false">
+  <button type="submit">Submit</button>
+</form>
+```
+
+react：
+
+```jsx
+function Form() {
+  function handleSubmit(e) {
+    e.preventDefault();
+    console.log('You clicked submit.');
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+需要注意的是，这里的事件 e 是一个合成事件，不能完全等同于原生事件，但其由 w3c 规范定义而来，因此有很好的兼容性
+
+当使用 es6 的 class 语法定义组件时，将事件处理写成类里面的方法是比较好的做法
+
+```jsx
+class Toggle extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {isToggleOn: true};
+    // This binding is necessary to make `this` work in the callback
+    this.handleClick = this.handleClick.bind(this);  
+  }
+
+  handleClick() {
+      this.setState(prevState => ({
+          isToggleOn: !prevState.isToggleOn    
+      }));
+  }
+    
+  render() {
+    return (
+      <button onClick={this.handleClick}>
+            {this.state.isToggleOn ? 'ON' : 'OFF'}
+      </button>
+    );
+  }
+}
+
+ReactDOM.render(
+  <Toggle />,
+  document.getElementById('root')
+);
+```
+
+> 在 jsx 的回调中应该小心 this 的指向，在 js 中，class 的方法默认是不绑定在 class 的 this 上的，所以需要我们手动进行绑定，如上面的代码那样，如果不这么做，在调用方法时将会报 undefined 错误
+
+如果不想每次都在构造函数中绑定 this，也可以使用新语法**公有类字段**（ public class fields ），使用箭头函数定义函数并赋值给类字段
+
+```jsx
+class LoggingButton extends React.Component {
+    handleClick = () => {
+        console.log('this is:', this);
+    }
+    
+    render() {
+        return (
+            <button onClick={this.handleClick}>
+                Click me
+            </button>
+        );
+    }
+}
+```
+
+另一种办法是在回调里面使用箭头函数
+
+```jsx
+class LoggingButton extends React.Component {
+  handleClick() {
+    console.log('this is:', this);
+  }
+
+  render() {
+    return (
+      <button onClick={() => this.handleClick()}>
+        Click me
+      </button>
+    );
+  }
+}
+```
+
+> 但是这种办法的缺点是每次 render button 时，都会生成一个不同的回调函数，如果这个回调是作为 prop 传递给子组件时，可能触发一次多余的重绘，故为避免这种情况产生性能问题，应当使用构造函数绑定 this 或共有类字段的办法改变 this 指向
+
+在回调中给事件传递参数需要注意，也要使用箭头函数或者绑定 this，不然回调中的函数会立即执行，因为回调中希望接收的是一个函数，而不是函数的执行
+
+```jsx
+<button onClick={(e) => this.deleteRow(id, e)}>Delete Row</button>
+<button onClick={this.deleteRow.bind(this, id)}>Delete Row</button>
+```
+
+e 表示 react 的事件，通常被当做第二个参数传递给函数，在使用箭头函数时必须显式地传递，但是使用 bind 的方式会自动传递
+
+#### 6 条件渲染
+
+react 的条件判断与 js 中的条件判断完全一致，这意味着你可以使用 if 等语句决定哪一个组件会被返回渲染
+
+```jsx
+class LoginControl extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleLoginClick = this.handleLoginClick.bind(this);
+    this.handleLogoutClick = this.handleLogoutClick.bind(this);
+    this.state = {isLoggedIn: false};
+  }
+
+  handleLoginClick() {
+    this.setState({isLoggedIn: true});
+  }
+
+  handleLogoutClick() {
+    this.setState({isLoggedIn: false});
+  }
+
+  render() {
+    const isLoggedIn = this.state.isLoggedIn;
+    let button;
+    if (isLoggedIn) {
+      button = <LogoutButton onClick={this.handleLogoutClick} />;
+    } else {
+      button = <LoginButton onClick={this.handleLoginClick} />;
+    }
+    return (
+      <div>
+        <Greeting isLoggedIn={isLoggedIn} />
+        {button}
+      </div>
+    );
+  }
+}
+
+ReactDOM.render(
+  <LoginControl />,
+  document.getElementById('root')
+);
+```
+
+可以使用 `&&` 进行判断
+
+```jsx
+function Mailbox(props) {
+  const unreadMessages = props.unreadMessages;
+  return (
+    <div>
+      <h1>Hello!</h1>
+      {unreadMessages.length > 0 &&
+         <h2>You have {unreadMessages.length} unread messages.</h2>
+      }
+    </div>
+  );
+}
+
+const messages = ['React', 'Re: React', 'Re:Re: React'];
+ReactDOM.render(
+  <Mailbox unreadMessages={messages} />,
+  document.getElementById('root')
+);
+```
+
+如果 `&&` 前面的条件为真，则整个表达式的值为 `&&` 后面的值，相反，整个表达式的值为 false，react 会忽略这个值并跳过它
+
+如果 `&&` 前面的值不是 boolean 而是别的类型，那将会被 react 返回而不会跳过，下面的代码最终返回 `<div>0</div>`
+
+```jsx
+render() {
+  const count = 0;  
+  return (
+    <div>
+      { count && <h1>Messages: {count}</h1>}
+    </div>
+  );
+}
+```
+
+三元表达式也是个不错的选择
+
+```jsx
+render() {
+  const isLoggedIn = this.state.isLoggedIn;
+  return (
+    <div>
+      The user is <b>{isLoggedIn ? 'currently' : 'not'}</b> logged in.
+    </div>
+  );
+}
+
+// 或者
+
+render() {
+  const isLoggedIn = this.state.isLoggedIn;
+  return (
+    <div>
+      {isLoggedIn
+         ? <LogoutButton onClick={this.handleLogoutClick} />
+         : <LoginButton onClick={this.handleLoginClick} />
+      }
+    </div>
+  );
+}
+```
+
+如果想隐藏一个组件使其不被渲染，那么可以直接在组件的 render 函数中返回一个 null 即可
+
+```jsx
+function WarningBanner(props) {
+  if (!props.warn) { return null; }
+  return (
+    <div className="warning">
+      Warning!
+    </div>
+  );
+}
+
+class Page extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {showWarning: true};
+    this.handleToggleClick = this.handleToggleClick.bind(this);
+  }
+
+  handleToggleClick() {
+    this.setState(state => ({
+      showWarning: !state.showWarning
+    }));
+  }
+
+  render() {
+    return (
+      <div>
+        <WarningBanner warn={this.state.showWarning} />
+        <button onClick={this.handleToggleClick}>
+          {this.state.showWarning ? 'Hide' : 'Show'}
+        </button>
+      </div>
+    );
+  }
+}
+
+ReactDOM.render(
+  <Page />,
+  document.getElementById('root')
+);
+```
+
+#### 7 循环渲染
 
 
 
