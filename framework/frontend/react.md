@@ -712,6 +712,183 @@ ReactDOM.render(
 
 #### 7 循环渲染
 
+react 可以使用 js 的 map 、for 等循环去处理循环
+
+```jsx
+const numbers = [1, 2, 3, 4, 5];
+const listItems = numbers.map((number) => <li>{number}</li>);
+
+ReactDOM.render(
+  <ul>{listItems}</ul>,
+  document.getElementById('root')
+);
+```
+
+在我们渲染一个列表时，有必要给列表项赋予一个 key
+
+```jsx
+function NumberList(props) {
+  const numbers = props.numbers;
+  const listItems = numbers.map((number) =>
+    <li key={number.toString()}>
+      {number}
+    </li>
+  );
+  return (
+    <ul>{listItems}</ul>
+  );
+}
+
+const numbers = [1, 2, 3, 4, 5];
+ReactDOM.render(
+  <NumberList numbers={numbers} />,
+  document.getElementById('root')
+);
+```
+
+为什么需要赋予一个 key 呢，通常这是为了帮助 react 标记列表项，更好的分辨列表项有无修改，更好的做法是使用数组元素中的**唯一的 id 值**
+
+```jsx
+const todoItems = todos.map((todo) =>
+  <li key={todo.id}>
+    {todo.text}
+  </li>
+);
+```
+
+如果没有这样的 id，也可以使用数组索引 index 代替
+
+```jsx
+const todoItems = todos.map((todo, index) =>
+  <li key={index}>
+    {todo.text}
+  </li>
+);
+```
+
+但请注意，在数组元素可能发生修改或者排序的情况下不推荐这样做，很有可能会影响性能，甚至对组件状态产生影响，在你不给出具体的 key 的情况下，react 会默认使用 index 作为 key
+
+为什么会这样呢，因为 key 是 react 唯一用来标识 dom 元素的东西，如果你增加删除列表项时使用了相同的 key，react 会认为这个列表项和之前的列表项是同一个列表项，具体可以看看这篇文章了解 [Index as a key is an anti-pattern](https://robinpokorny.medium.com/index-as-a-key-is-an-anti-pattern-e0349aece318)
+
+> key 的唯一只需要保证在当前数组中唯一即可，不同的数组中可以使用相同的 key
+
+#### 8 form表单
+
+原生的 form 表单有其默认行为，比如提交时访问新的网页，在 react 中比较好的做法是自己去控制 form 的行为，也就是控制组件（controlled components）
+
+```jsx
+class NameForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {value: ''};
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleChange(event) {
+    this.setState({value: event.target.value});
+  }
+  
+  handleSubmit(event) {
+    alert('A name was submitted: ' + this.state.value);
+    event.preventDefault();  // 阻止 form 的默认行为
+  }
+
+  render() {
+    return (
+      <form onSubmit={this.handleSubmit}>
+        <label>
+          Name:
+          <input type="text" value={this.state.value} onChange={this.handleChange} />             </label>
+        <input type="submit" value="Submit" />
+      </form>
+    );
+  }
+}
+```
+
+#### 9 组合
+
+是继承还是组合使用，react 推荐组合，当你想要构建的组件不知道以后想放什么内容进去时，你可以使用 `props.children` ，这在别的库里面类似于 slot 的概念
+
+```jsx
+function FancyBorder(props) {
+  return (
+    <div className={'FancyBorder FancyBorder-' + props.color}>
+      {props.children}
+    </div>
+  );
+}
+
+function WelcomeDialog() {
+  return (
+    <FancyBorder color="blue">
+      <h1 className="Dialog-title">Welcome</h1>
+      <p className="Dialog-message">
+        Thank you for visiting our spacecraft!
+      </p>
+    </FancyBorder>
+  );
+}
+```
+
+但如果你需要多个 slot，可以自定义名称而不是单一的 children
+
+```jsx
+function SplitPane(props) {
+  return (
+    <div className="SplitPane">
+      <div className="SplitPane-left">
+        {props.left}
+      </div>
+      <div className="SplitPane-right">
+        {props.right}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <SplitPane
+      left={<Contacts />}
+      right={<Chat />} />
+  );
+}
+```
+
+> 记住 react 的组件可以接收任意的 props，不管是原始的 js 变量，还是 react 元素或者是函数
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

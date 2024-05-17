@@ -3612,7 +3612,7 @@ Son.prototype.constructor = Son
    console.log(array, newArray);  // name全部为d
    ```
    
-   当无法满足返回条件而无法返回值的时候，默认会返回undefined，这意味着新数组的长度与原数组保持一致
+   当无法满足返回条件而无法返回值的时候，默认会返回undefined，这意味着**新数组的长度与原数组保持一致**
    
    ```js
    let numbers = [1, 2, 3, 4]
