@@ -3750,7 +3750,7 @@ fn(1, 2) // 3
 
 ##### 16.1 this指向
 
-记住一句话：函数中的this指向是**在函数执行时确定的**，而不是在函数定义时确定
+记住一句话：函数中的this指向是在 **函数执行时** 确定的，而不是在函数定义时确定
 
 |       函数类别       |      this指向      |
 | :------------------: | :----------------: |
@@ -3758,17 +3758,18 @@ fn(1, 2) // 3
 | 定时器、立即执行函数 |       window       |
 |       箭头函数       |     词法作用域     |
 |      对象的函数      |        对象        |
-|    构造函数（类）    |      实例对象      |
+|    构造函数（类）    |    类的实例对象    |
 |    绑定的事件函数    | 绑定事件函数的对象 |
 
 > 1. 普通函数也就是直接定义，直接调用的函数，这时的函数 this 指向的是 window 对象，但是可以通过 `call()`、`apply()`、`bind()` 等方法去执行函数，在执行函数的时候改变其 this 的指向
-> 2. 定时器 `setTimeout()` 里的回调函数的 this 指向的是 window 对象，因为定时器是 window 对象的函数，在定时器里执行的函数相当于是普通函数，所以其 this 指向了 window 对象，可是由于箭头函数的 this 指向的是其词法作用域中的 this，因此如果在定时器里面的回调函数是箭头函数的话，那么它的 this 可以指向定时器所在的词法作用域的 this
-> 3. 匿名函数的执行环境具有全局性，所以立即执行函数中的 this 指向是 window 对象
+> 2. 定时器 `setTimeout()` 里的回调函数的 this 指向的是 window 对象，因为定时器是 **window 对象的函数**，在定时器里执行的函数相当于是普通函数，所以其 this 指向了 window 对象，可是由于箭头函数的 this 指向的是其词法作用域中的 this，因此如果在定时器里面的回调函数是箭头函数的话，那么它的 this 可以指向定时器所在的词法作用域的 this
+> 3. 匿名函数的**执行环境具有全局性**，所以立即执行函数中的 this 指向是 window 对象
 
 通过 `call()`、`apply()`、`bind()` 等方法改变this指向
 
+`call()`可以正常调用函数，也可以改变this指向，这可以用来实现构造函数的继承
+
 ```js
-// 1. call()可以正常调用函数，也可以改变this指向，这可以用来实现构造函数的继承
 var obj = {
   name: 'ldh'
 }
@@ -3788,8 +3789,11 @@ function Son(uname, age, sex) {
 }
 var son = new Son('刘德华', 18, '男')
 console.log(son) // Object { uname: "刘德华", age: 18, sex: "男" }
+```
 
-// 2. apply()可以正常调用函数，也可以改变this指向，但是其参数必须是伪数组的形式，可以配合内置函数使用
+`apply()`可以正常调用函数，也可以改变this指向，但是其 **参数必须是伪数组** 的形式，可以配合内置函数使用
+
+```js
 function fn1(arr) {
   console.log(this)
   console.log(arr)
@@ -3802,9 +3806,12 @@ var max = Math.max.apply(null, arr)
 var min = Math.min.apply(Math, arr)
 console.log(max) // 9
 console.log(min) // 1
+```
 
-// 3. bind()不会正常调用函数，但是也可以改变 this 指向，返回值是一个改造之后的原构造函数的拷贝
-// 如果有的函数我们不需要立即调用，但是又想改变函数中 this 指向，用 bind 就最合适，比方说按钮的禁用，常用
+`bind()`不会正常调用函数，但是也可以改变 this 指向，返回值是一个改造之后的原构造函数的拷贝
+如果有的函数我们不需要立即调用，但是又想改变函数中 this 指向，用 bind 就最合适，比方说按钮的禁用，常用
+
+```js
 function fn2(a, b) {
   console.log(this)
   console.log(a + b)
@@ -3823,13 +3830,10 @@ btn.onclick = function () {
   // }, 3000)
 
   // 利用bind改变this指向btn，又不会立即调用函数，正好合适
-  setTimeout(
-    function () {
+  setTimeout(function () {
       this.disabled = false
       console.log(this) // <button>
-    }.bind(this),
-    3000
-  )
+    }.bind(this), 3000)
 
   // ES6中的箭头函数, this总是指向词法作用域，也就是外层调用者obj，也可以解决这个问题
   // setTimeout(() => {

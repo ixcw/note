@@ -428,6 +428,23 @@ this.setState(function(state, props) {
 
 react 中的组件数据是 **单向数据流** 的，react 的组件之间是互相独立的，但是父组件可以向子组件传递一些数据，子组件通过 props 接收这些数据，子组件只负责接收数据，并不关心这些数据是哪儿来的，无论是父组件的 state 或者 props 或者 直接手写的数据，都无所谓
 
+可以在 props 传值的时候进行类型校验，类型校验需要安装一个库 `prop-types`，详情使用参考 [prop-types](https://www.npmjs.com/package/prop-types)
+
+```jsx
+import PropTypes from 'prop-types';
+
+component.propTypes = {
+    list: PropTypes.arrayOf(PropTypes.object).required,
+    saveKey: PropTypes.func.isRequired,
+    w: PropTypes.number,
+    h: PropTypes.number
+}
+```
+
+###### 4.4.4 setState
+
+函数组件没有 state 和 生命周期函数，但是都可以通过 hooks 解决
+
 #### 5 事件处理
 
 react 的事件处理和原生 dom 事件处理是非常相似的
@@ -510,9 +527,9 @@ ReactDOM.render(
 );
 ```
 
-> 在 jsx 的回调中应该小心 this 的指向，在 js 中，class 的方法默认是不绑定在 class 的 this 上的，所以需要我们手动进行绑定，如上面的代码那样，如果不这么做，在调用方法时将会报 undefined 错误
+> 在 jsx 的回调中应该小心 this 的指向，在 jsx 中，class 的方法默认是不绑定在 class 的 this 上的，默认指向 undefined，所以需要我们手动进行绑定，如上面的代码那样，如果不这么做，在调用方法时将会报 undefined 错误
 
-如果不想每次都在构造函数中绑定 this，也可以使用新语法**公有类字段**（ public class fields ），使用箭头函数定义函数并赋值给类字段
+如果不想每次都在构造函数中绑定 this，也可以使用新语法**公有类字段**（ public class fields ），使用箭头函数定义函数并赋值给类的字段
 
 ```jsx
 class LoggingButton extends React.Component {
@@ -557,7 +574,7 @@ class LoggingButton extends React.Component {
 <button onClick={this.deleteRow.bind(this, id)}>Delete Row</button>
 ```
 
-e 表示 react 的事件，通常被当做第二个参数传递给函数，在使用箭头函数时必须显式地传递，但是使用 bind 的方式会自动传递
+> e 表示 react 的事件，通常被当做第二个参数传递给函数，在使用箭头函数时必须显式地传递，但是使用 bind 的方式会自动传递
 
 #### 6 条件渲染
 
@@ -774,7 +791,13 @@ const todoItems = todos.map((todo, index) =>
 
 #### 8 form表单
 
-原生的 form 表单有其默认行为，比如提交时访问新的网页，在 react 中比较好的做法是自己去控制 form 的行为，也就是控制组件（controlled components）
+原生的 form 表单有其默认行为，比如提交时会访问新的网页
+
+在 react 中比较好的做法是自己去控制 form 的行为，也就是控制组件（controlled components）
+
+不同于 vue 的是， vue 里面有 v-model 双向绑定，但是 react 得自己实现，从视图到值的更新一般需要我们自己去绑定一个 change 事件去监听值的变化，从而更新对应的 state 值
+
+至此，可以理解所谓 **受控组件** 就是组件和 state 关联起来了，可以通过 state 去控制组件
 
 ```jsx
 class NameForm extends React.Component {
