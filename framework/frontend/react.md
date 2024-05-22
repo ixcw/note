@@ -443,7 +443,20 @@ component.propTypes = {
 
 ###### 4.4.4 setState
 
-函数组件没有 state 和 生命周期函数，但是都可以通过 hooks 解决
+关于 setState，牢记 **不可变值**  **不可变值**  **不可变值** ，**可能** 是异步更新，**可能** 会被合并，看见这个可能，就知道简单不了
+
+函数组件没有 state 和 生命周期函数，但是都可以通过 hooks 解决，如果使用类组件，state 需要在构造函数中定义
+
+```jsx
+constructor(props) {
+  super(props);
+  this.state = {
+    count: 0
+  }
+}
+```
+
+state 是不能 **直接修改** 的，使用不可变值
 
 #### 5 事件处理
 
