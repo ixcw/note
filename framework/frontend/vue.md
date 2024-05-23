@@ -1226,13 +1226,17 @@ Vue.filter('upper', function (val, arg1, arg2) {
 
 仅仅了解单个组件的生命周期是不够的，更多的时候我们是在和父子组件打交道，所以有必要了解父子组件的生命周期，具体流程如下：
 
-创建阶段：父组件 created  => 子组件 created
+**创建阶段：**父组件 created  => 子组件 created
 
-挂载阶段：子组件 mounted => 父组件 mounted
+**挂载阶段：**子组件 mounted => 父组件 mounted
 
 这两个阶段还是比较好理解的，因为只有先创建了父组件，子组件才有地方创建，所以先父后子，然后挂载阶段，只有子组件先渲染完成，父组件才能渲染完成，这个也是正常的，如果子组件都没渲染完成，父组件那能叫渲染完成了吗，就像修房子，还有一扇门没装好，哪能叫这房子修完了吗
 
-更新阶段：父组件 beforeUpdate => 子组件 beforeUpdate => 子组件 updated => 父组件 updated
+更为详细的流程：
+
+`父 beforeCreate => 父 created => 父 beforeMount => 子 beforeCreate => 子 created => 子 beforeMount => 子 mounted => 父 mounted`
+
+**更新阶段：**父组件 beforeUpdate => 子组件 beforeUpdate => 子组件 updated => 父组件 updated
 
 ##### 4.8 变异方法和替换数组
 
