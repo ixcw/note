@@ -280,7 +280,7 @@ react 的组件遵循纯净函数原则，绝对不要修改传入的 props
 
 但是UI总是变动的，我们可以使用 state 去修改组件的输出
 
-##### 4.4 状态和生命周期
+##### 4.4 状态
 
 ###### 4.4.1 状态更新流程
 
@@ -395,53 +395,7 @@ root.render(<Clock />)
 > 1. 不要直接修改 state，这将不会触发组件的重新渲染，应该始终使用 `setState()` 函数去更改 state
 > 2. 只能在构造函数里直接对 state 进行赋值
 
-###### 4.4.2 同步异步更新
-
-state 的更新可能是 **异步** 的，因为 react 基于性能考虑可能会将多次 `setState()` 的操作合并为一次更新，由于 `props` 和 `state` 的更新可能是异步的，因此如果 `setState()` 更新的值依赖于这两个值的更新，那么可能会更新失败，比如：
-
-```jsx
-// Wrong
-this.setState({
-  counter: this.state.counter + this.props.increment
-})
-```
-
-如果你想同步更新 state，那么需要换一种写法，`setState()` 不再接收一个对象，而是一个函数，函数的第一个参数是之前的 state，第二个参数是 props （在更新完成时），箭头函数和传统函数都可以
-
-```jsx
-// arrow function
-this.setState((state, props) => ({
-  counter: state.counter + props.increment
-}))
-
-// regular function
-this.setState(function(state, props) {
-  return {
-    counter: state.counter + props.increment
-  }
-})
-```
-
-`setState()` 的更新是合并的，合并是浅合并，只会合并改动的部分
-
-###### 4.4.3 单向数据流
-
-react 中的组件数据是 **单向数据流** 的，react 的组件之间是互相独立的，但是父组件可以向子组件传递一些数据，子组件通过 props 接收这些数据，子组件只负责接收数据，并不关心这些数据是哪儿来的，无论是父组件的 state 或者 props 或者 直接手写的数据，都无所谓
-
-可以在 props 传值的时候进行类型校验，类型校验需要安装一个库 `prop-types`，详情使用参考 [prop-types](https://www.npmjs.com/package/prop-types)
-
-```jsx
-import PropTypes from 'prop-types';
-
-component.propTypes = {
-    list: PropTypes.arrayOf(PropTypes.object).required,
-    saveKey: PropTypes.func.isRequired,
-    w: PropTypes.number,
-    h: PropTypes.number
-}
-```
-
-###### 4.4.4 setState
+###### 4.4.2 setState
 
 关于 setState，牢记 **不可变值**  **不可变值**  **不可变值** ，**可能** 是异步更新，**可能** 会被合并，看见这个可能，就知道简单不了
 
@@ -456,7 +410,137 @@ constructor(props) {
 }
 ```
 
-state 是不能 **直接修改** 的，使用不可变值
+state 是不能 **直接修改** 的，要使用不可变值修改
+
+```jsx
+this.state.count++  // 这样直接修改是不行的
+```
+
+那我先直接修改，再使用 setState 修改可以吗？不行，仍然 **不能直接修改**
+
+```jsx
+this.state.count++
+this.setState({
+  count: this.state.count
+})
+```
+
+但是你会发现 count 还是增加了，看似没问题，实际上还是有问题的，后面再解释
+
+对数组进行操作时遵循一样的原则，不能先对数组进行修改，再去使用 setState 进行赋值，比如先对数组使用了 pop、push、splice 等会修改原数组的数组方法，不会修改原数组的方法是可以使用的，比如 concat、slice、map、filter 等
+
+```jsx
+this.setState({
+  list: this.state.list.concat(100)  // 可以，因为返回了一个新数组
+})
+```
+
+对对象的操作也是遵循一样的原则，不能直接修改对象的属性
+
+```jsx
+this.setState({
+  obj: Object.assign({}, this.state.obj, { a: 100 }), // 可以，因为返回了一个新对象
+  obj1: { ...this.state.obj1, a: 100 } // 同上
+})
+```
+
+另一个点是，setState **可能** 是 **异步更新** 的，为什么说可能呢，请看下面的例子
+
+```jsx
+ this.setState({ num: 1 })
+ console.log(this.state.num) // 0
+```
+
+在这个例子中我们使用 setState 改变了 num的值，然后立马打印 num 的值，发现 num 值并没有改变，即使我们把这句话封装成函数，每次点击按钮改变 num 的值，打印依然是滞后的，这说明 setState 的渲染是异步的，这有点类似于 Vue 的 $nextTick，那如何同步获取呢，在 setState 的回调里获取即可
+
+```jsx
+addNum = () => {
+  this.setState({ num: this.state.num + 1 }, () => {
+    console.log('setState callback: ', this.state.num)  // 可同步获取
+  })
+  console.log(this.state.num)
+}
+```
+
+但是在 settimeout 里，setState 的表现是同步的
+
+```jsx
+setTimeout(() => {
+  this.setState({ num: this.state.num + 1 }, () => {
+    console.log('setState callback: ', this.state.num) // 先打印
+  })
+  console.log(this.state.num) // 后打印
+}, 0)
+```
+
+自定义的事件中，setState 是同步的
+
+```jsx
+bodyClickHandler = () => {
+  this.setState({ num: this.state.num + 1 })
+  console.log('custom click: ', this.state.num)
+}
+
+componentDidMount() {
+  document.body.addEventListener('click', this.bodyClickHandler)
+}
+
+componentWillUnmount() {
+  document.body.removeEventListener('click', this.bodyClickHandler) // 及时销毁自定义事件
+}
+```
+
+最后，setState 可能会被合并，什么意思呢，就是如果 setState 是异步更新的时候，不管写了几遍，都会被 **合并成一次**，这是 react 基于性能的考虑，比如
+
+```jsx
+addNum = () => {
+  this.setState({ num: this.state.num + 1 })
+  this.setState({ num: this.state.num + 1 })
+  this.setState({ num: this.state.num + 1 })
+  console.log(this.state.num)
+}
+```
+
+最终 num 值只加了 1，怎么理解呢，可以理解为因为都是异步更新，所以不会立刻修改 num 值，而是之后统一修改，于是都只加了1，然后结果一合并，最终结果也是一样的了，类似于 `Object.assign()` 的属性合并，也是浅合并的
+
+如何不被合并呢，传入回调函数（箭头函数或传统函数均可）修改即可，这次不会合并，函数是没法合并的，而是 +3，但打印仍然是滞后的
+
+```jsx
+addNum = () => {
+  this.setState((prevState, props) => { return {num: prevState.num + 1} })
+  this.setState((prevState, props) => { return {num: prevState.num + 1} })
+  this.setState((prevState, props) => { return {num: prevState.num + 1} })
+  console.log(this.state.num)  // 0
+}
+```
+
+###### 4.4.3 单向数据流
+
+react 中的组件数据是 **单向数据流** 的，react 的组件之间是互相独立的，但是父组件可以向子组件传递一些数据，子组件通过 props 接收这些数据，子组件只负责接收数据，并不关心这些数据是哪儿来的，无论是父组件的 state 或者 props 或者 直接手写的数据，都无所谓
+
+可以在 props 传值的时候进行类型校验，类型校验需要安装一个库 `prop-types`，详情使用参考 [prop-types](https://www.npmjs.com/package/prop-types)
+
+```jsx
+import PropTypes from 'prop-types';
+
+component.propTypes = {
+  list: PropTypes.arrayOf(PropTypes.object).required,
+  saveKey: PropTypes.func.isRequired,
+  w: PropTypes.number,
+  h: PropTypes.number
+}
+```
+
+##### 4.5 生命周期
+
+关于 react 组件的生命周期，有个网站做得很不错，可以看看：[react-lifecycle-methods-diagram](https://projects.wojtekmaj.pl/react-lifecycle-methods-diagram/)
+
+1. 首先 react 组件会进入挂载阶段，先执行 constructor 构造方法，然后调用 render 函数渲染挂载，挂载成功后执行 `componentDidMount` 生命周期函数
+2. 接着就进入更新阶段，每当有新的 props 或者调用 setState 变更 state 时，都会触发 shouldComponentUpdate 方法来决定是否应该调用 render 函数进行渲染，如果要调用，则渲染完成后执行 `componentDidUpdate` 生命周期函数
+3. 最后进入卸载阶段，这个阶段 render 函数不再起作用，一般用于销毁定时器、自定义事件等，卸载完成会执行 `componentWillUnmount` 生命周期函数
+
+至于父子组件的生命周期，和 vue 完全一致，请参考 vue
+
 
 #### 5 事件处理
 
