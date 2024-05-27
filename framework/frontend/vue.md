@@ -1234,9 +1234,15 @@ Vue.filter('upper', function (val, arg1, arg2) {
 
 更为详细的流程：
 
-`父 beforeCreate => 父 created => 父 beforeMount => 子 beforeCreate => 子 created => 子 beforeMount => 子 mounted => 父 mounted`
+父组件 beforeCreate => 父组件 created => 父组件 beforeMount => 子组件 beforeCreate => 子组件 created => 子组件 beforeMount => 子组件 mounted => 父组件 mounted
 
 **更新阶段：**父组件 beforeUpdate => 子组件 beforeUpdate => 子组件 updated => 父组件 updated
+
+父组件先触发更新之前的生命周期，子组件更新完毕，父组件才能更新完毕
+
+**销毁阶段：**父组件 beforeDestroy => 子组件 beforeDestroy => 子组件 destroyed => 父组件 destroyed
+
+父组件先触发销毁之前的生命周期，子组件销毁完毕，父组件才能销毁完毕
 
 ##### 4.8 变异方法和替换数组
 
