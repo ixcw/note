@@ -1021,6 +1021,95 @@ console.log(greaterThan10(11));  // 输出：true
 
 高阶函数最主要的用途是创建可配置的函数，比如我们在上面的代码中我们使用高阶函数 `greaterThan` 创建了一个可配置的函数 `greaterThan(10)` 并用 `greaterThan10` 变量去接收这个函数
 
+又比如抽象重复代码：
+
+```js
+// 将 func 函数应用于数组的每个元素
+function map(func, array) {
+  let result = [];
+  for (let item of array) {
+      result.push(func(item));
+  }
+  return result;
+}
+```
+
+说回函数组件，函数组件没有生命周期，没有 state，也没有实例（不是 class 嘛），函数组件可视为一个纯函数，输入 props，输出 jsx，所以当不需要设置 state，不需要在生命周期执行操作时，选择函数组件是不错的选择，当然，通过其他的一些方法函数组件也能实现这些功能，这个后面再介绍
+
+##### 10.2 非受控组件
+
+非受控组件使用 ref，类似于 vue 里面的 ref，标记 dom 元素，然后通过 vue 的 api 去获取这个 dom 元素，获取之后就能操作这个 dom 元素
+
+```js
+this.$nextTick(() => {
+  const elem = this.$refs.refId  // refId 是 ref 指定的 id 值
+})
+```
+
+同理，在 react 中也是类似的
+
+```jsx
+// 首先在构造函数中创建 ref
+constructor(props) {
+  super(props)
+  this.state = {
+    name: 'james'
+  }
+  this.nameInputRef = React.createRef()
+}
+
+render() {
+  return <div>
+      // 然后在 dom 元素上使用 ref
+      <input defaultValue={this.state.name} ref={this.nameInputRef} ></input>
+    </div>
+}
+```
+
+定义好了之后如何获取 dom 元素呢，同样，通过固定的 api 获取
+
+```js
+const elem = this.nameInputRef.current
+alert(elem.value)
+```
+
+可以看到，input 中的值不管怎么变，都不会影响 state 中的值，因为没有绑定 onChange 事件，而 state 中的值不管怎么变，同样不影响 input 中的值，state 中的值和 input 的唯一关系是它给 input 赋了一个默认值，所以我们在 input 中绑定的是 defaultValue，而不是 value，同理 checkbox 得用 defaultChecked
+
+再比如上传文件，如果使用受控组件，将比较难以获取文件名字，但是如果使用非受控组件，将变得容易：
+
+```jsx
+<input type="file" ref={this.fileInputRef}></input>
+
+const elem = this.fileInputRef.current
+alert(elem.files[0].name)
+```
+
+因此，如果使用 setState 不能实现的场景，必须手动操作 dom 的场景，就很适合非受控组件，比如上传文件，或者需要给富文本编辑器传递 dom 元素的时候
+
+但是需要注意，优先使用受控组件，因为更符合 react 的设计原则，通过 state 数据驱动视图，但当必须操作 dom 时，就得使用非受控组件了
+
+##### 10.3 portals
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
