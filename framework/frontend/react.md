@@ -1090,15 +1090,208 @@ alert(elem.files[0].name)
 
 ##### 10.3 portals
 
+我们知道 react 的组件默认会按父组件嵌套子组件的形式一层一层地进行渲染，这和 dom 树是一一对应的，但是某些情况下需要我们把组件 **渲染到父组件以外**，这时就不能按照常规的渲染了，比如有时候我们使用了固定定位 fixed，为了兼容浏览器，比如 UC 浏览器，使用 fixed 定位的元素最好放到最外层渲染
 
+```jsx
+render() {
+    return <div className="modal">
+        {this.props.children}
+    </div>
+}
+```
 
+这里我们返回了一个 class 名为 modal 的 div 元素，modal 是 fixed 定位的，`this.props.children` 类似于 vue 中的 slot 语法，接收父组件的 **内容**
 
+怎么让它渲染到外层 dom 呢，我们可以使用 `react-dom` 提供的 api
 
+```jsx
+import ReactDOM from 'react-dom'
 
+render() {
+    return ReactDOM.createPortal(
+    	<div className="modal">{this.props.children}</div>,
+        document.body  // 这里写的是 body，但是你想把参数里的 dom 元素传到哪儿，就写哪儿的 dom 元素
+    )
+}
+```
 
+其他常见场景包括父组件设置了 `overflow: hidden;`，或父组件的 `z-index` 值太小等 css 布局问题，都可以使用 portals 变更子组件的渲染地点
 
+##### 10.4 context
 
+如果有公共信息需要传递给每一个组件，比如主题、语言等，每个组件都用 props 去接收吗？显然是不太现实的，那你说可以用 redux 呀，可以，但是有点小题大做了，比如主题和语言没什么逻辑，数据结构也不复杂，没有必要用 redux 去管理，这时就可以用 context 上下文环境去做这个事情，顾名思义，context 很适合用来设置环境
 
+```jsx
+import React from 'react'
+// 1. 创建一个 context 并赋值一个默认值
+const ThemeContext = React.createContext('light')
+
+// 5. 函数组件想要消费 context，由于函数组件没有实例，无法使用 this，故只能使用固定 api 去消费
+function ThemeLink() {
+    return <ThemeContext.Consumer>
+        {value => <p>the link theme is {value}</p>}
+    </ThemeContext.Consumer>
+}
+
+// 4. class 组件想要消费 context，需要指定 contextType
+class ThemeButton extends React.Component {
+    static contextType = ThemeContext // es6 新语法指定一个静态属性
+    
+    render() {
+        // 指定完静态属性 contextType 之后就可以使用 context 了
+        // react 会自动往上找到最近的 context 生产方
+        const theme = this.context
+        return <div>
+            <p>the button theme is {theme}</p>
+        </div>
+    }
+}
+ThemeButton.contextType = ThemeContext // 常规写法，都是静态属性，选一种写法即可
+
+// 3. 中间组件可消费 context，也可什么都不做
+function Toolbar(props) {
+    return (
+        <div>
+        	<ThemeButton />
+        	<ThemeLink />
+        </div>
+    )
+}
+
+class App extends React.Component {
+    constructor(props) {
+        super(props)
+        this.state = {
+            theme: 'light'
+        }
+    }
+    
+    changeTheme = () => {
+        this.setState({ theme: this.state.theme === 'light' ? 'dark' : 'light' })
+    }
+    
+    render() {
+        // 2. 然后我们需要在最外层组件生产出 context 的值，value 是为了动态改变其值，因为默认值是修改不了的
+        return <ThemeContext.provider value={this.state.theme}>
+        	<Toolbar />
+            <hr />
+            <button onChange={this.changeTheme}>change theme</button>
+        </ThemeContext.provider>
+    }
+}
+```
+
+##### 10.5 异步组件
+
+若某些组件体积比较大，需要用异步加载的方式提高性能
+
+vue 里面使用的是 `import()`，react 用的是自己的 api：`React.lazy` 和 `React.Suspense`
+
+```jsx
+// 首先异步引入组件
+const ContextDemo = React.lazy(() => import('./ContextDemo'))
+
+class App extends React.Component {
+    render() {
+        return <div>
+            // 然后就可以通过 suspense 引用了
+            // 异步组件通常需要等待，所以设置 fallback 显示等待时显示的内容
+            // 调试时可以设置低速网络进行测试，异步组件会被打包，作为最后一个 js 文件进行加载
+            <React.Suspense fallback={<div>loading...</div>}>
+            	<ContextDemo />
+            </React.Suspense>
+        </div>
+    }
+}
+```
+
+##### 10.6 性能优化 SCU
+
+性能优化在 react 中是很重要的
+
+SCU 的全称是 shouldComponentUpdate，是组件生命周期中的一个方法，通过返回 true 或 false 来决定是否执行 render 方法进行渲染
+
+```jsx
+shouldComponentUpdate(nextProps, nextState) {
+    if (nextState.count !== this.state.count) {
+        return true  // 可以渲染
+    }
+    return false  // 不重复渲染
+}
+```
+
+SCU 默认是返回 true 的，你也许想问，既然这个东西是和性能优化有关的，那么 react 为什么不把它直接做到内部函数里面，反而要把它暴露给开发者，给开发者一个自由选择的权利，由开发者去决定是否渲染呢？问得好，这个问题是一个重点，下面进行解释
+
+首先，在 react 的设计里面，只要父组件有数据更新，那么子组件也会 **无条件** 进行更新，不管子组件的数据有没有更新，都会执行 `componentDidUpdate` 这个生命周期函数，为什么呢？因为 SCU 默认是返回 true 的
+
+```jsx
+shouldComponentUpdate(nextProps, nextState) {
+    return true
+}
+```
+
+如何优化呢，按照上面的方法通过判断 props 或 state 的前后状态，进行限制即可
+
+那么新的问题又来了，什么时候该用 SCU 呢，需要在每一个不需要更新的子组件上都加上 SCU 判断吗？这显然是不现实的，那什么时机该用呢？很简单，如果重复渲染导致页面卡顿已经影响到了业务，那么这个时候就应该考虑使用 SCU 了，因为技术是为业务服务的，而不是为了追求极致的技术和性能
+
+还记得我们前面说过 setState 需要使用不可变值吗，其实这和 SCU 有关，举个例子，我们写个组件接收一个 list 数组，然后渲染这个数组成一个列表，每次使用 SCU 进行判断，利用 lodash 的 isEqual 深层比较判断前后 list 数组是否相同，但是我们每次添加数组元素去改变 list 数组，却并没有更新对应的视图，检查发现是因为在改变 list 数组时是直接使用了 push 方法去新增的，然后再使用 setState 去修改，这明显违背了不可变值的原则
+
+这个也是容易理解的，你先 push，那么 state 的值就已经变了，这个时候你再去调用 setState 修改，nextState 的值也变成和 state 的值一样的值了，所以 SCU 会错误地判断没有发生修改，一直返回 false 导致不执行 render 方法，也就是页面不执行重新渲染，故视图没有更新，解决办法也很简单，遵循 react 的不可变值原则即可
+
+react 提供了纯组件 PureComponent 实现了 SCU 的浅比较，只比较 state 或 props 中的第一层，发现不一样则返回 true，纯组件是 class 组件，另一个纯函数是 memo，只不过 memo 是函数组件
+
+其实浅比较已经适用于大多数场景，尽量不要使用深度比较，因为比较耗费性能
+
+```jsx
+class List extends React.PureComponent {}
+
+function MyComponent(props) {}
+
+function isEqual(prevProps, nextProps) {} // 实现一个类似 SCU 的比较
+
+export default React.memo(MyComponent, isEqual)
+```
+
+最后介绍一下 `immutable.js`，多人合作时，总有人忽略了性能优化，没有使用不可变值导致出现 bug，如果引入这个库，那么将会采用类似于深拷贝的方式，但实际上是基于共享数据的，速度还不错，有一定学习成本，需要均衡考虑是否使用
+
+##### 10.7 高阶组件
+
+有时我们需要将一些组件的公共逻辑抽离出来，你可能最先想到了 mixin，但是和 vue 一样，mixin 已经被 react 废弃了，原因很简单，mixin 会导致难以维护，不好追踪代码来源，react 有更好的方案代替，这就是高阶组件 HOC 和 Render Props
+
+首先高阶组件 HOC 不是一种功能，而是一种 **模式**，类似于设计模式中的工厂模式
+
+首先定义一个工厂函数，工厂函数接收一个待改造的组件，然后在工厂函数内部实现我们要抽离的公共逻辑，最后将待改造的组件融合公共逻辑之后生成一个新的组件，最后返回新的组件，这就像是一个生产新函数的工厂一样
+
+```jsx
+const HOCFactory = (Component) => {
+  class HOC extends React.Component {
+    // 在此实现公共逻辑
+    render() {
+      return <Component {...this.props} />
+    }
+  }
+  return HOC
+}
+
+const EnhancedComponent1 = HOCFactory(Component1)
+const EnhancedComponent2 = HOCFactory(Component2)
+```
+
+redux 的 connect 就是一个高阶组件
+
+#### 11 redux
+
+redux 类似于 vue 里面的 vuex 或者 pinia，是一个状态管理工具库，可以对整个应用中的状态进行集中管理，并且确保状态只能以可预测的方式进行更新
+
+使用 redux 的理由和 vue 中的 vuex 是一样的，没有状态管理之前，应用一旦变得复杂，组件层级过多，组件之间的传值也会变得繁琐，且不容易追踪状态的变化，极大地增加了代码维护的难度，而有了 redux 之后，状态被集中管理，各个组件都只需要和 redux 的状态库进行交互，传值变得简单，状态变化也变得可追踪，代码可维护性也提高了
+
+##### 11.1 工作流程
+
+1. 首先 react 的组件需要 取/改 状态仓库（store）中的数据，于是发起（dispatch）一个动作（action）
+2. store 接收到了这个 action，得知了 react 组件想要做的操作，于是将 action 和当前的状态（state）传递给了归纳（reducer）去处理，reducer 内部有定义好的逻辑操作，经过 reducer 的处理之后，reducer 返回了一个新的 state 给 store
+3. store 将新的 state 拿给 react 组件，react 组件完成了想要的 action，整个工作流程完成
+
+打个比喻，react 组件就像去图书馆借书的人，图书馆就是 store，借书人说我要借某某某书，说的这句话就是 action，图书馆自然无法理解这句话，但是图书管理员也就是 reducer 可以，reducer 通过这句话去找到了这本书，找的过程就是 reducer 进行逻辑处理的过程，reducer 最终把书 state 拿到图书馆 store，借书人 react 组件拿到了想要借的书
 
 
 
