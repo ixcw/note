@@ -1293,6 +1293,56 @@ redux 类似于 vue 里面的 vuex 或者 pinia，是一个状态管理工具库
 
 打个比喻，react 组件就像去图书馆借书的人，图书馆就是 store，借书人说我要借某某某书，说的这句话就是 action，图书馆自然无法理解这句话，但是图书管理员也就是 reducer 可以，reducer 通过这句话去找到了这本书，找的过程就是 reducer 进行逻辑处理的过程，reducer 最终把书 state 拿到图书馆 store，借书人 react 组件拿到了想要借的书
 
+##### 11.2 创建 store
+
+首先通过 npm 安装 redux
+
+```shell
+npm install --save redux
+```
+
+然后一般情况下是在 src 文件夹下新建一个名为 store 的文件夹，再创建一个 `index.js` 文件，用于创建 store
+
+```js
+// index.js
+import { createStore } from "redux"
+
+const store = createStore()
+
+export default store
+```
+
+但是光有 store 是不行的，就像图书馆还需要一个图书管理员吧，所以我们还得创建一个 reducer，再新建一个 `reducer.js` 文件
+
+```js
+// reducer.js
+const defaultState = {  // 为 state 创建一个默认值
+  inputValue: '',
+  list: []
+}
+
+export default (state = defaultState, action) => {
+  return state
+}
+```
+
+在 `index.js` 中引入 reducer
+
+```js
+import { createStore } from "redux"
+import reducer from "./reducer"
+
+const store = createStore(reducer)
+
+export default store
+```
+
+
+
+
+
+
+
 
 
 
