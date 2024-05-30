@@ -1312,6 +1312,8 @@ const store = createStore()
 export default store
 ```
 
+##### 11.3 创建 reducer
+
 但是光有 store 是不行的，就像图书馆还需要一个图书管理员吧，所以我们还得创建一个 reducer，再新建一个 `reducer.js` 文件
 
 ```js
@@ -1335,6 +1337,148 @@ import reducer from "./reducer"
 const store = createStore(reducer)
 
 export default store
+```
+
+##### 11.4 获取 state
+
+store 创建完毕后就可以获取其中的 state 了，可以通过 `getState` 去获取
+
+```js
+// TodoList.js
+import React, { Component } from "react";
+import store from "./store";
+
+class TodoList extends Component {
+
+  constructor(props) {
+    super(props)
+    this.state = store.getState()  // 通过 getState() 可以获取到 store 的 state
+    console.log(this.state)
+  }
+
+  render() {
+    return (
+      <div>
+        {this.state.list}
+      </div>
+    )
+  }
+}
+
+export default TodoList
+```
+
+##### 11.5 修改 state
+
+如果想要修改 store，只能发起一个 action，action 携带想要做的操作和传递的信息
+
+```jsx
+inputChangeHandler = (e) => {
+  // 创建一个 action
+  const action = {
+    type: 'change_input_value',  // 想要做的操作
+    value: e.target.value  // 传递的信息
+  }
+  store.dispatch(action)  // 发起 action
+}
+```
+
+action 发送到 store 后，store 会将 action 交给 reducer 处理，注意在 reducer 中不能修改 state，只能返回一个新的 state
+
+```js
+// reducer.js
+const defaultState = {
+  inputValue: '',
+  list: [1,2,3]
+}
+
+export default (state = defaultState, action) => {
+  // reducer 对 action 进行处理
+  if (action.type === 'change_input_value') {
+    const newState = Object.assign({}, state, { // 利用 Object.assign 创建新的 state
+      inputValue: action.value
+    })
+    return newState
+  }
+  return state
+}
+```
+
+但此时你会发现，页面并没有更新，此时我们需要设置订阅函数去监听 store 的 state 的改变，从而手动去更新视图
+
+```js
+constructor(props) {
+  super(props)
+  this.state = store.getState()
+  store.subscribe(this.storeChangeHandler)  // 甚至订阅函数
+}
+
+storeChangeHandler = () => {
+  this.setState(store.getState())  // 手动更新 state
+}
+```
+
+同理，给 state 的 list 数组增加项也是一样的
+
+```js
+// 定义处理函数，创建并发送 action
+addHandler = () => {
+  const action = {
+    type: 'add_todo_item'
+  }
+  store.dispatch(action)
+}
+```
+
+在 reducer 中处理 action
+
+```js
+export default (state = defaultState, action) => {
+  // reducer 对 action 进行处理
+  if (action.type === 'change_input_value') {
+    const newState = Object.assign({}, state, {
+      inputValue: action.value
+    })
+    return newState
+  }
+  if (action.type === 'add_todo_item') {
+    const newState = { ...state }
+    newState.list.push(newState.inputValue)
+    newState.inputValue = ''
+    return newState
+  }
+  return state
+}
+```
+
+删除数组项也是类似的
+
+```js
+// 绑定删除事件
+renderItem={(item, index) => (
+  <List.Item onClick={this.deleteItem.bind(this, index)}>
+      {item}
+  </List.Item>
+)}
+
+// 创建发送 action
+deleteItem = (index) => {
+  const action = {
+    type: 'delete_todo_item',
+    index
+  }
+  store.dispatch(action)
+}
+```
+
+在 reducer 中处理 action
+
+```js
+if (action.type === 'delete_todo_item') {
+  const newState = JSON.parse(JSON.stringify(state))
+  newState.list.splice(action.index, 1)
+  return newState
+}
 ```
 
 
