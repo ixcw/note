@@ -1038,7 +1038,7 @@ function map(func, array) {
 
 ##### 10.2 非受控组件
 
-非受控组件使用 ref，类似于 vue 里面的 ref，标记 dom 元素，然后通过 vue 的 api 去获取这个 dom 元素，获取之后就能操作这个 dom 元素
+非受控组件使用 ref，类似于 vue 里面的 ref，标记 dom 元素，然后通过 vue 的 api 去获取这个 dom 元素，获取之后就能 **操作** 这个 dom 元素
 
 ```js
 this.$nextTick(() => {
@@ -1482,6 +1482,167 @@ if (action.type === 'delete_todo_item') {
 ```
 
 此时也许你会疑问怎么现在不用设置订阅函数了呢，因为只需要设置一次，就会在当前组件一直生效
+
+##### 11.6 拆分 action
+
+截至目前，我们每次需要修改 store 的 state 的时候，都需要在事件处理函数中创建并发起一个 action，然后 store 收到 action 后将 action 送给 reducer 函数去处理，reducer 函数判断 action 的 type 字段，从而选择对应的处理操作，产生一个新的 state 返回给 store，最后组件监听到了 store 的 state 的改变，重新设置组件的 state，触发页面的更新
+
+这个流程有什么问题呢？
+
+1. 万一 type 写错，是不方便排查错误的，因为这只是字符串的相等判断，字符串写错了不属于语法错误，控制台是不会报错的
+2. 不方便修改，万一 type 需要修改，则需要改两个地方，定义 type 的地方和 reducer 中使用 type 的地方
+3. 每次都需要创建 action，还是很麻烦的，而且 action 的代码是有大量重复的
+
+这是可以改进的，我们可以专门定义一个 `actionType.js` 文件用于处理 action 的 type
+
+```js
+// actionType.js
+export const CHANGE_INPUT_VALUE = 'change_input_value'
+export const ADD_TODO_ITEM = 'add_todo_item'
+export const DELETE_TODO_ITEM = 'delete_todo_item'
+```
+
+然后在组件 `TodoList.js` 中引入使用
+
+```js
+// TodoList.js
+import {
+  CHANGE_INPUT_VALUE,
+  ADD_TODO_ITEM,
+  DELETE_TODO_ITEM
+} from './store/actionType'
+
+inputChangeHandler = (e) => {
+  const action = {
+    type: CHANGE_INPUT_VALUE,
+    value: e.target.value
+  }
+  store.dispatch(action)
+}
+
+addHandler = () => {
+  const action = {
+    type: ADD_TODO_ITEM
+  }
+  store.dispatch(action)
+}
+
+deleteItem = (index) => {
+  const action = {
+    type: DELETE_TODO_ITEM,
+    index
+  }
+  store.dispatch(action)
+}
+```
+
+同理，在 `reducer.js` 中引入使用
+
+```js
+// reducer.js
+import {
+  CHANGE_INPUT_VALUE,
+  ADD_TODO_ITEM,
+  DELETE_TODO_ITEM
+} from './store/actionType'
+
+const defaultState = {
+  inputValue: '',
+  list: []
+}
+
+export default (state = defaultState, action) => {
+  // reducer 对 action 进行处理
+  if (action.type === CHANGE_INPUT_VALUE) {
+    const newState = Object.assign({}, state, {
+      inputValue: action.value
+    })
+    return newState
+  }
+  if (action.type === ADD_TODO_ITEM) {
+    const newState = { ...state }
+    newState.list.push(newState.inputValue)
+    newState.inputValue = ''
+    return newState
+  }
+  if (action.type === DELETE_TODO_ITEM) {
+    const newState = JSON.parse(JSON.stringify(state))
+    newState.list.splice(action.index, 1)
+    return newState
+  }
+  return state
+}
+```
+
+可能你会觉得这样做不是更麻烦了吗？多了一个文件，而且看代码时需要多理解一步，需要将常量名转换一下，再去多的文件去查看，确实更麻烦了，但也带来了如下好处：
+
+1. 错误更容易排查，即使你写错了常量的值，也不影响 reducer 对常量是否相等的判断，并且如果你写错了常量名称，那么将会报变量未定义的错误，错误明显更容易排查了
+2. 假如 type 需要修改，那么只需要改一个地方，那就是定义常量的那个文件，组件和 reducer 中的 type 不用修改
+
+目前已经解决了前两个问题，还有第3个问题每次都创建 action 的麻烦问题，对于这个问题，我们可以创建一个文件去统一创建 action
+
+```js
+// actionCreator.js
+// 引入 type
+import {
+  CHANGE_INPUT_VALUE,
+  ADD_TODO_ITEM,
+  DELETE_TODO_ITEM
+} from './actionType'
+
+export const getInputChangeAction = (value) => ({
+  type: CHANGE_INPUT_VALUE,
+  value
+})
+
+export const getAddTodoItemAction = () => ({ type: ADD_TODO_ITEM })
+
+export const getDeleteTodoItemAction = (value) => ({
+  type: DELETE_TODO_ITEM,
+  value
+})
+```
+
+这样就可以在这个文件中完成 action 的 type 引用，所以组件中的 type 就不需要引入了，组件中的代码变成这样
+
+```js
+// TodoList.js
+
+import {
+  getInputChangeAction,
+  getAddTodoItemAction,
+  getDeleteTodoItemAction
+} from './store/actionCreator'
+
+inputChangeHandler = (e) => {
+  const action = getInputChangeAction(e.target.value)
+  store.dispatch(action)
+}
+
+storeChangeHandler = () => {
+  this.setState(store.getState())
+}
+
+addHandler = () => {
+  const action = getAddTodoItemAction()
+  store.dispatch(action)
+}
+
+deleteItem = (index) => {
+  const action = getDeleteTodoItemAction(index)
+  store.dispatch(action)
+}
+```
+
+如此一来，代码简洁了很多，也不用引入 type 了
+
+
+
+
+
+
+
+
 
 
 
