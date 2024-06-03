@@ -1636,13 +1636,165 @@ deleteItem = (index) => {
 
 如此一来，代码简洁了很多，也不用引入 type 了
 
+##### 11.7 异步请求
+
+和 vue 一样，异步请求的发出一般是在生命周期函数中进行，react 是在 `componentDidMount` 已挂载生命周期函数中发出请求
+
 #### 12 组件拆分
 
 react 中的组件大概可以分为三类组件，容器组件、UI组件、无状态组件，下面分别进行介绍
 
+回看我们写的 `TodoList.js` 组件，里面有 state，也有 redux 的 store，同时还有UI展示，可以发现代码量虽然不多，但是却是耦合在一起的，如果代码量很多的话，维护是比较困难的，因此我们可以按功能去拆分这个组件
 
+**容器组件：**按处理逻辑的功能去拆分的组件，负责处理逻辑，可包含UI组件，故称容器组件
 
+**UI组件：**按展示UI的功能去拆分的组件，就是纯粹的展示UI的组件，接收 props，展示 props 的数据
 
+下面进行拆分，UI组件其实就是 render 函数中的内容，可以把它单独提出来，首先创建一个 `TodoListUI.js`，引入相关的包，修改 state 的写法，现在不需要 state 了，只需要通过 props 的方式获取值，现在就是由父组件获取 state 的值，再传递给UI组件了
+
+```js
+// TodoListUI.js
+import React, { Component } from "react"
+import { 
+  Input,
+  Button,
+  List
+} from 'antd'
+
+class TodoListUI extends Component {
+  render() {
+    return (
+      <div>
+        <div>
+          <Input 
+            placeholder="todo info"
+            style={{width: 300, marginRight: 10}}
+            value={this.props.inputValue}
+            onChange={this.props.inputChangeHandler} />
+          <Button type="primary" onClick={this.props.addHandler}>add</Button>
+        </div>
+        <div>
+          <List
+            style={{width: 300, marginTop: 5}}
+            header={<div>Header</div>}
+            footer={<div>Footer</div>}
+            bordered
+            dataSource={this.props.list}
+            renderItem={(item, index) => (
+              <List.Item onClick={this.props.deleteItem.bind(this, index)}>
+                {item}
+              </List.Item>
+            )}
+          />
+        </div>
+      </div>
+    )
+  }
+}
+
+export default TodoListUI
+```
+
+父组件：
+
+```js
+// TodoList.js
+import React, { Component } from "react"
+import store from "./store"
+import {
+  getInputChangeAction,
+  getAddTodoItemAction,
+  getDeleteTodoItemAction
+} from './store/actionCreator'
+import TodoListUI from './TodoListUI'
+
+class TodoList extends Component {
+
+  constructor(props) {
+    super(props)
+    this.state = store.getState()
+    store.subscribe(this.storeChangeHandler)
+  }
+
+  inputChangeHandler = (e) => {
+    const action = getInputChangeAction(e.target.value)
+    store.dispatch(action)
+  }
+
+  storeChangeHandler = () => {
+    this.setState(store.getState())
+  }
+
+  addHandler = () => {
+    const action = getAddTodoItemAction()
+    store.dispatch(action)
+  }
+
+  deleteItem = (index) => {
+    const action = getDeleteTodoItemAction(index)
+    store.dispatch(action)
+  }
+
+  render() {
+    return (
+      <TodoListUI
+        inputValue={this.state.inputValue}
+        list={this.state.list}
+        inputChangeHandler={this.inputChangeHandler}
+        addHandler={this.addHandler}
+        deleteItem={this.deleteItem}
+      />
+    )
+  }
+}
+
+export default TodoList
+```
+
+我们发现UI组件中只有一个 render 函数，这样的话其实就没有必要定义成 class 组件了，因为 class 组件有生命周期函数，还有 render 函数，执行效率是更慢的，这时可以使用无状态组件，具有更好的性能优势
+
+**无状态组件：**其实就是一个函数组件，接收 props，返回UI元素，无需 render 函数
+
+```js
+import { 
+  Input,
+  Button,
+  List
+} from 'antd'
+
+const TodoListUI = (props) => {
+  return (
+    <div>
+      <div>
+        <Input 
+          placeholder="todo info"
+          style={{width: 300, marginRight: 10}}
+          value={props.inputValue}
+          onChange={props.inputChangeHandler} />
+        <Button type="primary" onClick={props.addHandler}>add</Button>
+      </div>
+      <div>
+        <List
+          style={{width: 300, marginTop: 5}}
+          header={<div>Header</div>}
+          footer={<div>Footer</div>}
+          bordered
+          dataSource={props.list}
+          renderItem={(item, index) => (
+            <List.Item onClick={props.deleteItem.bind(this, index)}>
+              {item}
+            </List.Item>
+          )}
+        />
+      </div>
+    </div>
+  )
+}
+
+export default TodoListUI
+```
+
+> UI组件有时也能执行一些逻辑，这不是绝对的
 
 
 
