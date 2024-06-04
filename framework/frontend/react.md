@@ -1638,7 +1638,145 @@ deleteItem = (index) => {
 
 ##### 11.7 异步请求
 
-和 vue 一样，异步请求的发出一般是在生命周期函数中进行，react 是在 `componentDidMount` 已挂载生命周期函数中发出请求
+和 vue 一样，异步请求的发出一般是在生命周期函数中进行，react 是在 `componentDidMount` 已挂载生命周期函数中发出请求，获得请求的数据后，按照 redux 的修改流程走就行了，创建 action，派送 action，最后 reducer 更新 store 的 state，页面监听到更新，重新渲染页面
+
+##### 11.2 redux-thunk
+
+在上一节的异步请求中，看似发送一个请求是非常简单的，但是如果一个组件中这样的请求多了之后，是很不好维护的，看上去也一团乱，我们可以把这些请求统一地移到一个地方进行管理，redux-thunk 就是做这样事情的一个中间件，它能把这些请求放到 action 中去处理
+
+首先安装 redux-thunk
+
+```shell
+npm install redux-thunk --save
+```
+
+然后在创建 redux 的 store 的时候引入相关 api，使用这个中间件
+
+```js
+// store/index.js
+import { createStore, applyMiddleware } from "redux"  // 引入 applyMiddleware
+import { thunk } from "redux-thunk"  // 引入 redux-thunk
+import reducer from "./reducer"
+
+const store = createStore(
+  reducer, 
+  applyMiddleware(thunk)  // 应用中间件，如果想同时使用 redux-devtools 中间件，请查询官网了解
+)
+
+export default store
+```
+
+在之前 `actionCreator.js` 中创建 action 时，我们都是通过函数返回了一个 action 对象，但是用了 thunk 中间件之后，我们可以返回一个函数了，在函数中可以执行异步操作
+
+```js
+// actionCreator.js
+export const getTodoList = () => {
+  return (dispatch) => { // 外部派发，内部可以接收到 dispatch
+    // 执行异步操作，成功获取结果后，将结果通过 action 派发出去修改 store
+  }
+}
+```
+
+在外部文件中依然正常创建 action，只不过现在这个 action 是一个函数，在派发的时候会自动执行一次
+
+```js
+componentDidMount() {
+  const action = getTodoList()  // 此时的 action 是一个函数
+  store.dispatch(action)  // dispatch 的同时会执行这个 action 函数
+}
+```
+
+也许你会问，这样不是更麻烦了吗，还得安装包，各种配置，中间还多了一层函数封装，的确更麻烦了，但是随着应用的不断增大，你会发现这种集中处理请求的方式是更容易 **维护管理** 的
+
+其实读到这里，你可能还是对中间件这个概念感到模糊，中间件顾名思义类似于中间人，是夹在中间的角色，负责在两个角色中间处理事务，具体到这里的 thunk 中间件，它位于哪两个角色中间呢，在 redux 的流程中，action 是要被 dispatch 到 store 的，再由 reducer 进行处理，所以它位于 dispatch 和 store 之间，也就是对 dispatch 进行了一个拦截，相当于改造了dispatch 方法，原本的 dispatch 方法只接收 action 对象，但是新的 dispatch 方法可以接收一个函数了，我们可以在函数中执行 **副作用**，比如发起异步请求的副作用，如果你还是原来的 action 对象，那么依然走旧的 dispatch 方法直接传递给 store 即可
+
+##### 11.3 redux-saga
+
+redux-saga 也是一个 redux 中间件，和 redux-thunk 相同的是，它们都是用于处理 redux 的异步请求的中间件，所以 redux-saga 可以替换 redux-thunk，二选一即可
+
+saga 的使用流程也是和 thunk 差不多的，先安装，然后引入，不同的是 saga 需要引入创建方法 `createSagaMiddleware` 去创建 saga，后面就是一样的使用 `applyMiddleware` 应用 saga
+
+saga 和 thunk 不同的是，saga 是把异步请求统一放到一个文件中去管理，而不是放到 action 中去管理，然后调用创建的 saga 的 run 方法去执行这个管理异步请求的文件，此文件中的函数要求必须是 [generator 函数](https://es6.ruanyifeng.com/#docs/generator)，是一种异步编程解决方案，该函数返回一个迭代器对象
+
+新增一个 `saga.js` 用于管理异步请求：
+
+```js
+import { takeEvery, put } from 'redux/saga/effects'
+import { GET_INIT_LIST } from './actionTypes'
+import { initListAction } from './actionCreators'
+import axios from 'axios'
+
+function* getInitList() {
+  try {
+    const res = yield axios.get('/list.json')
+    const action = initListAction(res.data)
+    yield put(action)      
+  } catch(e) {
+    console.log(e)
+  }
+}
+
+function* mySaga() {
+  yield takeEvery(GET_INIT_LIST, getInitList)  // 收到 GET_INIT_LIST 时执行 getInitList
+}
+
+export default mySaga
+```
+
+##### 11.4 react-redux
+
+react-redux 是 react 官方推荐的一个库，简化了 redux 的使用流程
+
+1. 正常定义好 redux 的 store
+
+2. 在最外层组件上引入 react-redux 的 Provider 组件，绑定好 store，这样内部组件就能使用 store了
+
+   ```js
+   import { Provider } from 'react-redux';
+   import store from './store';
+   
+   const App = (
+     <Provider store={store}>
+       <TodoList />
+     </Provider>
+   )
+   
+   const root = document.getElementById('root');
+   ReactDOM.render(
+     <React>
+       <App />
+     </React>,
+     root
+   );
+   ```
+
+3. 内部组件引入 connect，连接
+
+   ```js
+   import { connect } from 'react-redux'
+   
+   class TodoList extends Components { ... }
+   
+   const mapStateToProps = (state) => { // 创建状态映射函数
+     return {
+       inputValue: state.inputValue
+     }
+   }
+   
+   const mapDispatchToProps = (dispatch) => { // 创建派发映射函数
+     return {
+       changeInputValue(e) {
+         const action = {
+           type: 'change_input_value',
+           value: e.target.value
+         }
+         dispatch(action)
+       }
+     }
+   }
+   
+   export default connect(mapStateToProps, mapDispatchToProps)(TodoList)
+   ```
 
 #### 12 组件拆分
 
@@ -1756,6 +1894,8 @@ export default TodoList
 **无状态组件：**其实就是一个函数组件，接收 props，返回UI元素，无需 render 函数
 
 ```js
+import React from 'react'  // 仍然需要引入 react 库
+
 import { 
   Input,
   Button,
