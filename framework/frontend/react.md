@@ -1938,7 +1938,7 @@ export default TodoListUI
 
 #### 13 hooks
 
-react hooks 是 react 在 16.8 版本之后开始新增的 api，旨在解决函数组件没有状态和生命周期的一些问题，是一个可选功能，但截止目前的 react 18 版本，hooks 已成为 react 全面推荐的功能，不再推荐使用类组件
+react hooks 是 react 在 16.8 版本之后开始新增的 api，旨在解决函数组件没有组件实例和状态以及生命周期的一些问题，是一个可选功能，但截止目前的 react 18 版本，hooks 已成为 react 全面推荐的功能，不再推荐使用类组件
 
 类组件存在什么问题呢？主要是以下几点：
 
@@ -1950,9 +1950,39 @@ react hooks 是 react 在 16.8 版本之后开始新增的 api，旨在解决函
 
    又或者在挂载生命周期中绑定了某个事件，在销毁生命周期中解绑这个事件，看上去很正常是吧，但是同样可以理解为相同的业务逻辑被放到了两个地方执行
 
+函数组件更灵活，更易拆分和测试，而且 react 也提倡函数式编程，但是函数组件也存在一个问题，就是太简单，太过简单的结构难以支撑复杂的业务，而 hooks，就是用来解决这个问题的，下面介绍一些常见的 hooks
 
+##### 13.1 useState
 
+我们知道函数组件是一个纯函数，执行完毕就销毁，无法存储 state，如果它能存 state，那就违背了纯函数不能产生副作用的原则，那就不是纯函数了
 
+useState 这个 hook 可以解决这个问题，看到这儿也许你早就想问了，为啥叫 hook 呢？hook 翻译过来就是钩子，hook 的作用其实就是像钩子一样，比如函数组件没有 state，那么 useState 这个 hook 就把 state 给它 **钩** 过来，下面举一个例子
+
+```jsx
+// ClickCounter.jsx
+import { useState } from "react"
+
+export const ClickCounter = () => {
+  const [count, setCount] = useState(0)
+  const [name, setName] = useState('james')
+
+  function clickHandler() {
+    setCount(count + 1)
+    setName(name + 2024)
+  }
+
+  return <div>
+    <p>{name} 点击了 {count} 次</p>
+    <button onClick={clickHandler}>点击</button>
+  </div>
+}
+```
+
+在这个函数组件 ClickCounter 中，通过 useState 这个 hook 函数引入了 count 和 name 这两个 state，useState 返回了一个 state 状态和 一个修改 state 的函数，然后我们通过解构赋值去接收了相应的状态和函数，所以 count 和 setCount 的命名可以自由发挥，但最好见名知意
+
+引入了状态之后在返回的 react 元素里直接就能使用状态，并且可以编写函数利用 useState 钩子 **钩过来的修改状态的函数** 去改变 **钩过来的状态**，可以看到函数组件状态的引入及修改完全是由 hook 去管理的，函数组件并没有 **直接** 去修改状态，函数组件依然还是函数组件
+
+这就是 react hooks 的意义所在：保证函数组件的纯粹的前提下给函数组件增强功能
 
 
 
