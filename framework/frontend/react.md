@@ -1984,13 +1984,233 @@ export const ClickCounter = () => {
 
 这就是 react hooks 的意义所在：保证函数组件的纯粹的前提下给函数组件增强功能
 
+> 所有的 hooks 都以 use 开头，包括自定义的 hooks，这是一种 **命名规范**，因此不是 hooks 的地方尽量不要使用 use 开头去命名，避免造成混淆
 
+当 state 是一个对象时，如果你想更新其中的某个字段，必须显式复制其他字段
 
+```jsx
+const [position, setPosition] = useState({ x: 100, y: 100 })
+setPosition({ x: 200 })  // 错误，不能直接这样更新，因为这样做丢失了 y 属性
+setPosition({ ...position, x: 200 })  // 正确，需要先展开再合并，等同于 Object.assign({}, position, { x: 100 })
+```
 
+##### 13.2 useEffect
 
+我们知道函数组件是纯函数，执行完即销毁，无法实现生命周期，useEffect 可以模拟生命周期，不是真正的生命周期，但是可以模拟生命周期的功能
 
+同样的，生命周期的功能是被 useEffect **钩** 到函数组件中的，看下面的例子：
 
+```jsx
+import { useState, useEffect } from "react"
 
+export const ClickCounter = () => {
+  const [count, setCount] = useState(0)
+  const [name, setName] = useState('james')
+
+  function clickHandler() {
+    setCount(count + 1)
+    setName(name + 2024)
+  }
+
+  useEffect(() => {
+    console.log('send ajax')
+  })
+
+  return <div>
+    <p>{name} 点击了 {count} 次</p>
+    <button onClick={clickHandler}>点击</button>
+  </div>
+}
+```
+
+我们引入了 useEffect 这个 hook，然后给它传递了一个回调函数并在里面打印了一条信息，启动项目，我们会发现在组件渲染成功时打印了一次，每点击一次 button 又会打印一次，这证明 useEffect 默认模拟的是 componentDidMount 和 componentDidUpdate 这两个生命周期函数
+
+但是有时我们只想模拟 componentDidMount 这个生命周期怎么办呢？很简单，传递一个 **空数组** 作为第二个参数即可
+
+```jsx
+useEffect(() => {
+  console.log('send ajax')
+}, [])
+```
+
+再次点击 button，会发现没有打印信息，这说明此时没有再模拟 componentDidUpdate 生命周期了
+
+再有时我们只想模拟 componentDidUpdate 生命周期呢？传递一个 **依赖数组** 作为第二个参数即可，所谓依赖就是 update 触发需要依赖的状态
+
+```jsx
+useEffect(() => {
+  console.log('update')
+}, [count, name])  // count 或 name 更新时，触发 useEffect 的执行
+```
+
+组件挂载时会触发第一次更新，随后每点击一次 button 修改一次状态，触发一次更新
+
+如果想模拟销毁的生命周期怎么办呢？比如下面的代码在组件销毁后，定时器并没有被销毁，还会一直存在
+
+```jsx
+useEffect(() => {
+  const timerId = setInterval(() => {
+    console.log(Date.now())
+  }, 1000)
+}, [])
+```
+
+为了页面性能考虑，我们必须在销毁生命周期中销毁这个定时器，很简单，在传递的参数函数中返回一个函数，这个返回的函数就可以理解为销毁生命周期，在返回的函数中销毁即可
+
+```jsx
+useEffect(() => {
+  const timerId = setInterval(() => {
+    console.log(Date.now())
+  }, 1000)
+  return () => {
+    clearInterval(timerId)
+  }
+}, [])
+```
+
+> 纯函数是不应该有副作用的，也就是函数组件是不应该有副作用的，但是作为一个组件，有时候副作用是不可避免的，这个时候，技术只能向业务妥协了，于是 react 发明了 hooks 来把产生副作用的功能 **钩** 到了纯函数中
+
+这里需要注意的是，useEffect 模拟的销毁生命周期并不完全等同于类组件中的销毁生命周期
+
+如果 useEffect 模拟的是 **update 生命周期**，那么它的回调函数中返回的函数会在下一次 useEffect 执行之前被执行
+
+FriendStatus 组件：
+
+```jsx
+// FriendStatus.jsx
+import { useEffect, useState } from "react"
+
+export const FriendStatus = ({ friendId }) => {
+  const [status, setStatus] = useState(false)
+
+  useEffect(() => {
+    console.log(`开始监听 ${friendId} 的在线状态`)
+    
+    return () => {
+      console.log(`结束监听 ${friendId} 的在线状态`)
+    }
+  })
+
+  return <div>
+    好友 {friendId} 在线状态：{status.toString()}
+  </div>
+}
+```
+
+App 组件：
+
+```jsx
+import React, { useState } from 'react';
+import { FriendStatus } from 'components/FriendStatus';
+
+function App() {
+  const [flag, setFlag] = useState(true)
+  const [friendId, setFriendId] = useState(1)
+
+  return (
+    <div>
+      {flag && <FriendStatus friendId={friendId} />}
+      <button onClick={() => setFriendId(friendId + 1)}>id++</button>
+      <button onClick={() => setFlag(false)}>false</button>
+    </div>
+  );
+}
+
+export default App;
+```
+
+比如在上面的例子中，每点击一次 id++ 按钮更新 id 值，都将触发 useEffect 的更新和销毁生命周期打印内容如下：
+
+```sh
+# 挂载完成：
+开始监听 1 的在线状态
+# 点击按钮：
+结束监听 1 的在线状态
+开始监听 2 的在线状态
+# 再次点击：
+结束监听 2 的在线状态
+开始监听 3 的在线状态
+```
+
+##### 13.3 useRef
+
+useRef 其实就是用来实现类组件中的 `React.createRef()` 的，用来获取 dom 元素，使用上比原来的更简单
+
+```jsx
+import { useEffect, useRef } from "react"
+
+export const RefDemo = () => {
+  const btnRef = useRef(null)
+
+  useEffect(() => {
+    console.log(btnRef.current)  // <button>ref</button>
+  }, [])
+
+  return <div>
+    <button ref={btnRef}>ref</button>
+  </div>
+}
+```
+
+此外还可以用于定义变量，但具体使用场景后面再说
+
+```jsx
+const numRef = useRef(0)
+console.log(numRef.current)
+```
+
+##### 13.4 useContext
+
+useContext 是用于使用 context 的，一般用于设置上下文环境，需要跨组件传值的时候比较有用，比如设置主题色
+
+```jsx
+// 创建 context
+const ThemeContext = React.createContext('light')
+const theme = useContext(ThemeContext)
+console.log(theme)  // light
+```
+
+##### 13.5 useReducer
+
+我们直接来看例子
+
+```jsx
+// ReducerDemo.jsx
+import React, { useReducer } from "react"
+
+const initialState = { count: 0 }
+
+const reducer = (state, action) => {
+  switch(action.type) {
+    case 'increment':
+      return { count: state.count + 1 }
+    case 'decrement':
+      return { count: state.count - 1 }
+    default:
+      return state
+  }
+}
+
+export const ReducerDemo = () => {
+  const [state, dispatch] = useReducer(reducer, initialState)
+
+  return <div>
+    count: {state.count}
+    <button onClick={() => dispatch({ type: 'increment' })}>increment</button>
+    <button onClick={() => dispatch({ type: 'decrement' })}>decrement</button>
+  </div>
+}
+```
+
+在这个例子中，我们创建了一个初始 state 对象和一个 reducer 函数用于处理不同情况下的 state 对象的变化情况，然后将它们传递给 useReducer，接着从 useReducer 中解构出了 state 和 dispatch，这时就可以通过 state 获取我们定义的 count 值了，也能通过 dispatch 去修改 count 的值，是不是觉得这和 redux 很像呢？没错，它就是借鉴的 redux 的流程，但是需要 **注意**，useReducer 不是用来代替 redux 的，它只是借鉴了 redux 的流程，实际上它可看成是 useState 的复杂版本，用于处理 state 的 **更新逻辑比较复杂** 的场景，你还可以将自定义的 reducer 函数抽离到单独的文件中，以方便维护，以上代码如果用 useState 的话，则是：
+
+```jsx
+const [count, setCount] = useState(0)
+```
+
+##### 13.6 useMemo
+
+useMemo 是用于性能优化的，回顾之前讲的 SCU，当父组件渲染时，子组件也会无条件跟着渲染，但是如果这种渲染已经影响页面性能了，那么就需要我们自己使用 SCU 去做性能优化，判断什么时候才应该去渲染组件
 
 
 
