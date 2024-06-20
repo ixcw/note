@@ -2221,5 +2221,32 @@ react 提供了自定义 hooks 的能力，以帮助我们拓展想要的功能�
 1. 只能用于函数组件和自定义 hooks 中
 2. 只能用于顶层代码，不能用于循环和判断中
 
+#### 14 高级技巧
+
+##### 14.1 forwardRef
+
+有时我们需要获取组件中的 **某个元素**，而不是某个元素，此时组件又恰好是函数组件，这时只能通过 forwardRef 传递 ref 去获取组件中的这个元素
+
+子组件：
+
+```jsx
+import { forwardRef } from "react"
+
+export default forwardRef(function Child(props, childRef) {
+  return (
+    <div ref={areaRef}>
+      <div>yes</div>
+      <div>no</div>
+    </div>
+  )
+})
+```
+
+父组件：
+
+```jsx
+<Child ref={el => console.log('this is the element we want: ', el)} />
+```
+
 
 

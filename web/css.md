@@ -1408,6 +1408,23 @@ body {
 设置`max-width: 100%;`，内容即使很大也不会超出最大宽度，最大宽度是由父元素建立的内容区域，如果父元素有水平方向的内边距，内容区域会变小
 设置弹性布局可以对元素设置`width: 50%;`，50%是元素在水平方向上占据容器空间的比例
 
+##### 11.12 尺寸调整
+
+因为某些特殊需要，需要模仿 textarea 的可调节大小，这时可结合 resize 和 overflow 属性设定
+
+```html
+<div class="horizontal"></div>
+```
+
+```css
+.horizontal {
+  resize: both;
+  overflow: hidden;
+}
+```
+
+设定完成后，div 就变得可以用鼠标调节大小了
+
 #### 12 媒体查询
 1. link元素中的CSS媒体查询：
 ```html

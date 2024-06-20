@@ -5376,6 +5376,8 @@ app.get('/async2', (req, res) => {
 
 实现：第一次执行函数时给出一个延时，在延时之内如果重复触发了执行函数，则重新开始延时计算
 
+如何理解：英雄联盟中的英雄 **回城操作**
+
 案例：监听浏览器滚动条位置、页面适配时监听页面大小
 
 ```js
@@ -5408,6 +5410,8 @@ function debounce(fn, delay) {
 **节流：**类似控制阀门一样定期开放执行函数，也就是让函数执行一次后，在某个时间段内暂时失效，过了这段时间后再重新激活，就像技能冷却一样
 
 实现：有多种实现思路，比如利用标志位加定时器，通过标志位判定、直接判断定时器、设置时间戳，通过时间间隔判断
+
+如何理解：英雄联盟中的英雄 **技能冷却**
 
 案例：输入框做实时搜索时，间隔一段时间就搜索一次，而不是每个字输完都搜索，或者输入的间隔时间大于某个值则认为输入完成，进行搜索
 
@@ -5555,6 +5559,39 @@ f();
 标记清除算法通过判断 **对象是否可以获得** 来决定是否回收该对象，该算法假设了一个根对象 `root`，在 js 中，根对象是全局对象 `window` 或 `global`，垃圾回收器 **定期** 从根对象开始寻找从根对象开始的引用对象，再寻找这些引用对象的引用对象，直至找到所有的引用对象和不可获得的对象，回收不可获得的对象，这个算法更好，因为零引用的对象总是不可获得的，但是相反却不一定
 
 从 2012 年起，所有现代浏览器都使用了标记清除垃圾回收算法，在引用计数的示例中，函数调用返回之后，两个对象从全局对象出发无法获取，因此，他们将会被垃圾回收器回收
+
+#### 22 实用API
+
+##### 22.1 ResizeObserver
+
+以在 react 中使用为例，用于检测元素的尺寸大小变化，作出相应操作
+
+```js
+this.resizeObserver = new ResizeObserver((entries, observer) => {
+    // entries：传入的网页元素数组
+    const questionId = entries[0].target.getAttribute('questionid')
+    const height = entries[0].target.offsetHeight
+    // 由于是实时监测，需做防抖处理
+    clearTimeout(this.resizeObserverTimer)
+    this.resizeObserverTimer = setTimeout(() => {
+      if (questionId && height) {
+        // 保存元素高度到服务器
+        this.saveSingleDataAreaParams(questionId, height)
+      }
+    }, 500)
+})
+```
+
+离开页面时，应当给予销毁，包括定时器
+
+```js
+componentWillUnmount() {
+  // 调用 disconnect 方法即可销毁
+  if (this.resizeObserver) this.resizeObserver.disconnect()
+  // 销毁定时器
+  clearTimeout(this.resizeObserverTimer)
+}
+```
 
 
 
