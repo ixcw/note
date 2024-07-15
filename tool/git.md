@@ -447,6 +447,17 @@ git stash pop stash@`{1`}  # 在vscode中{}需要转义
 git checkout origin/master  /xxx/xxx/xxxx.file
 ```
 
+##### 4.16 比较分支差异
+
+如果想知道当前分支和别的某一个分支的差异，可使用如下命令
+
+```bash
+git diff branch1 branch2 --stat  # 显示大致差异
+git diff branch1 branch2  # 显示详细差异
+git diff branch1 branch2 文件路径  # 显示具体某一文件的详细差异
+```
+
+
 #### 5 开源协议
 
 软件一旦开源，意味着任何人都可以来查看和修改源码，但是开源并不意味着完全没有限制，为了限制使用者对软件源码的使用范围和保护软件作者权益，每个开源项目都会选择一个开源协议（Open Source License）
