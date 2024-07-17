@@ -1427,50 +1427,65 @@ body {
 
 #### 12 媒体查询
 1. link元素中的CSS媒体查询：
-```html
-<link rel="stylesheet" media="(max-width: 800px)" href="example.css" />
-```
->媒体查询的结果为true或false，即使为false，link中的样式表也会被下载，但不会应用
 
-2. 样式表中的CSS媒体查询：
+   媒体查询的结果为 true 或 false
 
-   常用参数有all、print、screen，分别是所有设备、打印机、电子屏幕，常用screen
-```css
-@media screen and (max-width: 600px) {
-  .facet_sidebar {
-    display: none;
-  }
-}
-```
-可以使用逻辑操作符`and`、`,`、`not`、`only`构建复杂查询：
-`and`：将多个媒体属性组合成一条媒体查询，每个媒体属性都为真时，媒体查询才为真
+   ```html
+   <link rel="stylesheet" media="(max-width: 800px)" href="example.css" />
+   ```
 
-```css
-/*仅在电视媒体并在可视区域宽度不小于700像素且在横屏时上时应用*/
-@media tv and (min-width: 700px) and (orientation: landscape) { ... }
-```
-`,`：用多个逗号连接起来的媒体属性，只要有一个为真，媒体查询为真，相当于`or`
+   >即使结果为false，link中的样式表也会被下载，但不会应用
 
-```css
-/*在最小宽度为700像素或是横屏的手持设备上应用*/
-@media (min-width: 700px), handheld and (orientation: landscape) { ... }
-```
-`not`：对媒体查询的结果取反，作用于整个媒体查询，必须指定一个媒体类型
+2. 样式表中的 CSS 媒体查询：
 
-```css
-@media not all and (monochrome) { ... }
-```
-等价于
-```css
-@media not (all and (monochrome)) { ... }
-```
-`only`：防止老旧的浏览器不支持带媒体属性的查询而应用到给定的样式
-
-```css
-@media only screen and (color) { ... }
-```
->媒体查询的大小写不敏感，包含未知媒体类型的查询返回假，表达式需要使用圆括号
-[MDN文档 - 媒体查询](https://developer.mozilla.org/zh-CN/docs/Web/Guide/CSS/Media_queries)
+   常用参数有 all、print、screen，常用 screen
+   
+   - all：所有设备
+   
+   - print：打印机
+   
+   - screen：电子屏幕
+   
+   ```css
+   /* 查询屏幕同时可视区宽度 小于600px 的时候应用规则 */
+   @media screen and (max-width: 600px) {
+     .facet_sidebar {
+       display: none;
+     }
+   }
+   ```
+   
+   可以使用逻辑操作符`and`、`not`、`only`、`,`构建复杂查询：
+   
+   `and`：将多个媒体属性组合成一条媒体查询，每个媒体属性都为真时，媒体查询才为真
+   
+   ```css
+   /* 仅在电视媒体并在可视区域宽度 大于700px 且在横屏上的时候应用规则 */
+   @media tv and (min-width: 700px) and (orientation: landscape) { ... }
+   ```
+   
+   `not`：对媒体查询的结果取反，作用于整个媒体查询，必须指定一个媒体类型
+   
+   ```css
+   @media not all and (monochrome) { ... }
+   /* 等价于 */
+   @media not (all and (monochrome)) { ... }
+   ```
+   
+   `only`：防止老旧的浏览器不支持带媒体属性的查询而应用到给定的样式
+   
+   ```css
+   @media only screen and (color) { ... }
+   ```
+   
+   `,`：用多个逗号连接起来的媒体属性，只要有一个为真，媒体查询就为真，相当于 `or`
+   
+   ```css
+   /* 在最小宽度为700像素或是横屏的手持设备上应用 */
+   @media (min-width: 700px), handheld and (orientation: landscape) { ... }
+   ```
+   
+   >媒体查询的大小写是不敏感的，包含未知媒体类型的查询返回假，表达式需要使用圆括号包括，更多详情请查看[MDN文档 - 媒体查询](https://developer.mozilla.org/zh-CN/docs/Web/Guide/CSS/Media_queries)
 
 #### 13 css3新特性
 ##### 13.1 圆角边框
