@@ -1427,50 +1427,65 @@ body {
 
 #### 12 媒体查询
 1. link元素中的CSS媒体查询：
-```html
-<link rel="stylesheet" media="(max-width: 800px)" href="example.css" />
-```
->媒体查询的结果为true或false，即使为false，link中的样式表也会被下载，但不会应用
 
-2. 样式表中的CSS媒体查询：
+   媒体查询的结果为 true 或 false
 
-   常用参数有all、print、screen，分别是所有设备、打印机、电子屏幕，常用screen
-```css
-@media screen and (max-width: 600px) {
-  .facet_sidebar {
-    display: none;
-  }
-}
-```
-可以使用逻辑操作符`and`、`,`、`not`、`only`构建复杂查询：
-`and`：将多个媒体属性组合成一条媒体查询，每个媒体属性都为真时，媒体查询才为真
+   ```html
+   <link rel="stylesheet" media="(max-width: 800px)" href="example.css" />
+   ```
 
-```css
-/*仅在电视媒体并在可视区域宽度不小于700像素且在横屏时上时应用*/
-@media tv and (min-width: 700px) and (orientation: landscape) { ... }
-```
-`,`：用多个逗号连接起来的媒体属性，只要有一个为真，媒体查询为真，相当于`or`
+   >即使结果为false，link中的样式表也会被下载，但不会应用
 
-```css
-/*在最小宽度为700像素或是横屏的手持设备上应用*/
-@media (min-width: 700px), handheld and (orientation: landscape) { ... }
-```
-`not`：对媒体查询的结果取反，作用于整个媒体查询，必须指定一个媒体类型
+2. 样式表中的 CSS 媒体查询：
 
-```css
-@media not all and (monochrome) { ... }
-```
-等价于
-```css
-@media not (all and (monochrome)) { ... }
-```
-`only`：防止老旧的浏览器不支持带媒体属性的查询而应用到给定的样式
-
-```css
-@media only screen and (color) { ... }
-```
->媒体查询的大小写不敏感，包含未知媒体类型的查询返回假，表达式需要使用圆括号
-[MDN文档 - 媒体查询](https://developer.mozilla.org/zh-CN/docs/Web/Guide/CSS/Media_queries)
+   常用参数有 all、print、screen，常用 screen
+   
+   - all：所有设备
+   
+   - print：打印机
+   
+   - screen：电子屏幕
+   
+   ```css
+   /* 查询屏幕同时可视区宽度 小于600px 的时候应用规则 */
+   @media screen and (max-width: 600px) {
+     .facet_sidebar {
+       display: none;
+     }
+   }
+   ```
+   
+   可以使用逻辑操作符`and`、`not`、`only`、`,`构建复杂查询：
+   
+   `and`：将多个媒体属性组合成一条媒体查询，每个媒体属性都为真时，媒体查询才为真
+   
+   ```css
+   /* 仅在电视媒体并在可视区域宽度 大于700px 且在横屏上的时候应用规则 */
+   @media tv and (min-width: 700px) and (orientation: landscape) { ... }
+   ```
+   
+   `not`：对媒体查询的结果取反，作用于整个媒体查询，必须指定一个媒体类型
+   
+   ```css
+   @media not all and (monochrome) { ... }
+   /* 等价于 */
+   @media not (all and (monochrome)) { ... }
+   ```
+   
+   `only`：防止老旧的浏览器不支持带媒体属性的查询而应用到给定的样式
+   
+   ```css
+   @media only screen and (color) { ... }
+   ```
+   
+   `,`：用多个逗号连接起来的媒体属性，只要有一个为真，媒体查询就为真，相当于 `or`
+   
+   ```css
+   /* 在最小宽度为700像素或是横屏的手持设备上应用 */
+   @media (min-width: 700px), handheld and (orientation: landscape) { ... }
+   ```
+   
+   >媒体查询的大小写是不敏感的，包含未知媒体类型的查询返回假，表达式需要使用圆括号包括，更多详情请查看[MDN文档 - 媒体查询](https://developer.mozilla.org/zh-CN/docs/Web/Guide/CSS/Media_queries)
 
 #### 13 css3新特性
 ##### 13.1 圆角边框
@@ -2182,65 +2197,71 @@ div {
 
 ##### 15.4 flex弹性布局
 
-弹性布局不需要清除浮动，且布局更简单，但是兼容性较差，任何元素都可以指定为flex布局
+通过给父元素指定flex属性，控制子元素的位置和排列方式，任何元素都可以指定为flex布局
 
-通过给父元素指定flex属性，控制子盒子的位置和排列方式
+> 1. 兼容性较差
+> 2. 弹性布局不需要清除浮动，且布局更简单
+> 3. 父元素设定为flex盒子之后，子元素的 float、clear、vertical-align 属性将失效，因为 flex 可以更好地完成这些效果，理应淘汰掉这些属性
 
-父元素设定为flex盒子之后，子盒子的float、clear、vertical-align属性将失效，因为flex可以更好地完成这些效果，理应淘汰掉这些属性
+父元素叫做 flex 容器，子元素叫做 flex 项目
 
-父元素叫做flex容器，子元素叫做flex项目
+###### 15.4.1 父元素常用属性
 
-- 父元素常用属性
-
-  | flex-direction  | 设置主轴方向，主轴方向默认是x轴                          |
+  | 属性名称        | 作用                                                     |
   | --------------- | -------------------------------------------------------- |
+  | flex-direction  | 设置主轴方向，主轴方向默认是x轴水平方向                  |
   | flex-wrap       | 设置子元素是否换行                                       |
-  | justify-content | 设置主轴方向的子元素排列方式，默认是x轴，水平方向        |
+  | justify-content | 设置主轴方向的子元素排列方式                             |
   | align-items     | 设置侧轴方向的子元素排列方式                             |
   | align-content   | 设置侧轴方向的子元素排列方式（只能在有换行的情况下生效） |
-  | flex-flow       | 复合属性，相当于同时设置flex-direction和flex-wrap        |
+  | flex-flow       | 复合属性，相当于同时设置 flex-direction 和 flex-wrap     |
 
   1. flex-direction
 
-     | row            | 默认值，主轴水平排列                               |
-     | -------------- | -------------------------------------------------- |
-     | row-reverse    | 水平排列，方向反转，从尾部开始排列，子元素顺序反转 |
-     | column         | 主轴垂直排列，从上到下                             |
-     | column-reverse | 垂直排列，方向反转                                 |
+     | 属性值         | 作用                               |
+     | -------------- | ---------------------------------- |
+     | row            | 默认值，主轴为 x 轴水平方向        |
+     | row-reverse    | 子元素顺序方向反转，从尾部开始排列 |
+     | column         | 主轴改为 y 轴垂直方向              |
+     | column-reverse | 子元素顺序方向反转，从底部开始排列 |
 
   2. flex-wrap
 
-     | nowrap | 默认值，不换行，超出会把子元素的大小变小从而使得子元素不超出一行显示 |
+     | 属性值 | 作用                                                         |
      | ------ | ------------------------------------------------------------ |
-     | wrap   | 换行，超出会换行显示                                         |
+     | nowrap | 默认值，子元素不换行，若一行显示不下，则会把子元素的大小变小从而使得子元素不超出一行显示 |
+     | wrap   | 子元素换行，若一行显示不下，则会换行显示                             |
 
   3. justify-content
 
-     | flex-start    | 默认值，从头部开始排列，x轴的头部就是左边      |
-     | ------------- | ---------------------------------------------- |
-     | flex-end      | 从尾部开始排列                                 |
-     | center        | 子元素在主轴上居中对齐                         |
-     | space-around  | 平分剩余空间                                   |
-     | space-between | 先两边贴边，剩下的子元素平分剩余空间，用得挺多 |
+     | 属性值        | 作用                                                         |
+     | ------------- | ------------------------------------------------------------ |
+     | flex-start    | 默认值，从头部开始排列（x轴的头部就是左边，y轴的头部就是顶部） |
+     | flex-end      | 子元素从尾部开始排列                                         |
+     | center        | 子元素在主轴上居中对齐                                       |
+     | space-around  | 子元素平分剩余空间                                           |
+     | space-between | 最边上的两个子元素先贴边，剩下的子元素平分剩余空间，用得挺多 |
 
   4. align-items
 
-     | flex-start | 从头部开始排列                   |
+     | 属性值     | 作用                             |
      | ---------- | -------------------------------- |
-     | flex-end   | 从尾部开始排列                   |
-     | center     | 侧轴居中对齐                     |
+     | flex-start | 默认值，从头部开始排列           |
+     | flex-end   | 子元素从尾部开始排列             |
+     | center     | 子元素在侧轴上居中对齐           |
      | stretch    | 子盒子不给高度，拉伸子盒子的高度 |
 
-- 子元素常用属性
+###### 15.4.2 子元素常用属性
 
-  | flex       | 子盒子占父盒子剩余空间的份数，默认是0 |
-  | ---------- | ------------------------------------- |
-  | align-self | 控制子盒子自己在侧轴的排列方式        |
-  | order      | 控制子盒子自己的排列顺序              |
+| 属性名称   | 作用                                  |
+| ---------- | ------------------------------------- |
+| flex       | 表示子元素占父元素 **剩余空间的份数** |
+| align-self | 控制子元素自己在侧轴的排列方式        |
+| order      | 控制子元素自己的排列顺序              |
 
   1. flex
 
-     flex表示占父盒子**剩余空间**的份数，假设有三个子盒子两个有固定的宽度，中间的子盒子没有固定宽度，只需要给父盒子设置flex属性，然后中间的子盒子设置flex为1，那么中间的子盒子就会把除去两个固定宽度子盒子之后的剩余空间占完
+     表示占父元素的 **剩余空间的份数**，假设有三个子元素，两边的两个子元素有固定的宽度，中间的子元素没有固定宽度，给其设置 flex 值为 1，那么中间的子元素就会把除去两个固定宽度的子元素之后的剩余空间占完
 
   2. align-self
 
@@ -2248,9 +2269,8 @@ div {
 
   3. order
 
-     默认0，越小越靠前
-     
-##### 15.5 grid布局
+     默认值为 0，以数字方式设置，越小越靠前
+##### 15.5 grid网格布局
 grid网格布局，将网页划分为网格，然后任意组合网格实现布局，可以参考 [CSS Grid 网格布局教程(阮一峰)](https://www.ruanyifeng.com/blog/2019/03/grid-layout-tutorial.html)
 
 网格布局常用属性：容器、项目、行、列、单元格、网格线，具体解释如下：

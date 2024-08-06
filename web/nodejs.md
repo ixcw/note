@@ -394,7 +394,7 @@ const third = require('third') // 三方模块引用前需要下载（肯定的�
 
 当我们通过 require 方法导入模块时其实得到的返回值就是 module 对象的 **exports 属性对象**
 
-在默认情况下 exports 属性对象是一个空对象：
+在默认情况下 exports 属性对象是一个 **空对象**：
 
 ```js
 const m = require('./module')
@@ -411,9 +411,7 @@ console.log(m) // {}
 const age = 20
 module.exports.age = age
 module.exports.username = '张三'
-module.exports.sayHello = function () {
-  console.log('hello')
-}
+module.exports.sayHello = function () { console.log('hello') }
 ```
 
 在另一个模块中引入module模块，这时再打印导入的exports对象，就可以发现其有属性值了
@@ -423,15 +421,13 @@ const m = require('./module')
 console.log(m) // { username: '张三', sayHello: [Function (anonymous)], age: 20 }
 ```
 
-由于`module.exports`写起来比较麻烦，忽略`module`只写`exports`也是可以的，下面的写法也是ok的
+由于 `module.exports` 写起来比较麻烦，可以忽略 `module` 只写 `exports` 也是可以的，下面的写法也是 ok 的
 
 ```js
 const age = 20
 exports.age = age
 exports.username = '张三'
-exports.sayHello = function () {
-  console.log('hello')
-}
+exports.sayHello = function () { console.log('hello') }
 ```
 
 验证这种写法是否正确

@@ -268,7 +268,7 @@ class Welcome extends React.Component {
 
 > 什么时候有必要写成组件呢？就是当某部分的UI被用到了好几次，或者其本身足够复杂，那么写成组件是个不错的选择
 
-组件的 props 是 **不可变** 的，像下面的函数被称为 **纯净函数**，特点是没有修改传入的参数，相同的输入总有相同的输出
+组件的 props 是 **不可变** 的，像下面的函数被称为 **纯函数**，特点是没有修改传入的参数，相同的输入总有相同的输出
 
 ```jsx
 function sum(a, b) {
@@ -276,7 +276,7 @@ function sum(a, b) {
 }
 ```
 
-react 的组件遵循纯净函数原则，绝对不要修改传入的 props，但是UI总是变动的，我们可以使用修改内部的状态 state 的方式去修改组件的输出
+react 的组件遵循纯函数原则，绝对不要修改传入的 props，但是UI总是变动的，我们可以使用修改内部的状态 state 的方式去修改组件的输出
 
 ##### 4.4 状态
 
@@ -299,7 +299,7 @@ class Clock extends React.Component {
 }
 ```
 
-render 函数在每次组件有更新时都会调用一次，但只要我们每次都把 Clock 组件 渲染进同一个 dom 节点，那么就始终只有一个 Clock 实例会被创建
+render 函数在每次组件有更新时都会调用一次，但只要我们每次都把 Clock 组件渲染进同一个 dom 节点，那么就始终只有一个 Clock 实例会被创建
 
 现在将 Clock 组件从 props 改造成 state 的形式
 
@@ -1410,7 +1410,7 @@ export default (state = defaultState, action) => {
 constructor(props) {
   super(props)
   this.state = store.getState()
-  store.subscribe(this.storeChangeHandler)  // 甚至订阅函数
+  store.subscribe(this.storeChangeHandler)  // 设置订阅函数
 }
 
 storeChangeHandler = () => {
