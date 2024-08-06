@@ -2152,12 +2152,44 @@ export const RefDemo = () => {
 }
 ```
 
-此外还可以用于定义变量，但具体使用场景后面再说
+此外还可以用于定义变量
 
 ```jsx
 const numRef = useRef(0)
 console.log(numRef.current)
 ```
+
+比如函数组件中需要定义一个 id 变量去接收定时器，然后在卸载组件时清除这个定时器，这个时候用 useRef 定义变量就很合适
+
+```jsx
+import React, { useEffect, useRef } from 'react'
+
+const TimerComponent = () => {
+  const timerIdRef = useRef(null)
+
+  useEffect(() => {
+    // 设置定时器
+    timerIdRef.current = setInterval(() => {
+      console.log('定时器运行中')
+    }, 1000)
+
+    // 在组件卸载时清除定时器
+    return () => {
+      clearInterval(timerIdRef.current)
+    }
+  }, [])
+
+  return <div>定时器组件</div>
+}
+
+export default TimerComponent
+```
+
+为什么使用 useRef 而不是 useState 的原因如下：
+
+1. **避免不必要的重新渲染**：`useState` 的更新会触发组件的重新渲染，而 `useRef` 的更新不会。定时器 ID 并不需要参与渲染过程，它只是一个内部的引用，因此使用 `useRef` 更合适。避免不必要的重新渲染可以提高性能
+2. **保持对最新值的引用**：`useRef` 可以存储一个可变的值，该值在组件的整个生命周期内保持一致，`useRef` 更像是一个实例变量，用于持久化跨渲染周期的数据
+3. **语义更清晰**：`useRef` 通常用于引用 DOM 元素或持有不需要引起重新渲染的变量
 
 ##### 13.4 useContext
 
