@@ -2342,6 +2342,15 @@ display: grid;
 grid-template-columns: 150px auto 100px; // 第二列宽度自适应
 ```
 
+如果想实现垂直布局，同时调整项目的内容为居中显示，可使用 `justify-items`，为什么不用 `justify-content` 呢，因为 content 只是将容器的整体内容进行了居中，不能保证项目内的内容也居中，所以得单独调整 item 的内容居中，因此使用了 `justify-items`
+
+```css
+display: grid;
+grid-template-rows: auto auto;
+justify-items: center;
+/* justify-content: center; */
+```
+
 可以给网格线设定名称，方便后续引用，下面的网格布局表示3行3列，4根行网格线名称分别是r1、r2、r3、r4，列同理
 
 ```css
