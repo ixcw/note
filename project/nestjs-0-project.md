@@ -88,21 +88,141 @@ cd nest-demo
 pnpm run start
 ```
 
+开启成功后用浏览器访问 `http://localhost:3000/` ，就会得到返回的文本 "Hello World!"
 
+cli 脚手架可以通过命令查看帮助，直接通过命令生成 class、controller 等代码文件，非常方便
 
+```sh
+nest --help
+```
 
+#### 4 RESTful api
 
+说到这个肯定是不陌生的，RESTful 并不是一个单词，而是 representation state transfer 的缩写，翻译过来是表现状态转移，乍一听这什么玩意儿，其实仔细一想，这是一种接口风格，是前后端遵守的一种风格、规范。为什么需要遵守规范呢，想一想就像不同的计算机之间想要通信，就需要通过网络进行连接，而连接网络需要遵守同一个规范（比如HTTP协议），才能进行通信，因此，前后端如果想要通信，必然需要遵守同一种规范，Restful api 就是这样的一种规范
 
+representation 代表了一种表现形式，不管是前端的数据还是后端的数据，都需要一种表现形式，而 transfer 表示从后端状态的表示转移到前端状态的表示，所以简单来说，这就是一种需要前后端都需要遵守的接口风格，以更方便的进行前后端的通信
 
+常见请求方法有 POST、GET、PUT、DELETE，更多相关知识可以查看相关文档
 
+#### 5 工程目录及命名约定
 
+不知道各位有没有听过一句话，叫做 “约定大于配置”，如何理解呢，约定是大家都一致同意的规范，如果大家都遵守同一个约定，那么办起事来必然是事半功倍的，因为少了很多的沟通成本和调错成本，python 语言就是这样的一种编程语言，里面有许多默认的约定，大家都遵守一种约定（比如 python 的代码缩进约定），使得 python 的代码看起来简洁而优雅，试想如果没有约定，仅靠配置去约束，那代码风格必然千奇百怪，不同的配置，也将花费更多的心力去维护，nest 就是约定大于配置的后端框架，如果大家对工程目录以及文件命名等进行一致的约定，即使是不同的 nest 项目维护起来，必然也是更加轻松的
 
+下面来看 nest 项目的常见约定
 
+**工程目录：**
 
+根据 nest 原作者说法，工程目录应该形如下面约定：
 
+```sh
+- src
+  - core
+  - common
+    - middleware
+    - interceptors
+    - guards
+  - user
+    - interceptors(scoped interceptors)
+    - user.controller.ts
+    - user.model.ts
+  - store
+    - store.controller.ts
+    - store.model.ts
+```
 
+上面的工程目录可能是一个商店的应用
 
+- core 目录一般存放核心代码，比如鉴权
+- common 目录用于存放公共代码，比如中间件、拦截器、守卫等
+- 没有模块目录，按照功能划分目录，比如用户、商店目录
+- 一个仓库创建多个子项目，子项目之间共享一些库/包
 
+**代码风格：**
+
+类似于 angular 的代码风格，总则：
+
+- 坚持一个文件只定义一个东西（比如服务或组件，不要混合起来），考虑将文件大小限制在400行以内
+- 坚持定义简单函数，考虑限制在75行之内
+
+更多详情请参考 angular 官方的 [风格指南](https://angular.cn/style-guide)
+
+#### 6 创建控制器
+
+首先打开项目里的 `app.controller.ts` 文件，可以照着注解写一个路由，如下：
+
+```ts
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+
+@Controller('api')
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+
+  @Get('app')
+  getApp(): object {
+    return {
+      code: 0,
+      data: 'Hello nestjs',
+      msg: '请求成功'
+    }
+  }
+}
+```
+
+这时访问 `http://localhost:3000/api/app` 将会得到 json 格式的返回，并且响应头的内容类型自动变为 json 类型，即
+
+```js
+Content-Type: application/json; charset=utf-8
+```
+
+是不是非常智能，这只是一个简单的测试，像这种业务代码我们并不会直接写在 app 文件中，我们将 app 的 controller 和 service 都删掉，创建自己的控制器，此时还剩下 `app.module.ts` 文件，内容如下：
+
+```ts
+import { Module } from '@nestjs/common';
+
+@Module({
+  imports: [],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {}
+```
+
+我们新建一个终端，使用 cli 工具新建一个 user 模块
+
+```shell
+nest g module user
+```
+
+> 这里遇见了一个bug，输入命令后没有报错，但也没有反应，查询 github 的 issue 发现可能是版本问题，于是重新全局安装了最新版 10.4.5，问题解决
+
+会发现 src 目录下新建了一个 user 目录，目录下有新建的 `user.module.ts` 文件：
+
+```ts
+import { Module } from '@nestjs/common';
+
+@Module({})
+export class UserModule {}
+```
+
+而 `app.module.ts` 文件自动更新了代码，引用了 user 模块：
+
+```ts
+import { Module } from '@nestjs/common';
+import { UserModule } from './user/user.module';
+
+@Module({
+  imports: [UserModule],
+  controllers: [],
+  providers: [],
+})
+export class AppModule {}
+```
 
 
 
