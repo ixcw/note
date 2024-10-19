@@ -4993,18 +4993,17 @@ const stu = { name, age }
 console.log(stu)  // { name: 'jack', age: 18 }
 ```
 
-如果对象属性的名称想使用变量的值的话，可以加`[]`
+如果动态计算属性名称，比如使用变量值计算的话，可以加`[]`
 
 ```js
 const name = 'jack'
 const age = 18
 const sch = 'school'
 const fruit = 'cherry'
-const stu = { name, age, [sch]: fruit }
-console.log(stu)  // { name: 'jack', age: 18, school: 'cherry' }
+const eat = `${name}${fruit}`
+const stu = { name, age, [sch]: fruit, [eat]: name }
+console.log(stu)  // { name: 'jack', age: 18, school: 'cherry', jackcherry: 'jack' }
 ```
-
-
 
 ##### 18.9 Set
 
