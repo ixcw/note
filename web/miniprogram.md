@@ -204,6 +204,22 @@ radioTap(e) {
 }
 ```
 
+##### 6.2 setData
+
+更新值必须使用 `setData`，否则会丢失响应式
+
+```js
+this.setData({ name: 'james' })
+```
+
+如果数据是个对象，只想更新对象的某个属性，需要加引号
+
+> 传入 `setData` 的是一个配置对象，而对象的属性是不能有 `.` 的，因此需要加引号
+
+```js
+this.setData({ 'student.name': 'james' })
+```
+
 
 #### 7 条件与循环
 
@@ -279,6 +295,10 @@ block 并不是一个组件，它仅仅是一个包装元素，**不会在页面
 `onTabItemTap`：Page事件，在tabbar点击时触发，需要当前页面是tabbar页面才能触发
 
 `wx.vibrateShort`：手机振动
+
+`bindtap="event"`：绑定事件
+
+`catchtap="event"`：绑定事件（阻止冒泡）
 
 #### 9 自定义组件
 
