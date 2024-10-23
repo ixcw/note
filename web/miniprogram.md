@@ -397,6 +397,22 @@ properties: {
 <my-comp />
 ```
 
+通过 `wx.navigateTo()` 传递对象需要借助 JSON 序列化
+
+```js
+wx.navigateTo({
+  url: `/pages/detail/detail?userInfo=${encodeURIComponent(JSON.stringify(userInfo))}`
+})
+```
+
+接收时需要解码
+
+```js
+onLoad(options) {
+  const userInfo = JSON.parse(decodeURIComponent(options.userInfo))
+}
+```
+
 ###### 9.2.2 传递样式
 
 如果想传递样式给组件，可以利用`externalClasses`属性，该属性为数组，在自定义组件中定义好该属性
