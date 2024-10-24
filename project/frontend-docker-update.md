@@ -44,18 +44,14 @@ Tengxunyun0708
 
 5. 返回 docker 环境，进入到复制的文件夹内，将解压的文件复制到 nginx 目录，然后删除复制过来的文件夹
 
+   解压过来的文件中有一个文件是脚本文件，需要进行正则处理然后赋予执行权限
+
    ```sh
    # docker环境下执行
    cd dist
    cp -r * /usr/share/nginx/html/
    cd ..
    rm -rf /usr/share/nginx/html/dist/
-   ```
-
-6. 解压过来的文件中有一个文件是脚本文件，需要进行正则处理然后赋予执行权限
-
-   ```sh
-   # docker环境下执行
    sed -i 's/\r$//' /usr/share/nginx/html/env.sh
    chmod +x /usr/share/nginx/html/env.sh
    ```
