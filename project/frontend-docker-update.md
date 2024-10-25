@@ -16,20 +16,39 @@ Tengxunyun0708
 
 1. 首先登录至服务器，进入上传目录，清除旧文件，上传新文件，然后解压
 
+   web：
+
    ```sh
    ls
    cd mogu_web
    rm -rf /root/mogu_web/*
    unzip dist.zip
    ```
+   admin：
+
+   ```sh
+   ls
+   cd mogu_admin
+   rm -rf /root/mogu_admin/*
+   unzip dist.zip
+   ```
 
 2. 新开一个终端，用于进入 docker 环境，因为进入环境后不能退出，所以需要新开一个终端用于操作
+
+   web：
 
    ```sh
    docker exec -it vue_mogu_web /bin/bash
    ```
-
+   admin：
+   
+   ```sh
+   docker exec -it vue_mogu_admin /bin/bash
+   ```
+   
 3. 将 docker 环境中的旧文件清除
+
+   web & admin：
 
    ```sh
    # docker环境下执行
@@ -38,13 +57,23 @@ Tengxunyun0708
 
 4. 将第 1 步解压得到的文件复制到 docker 环境中
 
+   web：
+
    ```sh
    docker cp /root/mogu_web/dist/ vue_mogu_web:/usr/share/nginx/html/
+   ```
+
+   admin：
+
+   ```sh
+   docker cp /root/mogu_admin/dist/ vue_mogu_admin:/usr/share/nginx/html/
    ```
 
 5. 返回 docker 环境，进入到复制的文件夹内，将解压的文件复制到 nginx 目录，然后删除复制过来的文件夹
 
    解压过来的文件中有一个文件是脚本文件，需要进行正则处理然后赋予执行权限
+
+   web & admin：
 
    ```sh
    # docker环境下执行
@@ -58,7 +87,17 @@ Tengxunyun0708
 
 7. 在外部环境中重启 docker，完成
 
+   web：
+   
    ```sh
    docker restart vue_mogu_web
    ```
+   
+   admin：
+   
+   ```sh
+   docker restart vue_mogu_admin
+   ```
+   
+   
 

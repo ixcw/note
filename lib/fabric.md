@@ -300,6 +300,15 @@ path.set({
 
 可以创建一个分组，有点类似于 PS 里面的分组，把多个图层分为同一个组，从而实现同步操作，比如同时进行平移、旋转、缩放等操作
 
+```js
+// 数组元素顺序影响图层覆盖，比如这里是 text 覆盖在 ellipse 上面
+const group = new fabric.Group([ellipse, text], {
+  top: 50,
+  left: 100,
+  angle: -10
+})
+```
+
 #### x 使用图片
 
 略
