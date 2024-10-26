@@ -298,6 +298,8 @@ path.set({
 
 #### 7 分组
 
+##### 7.1 创建分组
+
 可以创建一个分组，有点类似于 PS 里面的分组，把多个图层分为同一个组，从而实现同步操作，比如同时进行平移、旋转、缩放等操作
 
 ```js
@@ -306,6 +308,31 @@ const group = new fabric.Group([ellipse, text], {
   top: 50,
   left: 100,
   angle: -10
+})
+```
+
+##### 7.2 操作分组
+
+分组创建好后，可对其进行操作，常见操作如下
+
+```js
+getObjects() // 返回一组中所有对象的数组
+size() // 所有对象的数量
+contains()  // 检查特定对象是否在 group 中
+item()  // 选中组中的元素，参数为数组索引
+forEachObject()  // 遍历组中对象
+add()  // 添加元素对象
+remove()  // 删除元素对象
+fabric.util.object.clone()  // 克隆
+```
+
+比如 `item()`，用法如下
+
+```js
+group.item(0).set('fill', 'green')  // 将组中第一个元素 ellipse 填充为绿色
+group.item(1).set({  // 将组中第二个元素 text 的文本内容改为 '雷猴，世界'，颜色改为白色
+  text: '雷猴，世界',
+  fill: '#fff'
 })
 ```
 
