@@ -146,7 +146,7 @@ representation 代表了一种表现形式，不管是前端的数据还是后�
 
 更多详情请参考 angular 官方的 [风格指南](https://angular.cn/style-guide)
 
-#### 6 创建控制器
+#### 6 创建模块
 
 首先打开项目里的 `app.controller.ts` 文件，可以照着注解写一个路由，如下：
 
@@ -180,7 +180,13 @@ export class AppController {
 Content-Type: application/json; charset=utf-8
 ```
 
-是不是非常智能，这只是一个简单的测试，像这种业务代码我们并不会直接写在 app 文件中，我们将 app 的 controller 和 service 都删掉，创建自己的控制器，此时还剩下 `app.module.ts` 文件，内容如下：
+是不是非常智能
+
+##### 6.1 创建 module
+
+前面只是一个简单的测试，像这种业务代码我们一般并不会直接写在 app 文件中，而是会创建不同的模块
+
+我们将 app 的 controller 和 service 都删掉，创建自己的控制器，此时还剩下 `app.module.ts` 文件，内容如下：
 
 ```ts
 import { Module } from '@nestjs/common';
@@ -224,7 +230,97 @@ import { UserModule } from './user/user.module';
 export class AppModule {}
 ```
 
+##### 6.2 创建 controller
 
+接着创建名为 user 的控制器，使用如下命令
+
+```sh
+# --no-spec: 只创建 controller，不创建测试相关的文件
+# -d: 预示操作结果，不写入本地磁盘
+nest g controller user --no-spec -d
+```
+
+查看预期结果后，没有问题就使用如下命令创建 user controller
+
+```sh
+nest g controller user --no-spec
+```
+
+这将会在 `src/user` 目录下创建 `user.controller.ts` 文件，同时更新同目录下的 `user.module.ts` 文件
+
+```ts
+// user.controller.ts
+
+import { Controller } from '@nestjs/common';
+
+@Controller('user')
+export class UserController {}
+```
+
+```ts
+// user.module.ts
+
+import { Module } from '@nestjs/common';
+import { UserController } from './user.controller';
+
+@Module({
+  controllers: [UserController]
+})
+export class UserModule {}
+```
+
+现在我们去给控制器添加函数
+
+```ts
+import { Controller, Get } from '@nestjs/common';
+
+@Controller('user')
+export class UserController {
+
+  @Get()
+  getUsers(): any {
+    return {
+      code: 0,
+      data: [],
+      msg: '请求用户列表成功！'
+    }
+  }
+}
+```
+
+导入 Get，使用 Get 注解函数，这时访问 `http://localhost:3000/user` 就能返回如下 json 数据
+
+```js
+{
+  code: 0,
+  data: [],
+  msg: '请求用户列表成功！'
+}
+```
+
+但是通常我们访问后端，是不是一般所有接口都会带个前缀，比如 `/api`，难道我们给每个接口都加上这个前缀吗，这显然是很麻烦的，未来修改维护也会很麻烦，因为要修改多处地方
+
+可以统一处理，打开 `src/` 目录下的 `main.ts` 文件，在 `app` 监听端口前，添加全局的前缀
+
+```ts
+// main.ts
+
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api/v1');
+  await app.listen(process.env.PORT ?? 3000);
+}
+bootstrap();
+```
+
+这时再访问 `http://localhost:3000/api/v1/user` 就不管用了，会返回 404
+
+得访问 `http://localhost:3000/api/v1/user` 才是正确的路径，会返回正确的 json 数据
+
+##### 6.3 创建 service
 
 
 
