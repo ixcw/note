@@ -316,11 +316,136 @@ async function bootstrap() {
 bootstrap();
 ```
 
-这时再访问 `http://localhost:3000/api/v1/user` 就不管用了，会返回 404
+这时再访问 `http://localhost:3000/user` 就不管用了，会返回 404 状态码
 
-得访问 `http://localhost:3000/api/v1/user` 才是正确的路径，会返回正确的 json 数据
+需要访问 `http://localhost:3000/api/v1/user` 才会返回正确的 json 数据
 
 ##### 6.3 创建 service
+
+与创建 controller 一样，创建 service 也是一样的命令
+
+```sh
+nest g service user --no-spec -d
+```
+
+确认没问题后去掉 `-d` 参数
+
+```sh
+nest g service user --no-spec
+```
+
+这将会在 `src/user` 目录下创建 `user.service.ts` 文件，同时更新同目录下的 `user.module.ts` 文件
+
+```ts
+// user.service.ts
+
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class UserService {}
+```
+
+```ts
+// user.module.ts
+
+import { Module } from '@nestjs/common';
+import { UserController } from './user.controller';
+import { UserService } from './user.service';
+
+@Module({
+  controllers: [UserController],
+  providers: [UserService]
+})
+export class UserModule {}
+```
+
+service 层是逻辑层，负责逻辑处理，在 controller 里使用 service 需要在构造函数中引入，在 `user.controller.ts` 中引入 service，并且将 `getUsers` 路由改为返回 service 的 `getUsers`  函数
+
+```ts
+// user.controller.ts
+
+import { Controller, Get } from '@nestjs/common';
+import { UserService } from './user.service';
+
+@Controller('user')
+export class UserController {
+  constructor(private userService: UserService) {
+    // 语法糖写法，等价于 this.userService = new UserService();
+  }
+
+  @Get()
+  getUsers(): any {
+    return this.userService.getUsers();
+  }
+}
+```
+
+由于此时 service 还没有 `getUsers`  函数，所以我们去创建一个就可以了
+
+```ts
+// user.service.ts
+
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class UserService {
+  getUsers() {
+    return {
+      code: 0,
+      data: [],
+      msg: '获取用户列表成功！'
+    }
+  }
+
+  addUser() {
+    return {
+      code: 0,
+      data: {},
+      msg: '添加用户列表成功！'
+    }
+  }
+}
+```
+
+#### 7 调试
+
+调试作为软件开发必不可少的一环，nestjs 也是需要的，如果使用 vscode 开发 node 项目，这个调试技巧是通用的
+
+1. 首先在想要调试的地方打上红色的断点
+
+2. 点击 vscode 左侧的 debug 小虫子图标，进入运行调试菜单，首次调试，需要新建一个 `launch.json` 文件
+
+   ```json
+   {
+     "version": "0.2.0",
+     "configurations": [
+       {
+         "type": "node",
+         "request": "launch",
+         "name": "Launch NestJS",
+         "runtimeArgs": ["--nolazy", "-r", "ts-node/register"],
+         "args": ["src/main.ts"],
+         "cwd": "${workspaceFolder}",
+         "restart": true,
+         "console": "integratedTerminal"
+       }
+     ]
+   }
+   ```
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
