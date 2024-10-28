@@ -316,9 +316,9 @@ const group = new fabric.Group([ellipse, text], {
 分组创建好后，可对其进行操作，常见操作如下
 
 ```js
-getObjects() // 返回一组中所有对象的数组
+getObjects() // 分组中所有对象的数组
 size() // 所有对象的数量
-contains()  // 检查特定对象是否在 group 中
+contains()  // 检查特定对象是否在分组中
 item()  // 选中组中的元素，参数为数组索引
 forEachObject()  // 遍历组中对象
 add()  // 添加元素对象
@@ -335,6 +335,94 @@ group.item(1).set({  // 将组中第二个元素 text 的文本内容改为 '雷
   fill: '#fff'
 })
 ```
+
+##### 7.3 打散分组
+
+可以将已经组合好的分组打散成各个独立的图形，可以编写如下函数实现
+
+```js
+const ungroup = () => {
+  // 判断当前有没有选中元素，如果没有就不执行任何操作
+  if (!canvas.getActiveObject()) {
+    return
+  }
+  // 判断当前选中的元素是否是组，如果不是，就不执行任何操作
+  if (canvas.getActiveObject().type !== 'group') {
+    return
+  }
+  // 先获取当前选中的元素，然后调用 toActiveSelection 将其打散
+  canvas.getActiveObject().toActiveSelection()
+}
+```
+
+#### 8 事件
+
+可以通过 `on` 给图形对象添加事件，或者给 canvas 画布添加事件，`off` 去除事件
+
+```js
+// 多边形
+// 和折线一样，不同的是多边形会自动闭合起点和终点
+const polygon = new fabric.Polygon([
+  { x: 50, y: 50 },
+  { x: 200, y: 50 },
+  { x: 200, y: 200 },
+  { x: 50, y: 200 }
+], {
+  top: 300,
+  left: 300,
+  fill: '#eee',
+  stroke: '#5e5e5e',
+  strokeWidth: 12
+})
+polygon.on('selected', options => {
+  console.log('选中多边形:', options)
+})
+```
+
+这样在选中多边形的时候就会触发回调函数，打印 options
+
+#### 9 绘画
+
+想要绘画需要开启绘画模式，通过设置 canvas 的 isDrawingMode 属性可以开启和关闭绘画模式
+
+```js
+canvas.isDrawingMode = true
+```
+
+10 操作禁止
+
+某些场景下可能需要禁止某些操作，比如禁止水平和垂直移动、禁止旋转、禁止缩放等
+
+```js
+// 多边形
+// 和折线一样，不同的是多边形会自动闭合起点和终点
+const polygon = new fabric.Polygon([
+  { x: 50, y: 50 },
+  { x: 200, y: 50 },
+  { x: 200, y: 200 },
+  { x: 50, y: 200 }
+], {
+  top: 300,
+  left: 300,
+  fill: '#eee',
+  stroke: '#5e5e5e',
+  strokeWidth: 12
+})
+// 禁止水平移动
+polygon.lockMovementX = true
+// 禁止重置移动
+polygon.lockMovementY = true
+// 禁止旋转
+polygon.lockRotation = true
+// 禁止水平缩放
+polygon.lockScalingX = true
+// 禁止垂直缩放
+polygon.lockScalingY = true
+```
+
+#### 10 移动、缩放画布
+
+
 
 #### x 使用图片
 
