@@ -422,7 +422,7 @@ polygon.lockScalingY = true
 
 #### 10 移动、缩放画布
 
-
+在 PC 端，监听的事件是 `mouse:wheel`
 
 #### x 使用图片
 
