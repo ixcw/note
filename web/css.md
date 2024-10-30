@@ -2291,11 +2291,11 @@ display: grid; // 设置显示模式为grid模式
 grid-template-rows: 50px 50px 50px; // 设置行显示，定义每一行的行高，这里是划分三行，每行的行高是50px
 grid-template-columns: 50px 50px 50px; // 设置列显示，定义每一列的列宽，这里是划分三列，每列的列宽是50px
 ```
-如果行列的高宽度是一样的，那么定义几行就要写几次行高，列同理，如上面的代码写了三次，如果更多次呢？这样很麻烦
+如果行列的高宽度是一样的，那么定义几行就要写几次行高，列同理，比如上面的代码就写了三次，但是如果要定义更多的次数呢？比如50次就要写50遍吗？这明显是不合理的
 
-所以css定义了 `repeat()` 函数给我们调用，函数接收两个参数，第一个参数定义重复几次，第二个参数定义每次重复的高宽度
+因此 css 定义了 `repeat()` 函数给我们调用，函数接收两个参数，第一个参数定义重复几次，第二个参数定义每次重复的高宽度
 
-上面的代码可简化如下：
+于是上面的代码可简化如下：
 
 ```css
 display: grid;
@@ -2303,23 +2303,52 @@ grid-template-rows: repeat(3, 50px);
 grid-template-columns: repeat(3, 50px);
 ```
 
-也许你想问，如果特定的行列高宽度不一样，那怎么重复呢？没关系，`repeat()`还能重复某种特定模式
+也许你想问，如果特定的行列高宽度不一样，那怎么重复呢？没关系，`repeat()`还能重复 **某种特定模式**
 
-下面的代码表示第一行行高是100px，第二行行高是80px，第三行行高是50px，然后重复三次共九行，列同理
+下面的代码表示第一行的行高是100px，第二行的行高是80px，第三行的行高是50px，然后将这三行的行高排列作为一种特定模式，然后重复三次一共九行，列同理
 
 ```css
 display: grid;
 grid-template-rows: repeat(3, 100px 80px 50px);
 grid-template-columns: repeat(3, 100px 80px 50px);
 ```
-如果单元格的大小是一定的，但是容器的大小不是，这是可以使用 `auto-fill` 关键字，让容器**自适应**单元格的宽高
+如果 **单元格大小** 是一定的，但是 **容器的大小** 不是，这是可以使用 `auto-fill` 关键字，让容器**自适应**单元格的宽高，下方的 `100px` 是单元格的宽度，因为这里是列，同时可以传递百分比，容器将会自适应单元格的宽度
+
+r如果容器本身有宽度，则会一直重复单元格的宽度，直到将容器填满
 
 ```css
 display: grid;
 grid-template-columns: repeat(auto-fill, 100px);
 ```
 
-为方便表示比例关系，网格布局提供了 `fr` 单位，这是 `fraction` 单词的缩写，意为一小部分、分数、片段，在代码里面用于表示比例关系
+这里实现一个商品布局的常见案例，商品从左到右平铺，一行占 4 个，每个商品间距 20px
+
+```css
+.goods-list {
+  width: 100%;
+  display: grid;
+  // 四个商品占四列，有三个间距，所以要减去 20 X 3 = 60 个像素，剩下的宽度四个商品平分
+  grid-template-columns: repeat(auto-fill, calc((100% - 60px)/4));
+  // 间距 20px
+  gap: 20px;
+}
+
+.goods {
+  height: 270px;
+  box-shadow: 0 4px 8px 0 rgb(95 101 105 / 5%);
+  border-radius: 8px;
+  background-color: #fff;
+  transition: transform .2s, box-shadow .2s;
+}
+
+/* 鼠标滑过阴影特性 */
+.goods:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px 0 rgba(95,101,105,.15);
+}
+```
+
+为方便表示比例关系，网格布局提供了 `fr` 单位，这是 `fraction` 单词的缩写，意为一小部分、分数、片段，在里面用于表示比例关系
 
 ```css
 display: grid;
