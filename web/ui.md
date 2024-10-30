@@ -67,6 +67,61 @@ Element-UI是基于vue的桌面端UI组件库，用于前端页面样式的编�
 
   发现自动导入了element的按钮组件，这时就可以在`App.vue`文件里面使用element标签了
 
+#### 3 例子
+
+##### 3.1 走马灯实现移动端滑动切换
+
+可以通过检测移动端事件，获取走马灯实例执行切换方法实现
+
+```vue
+<template>
+  <div
+    class="banner"
+    @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
+    @touchend="handleTouchEnd"
+  >
+    <el-carousel
+       class="bannerBox"
+       ref="carousel"
+       indicator-position="outside"
+       trigger="hover"
+     ></el-carousel>
+  </div>
+</template>
+<script>
+export default {
+  name: "FirstRecommend",
+  data() {
+    return {
+      startX: 0,
+      endX: 0
+    }
+  },
+  methods: {
+    handleTouchStart(event) {
+      this.startX = event.touches[0].clientX
+    },
+    handleTouchMove(event) {
+      this.endX = event.touches[0].clientX
+    },
+    handleTouchEnd() {
+      const distance = this.endX - this.startX
+      // 切换阈值
+      const threshold = 50
+      if (distance > threshold) {
+        // 向右滑动，执行切换方法切换到上一张
+        this.$refs.carousel.prev()
+      } else if (distance < -threshold) {
+        // 向左滑动，执行切换方法切换到下一张
+        this.$refs.carousel.next()
+      }
+    }
+  }
+}
+</script>
+```
+
 
 
 

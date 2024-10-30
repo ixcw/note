@@ -1,6 +1,7 @@
 @echo off
-set /p message=please input commit message: 
+@REM set /p message=please input commit message: 
 git pull
-git cmp %message%
-echo %message% update successfully
+@REM git cmp %message%
+git cmp "update"
+echo update successfully
 pause
