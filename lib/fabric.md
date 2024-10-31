@@ -524,6 +524,303 @@ canvas.on('mouse:up', opt => {
 
 #### 11 选中状态
 
+fabric 创建的图形默认是可以被选中的，关于选中有许多可关注的点，比如是否可选中、空白区域是否可以选中图形、选中图形后图形的样式如何变化等等
+
+##### 11.1 禁止选中
+
+设置后，鼠标移动到图形上鼠标指针形状还是会变化，但是无法选中图形
+
+```js
+polygon.selectable = false
+```
+
+##### 11.2 禁止空白区域选中
+
+设置后，鼠标必须放在图形上才能选中，而不是包裹图形的矩形区域中的任意一点都能选中
+
+```js
+path.perPixelTargetFind = true
+```
+
+##### 11.3 框选设置
+
+可以通过鼠标在画布上移动画出一个矩形框进行批量选中图形，可以对画出的矩形框进行一些样式设置，以及控制框选表现
+
+```js
+// 画布是否可通过框选选中，默认 true，false 为不可选中，但仍可以直接点击图形进行选中
+canvas.selection = true
+// 鼠标框选时的背景色
+canvas.selectionColor = 'rgba(234, 61, 255, 0.3)'
+// 鼠标框选时的边框颜色
+canvas.selectionBorderColor = "#1d2786"
+// 鼠标框选时的边框宽度
+canvas.selectionLineWidth = 6
+// 鼠标框选时边框的虚线规则
+canvas.selectionDashArray = [30, 4, 10]
+// 只会选中完全包含在框选的选择框内的图形，只框选一部分的图形不会被选中
+canvas.selectionFullyContained = true
+```
+
+##### 11.4 自定义图形选中框样式
+
+当我们选中图形时，图形的样式会产生变化，具体是多出一个用于控制图形缩放及旋转的选中框，默认的选中框样式不好看，我们可以自定义这个选中框的样式
+
+```js
+path.set({
+  borderColor: 'red',   // 选中框颜色
+  cornerColor: 'green', // 控制角颜色
+  cornerSize: 10,       // 控制角大小
+  transparentCorners: true, // 控制角颜色设置不透明，如不设置，控制角的中间会变空白
+  selectionBackgroundColor: 'orange' // 背景色
+})
+```
+
+隐藏选中框的框线，但是控制角和背景色还在
+
+```js
+path.hasBorders = false
+```
+
+隐藏控制角，但是没有控制角将意味着无法用鼠标直接操作缩放和旋转，而只是允许移动操作
+
+```js
+path.hasControls = false
+```
+
+自定义鼠标悬停样式，这里定义了鼠标悬停在图形上时的样式
+
+```js
+path.hoverCursor = 'wait'
+```
+
+定义移动图形时的样式，这里定义了鼠标按下选中图形或选中图形进行移动时，图形的样式，这里的效果是缩放
+
+```js
+function animate(e, dir) {
+  if (e.target) {
+    fabric.util.animate({
+      startValue: e.target.get('angle'),
+      endValue: e.target.get('angle') + (dir ? 10 : -10),
+      duration: 100
+    })
+    fabric.util.animate({
+      startValue: e.target.get('scaleX'),
+      endValue: e.target.get('scaleX') + (dir ? 0.2 : -0.2),
+      duration: 100,
+      onChange: function(value) {
+        e.target.scale(value)
+        canvas.renderAll()
+      },
+      onComplete: function() {
+        e.target.setCoords()
+      }
+    })
+  }
+}
+canvas.on('mouse:down', function(e) { animate(e, 1) })
+canvas.on('mouse:up', function(e) { animate(e, 0) })
+```
+
+#### 12 裁剪
+
+##### 12.1 定位基准点
+
+可通过 `clipPath` 属性对图形进行裁剪，clipPath 将会从 **图形对象的中心** 开始定位
+
+图形对象的 originX 和 originY 不起任何作用，也就是说，图形的 originX 和 originY 是用来定义对象的 **定位基准点** 的
+
+而 clipPath 的 originX 和 originY 是起作用的，定位逻辑与 `fabric.Group` 相同，因为 clipPath 的定位基准点会影响 clipPath **相对于图形的位置**，也就是最终裁剪的位置会发生改变
+
+如何理解定位基准点呢，请看如下的例子：
+
+这里定义了一个矩形，相对于原点（0，0），距离 x 轴 100px， y 轴 100px
+
+- 当 originX 和 originY 的值都是 center 时，此时矩形的中心点定位于坐标（200，200）处
+- 当 originX 的值是 left 时，此时矩形的最左边定位于坐标（200，200）处，看上去像是矩形往右边平移了
+- 当 originX 的值是 right 时，此时矩形的最右边定位于坐标（200，200）处，看上去像是矩形往左边平移了
+- originY 的值分别是 top、center、bottom，效果与 originX 一致，不过是竖直方向
+- originX 和 originY 通过设置不同的值进行排列组合可产生不同的效果，大家同理可证
+
+这里（200，200）就是基准点，originX 和 originY 设置了相对于基准点的定位方式，这就是定位基准点
+
+```js
+const rect = new fabric.Rect({
+  width: 100,
+  height: 100,
+  fill: 'blue',
+  left: 200,
+  top: 200,
+  originX: 'center',
+  originY: 'center'
+})
+```
+
+##### 12.2 单一图形裁剪
+
+对一个单一图形进行裁剪
+
+```js
+const clipPath = new fabric.Circle({
+  radius: 60,
+  left: -40,
+  top: -40
+})
+polygon.clipPath = clipPath  // 这将会把多边形裁剪为圆形
+```
+
+##### 12.3 组裁剪
+
+对一个组进行裁剪
+
+```js
+const clipPath = new fabric.Circle({
+  radius: 40,
+  left: -40,
+  top: -40
+})
+const group = new fabric.Group([
+  new fabric.Rect({ width: 100, height: 100, fill: 'red' }),
+  new fabric.Rect({ width: 100, height: 100, fill: 'yellow', left: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: 'blue', top: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: 'green', left: 100, top: 100 })
+])
+group.clipPath = clipPath
+```
+
+##### 12.4 组对组裁剪
+
+设置一个组为 clipPath 对另一个组进行裁剪
+
+```js
+const clipPath = new fabric.Group(
+  [
+    new fabric.Circle({ radius: 70, top: -70, left: -70 }),
+    new fabric.Circle({ radius: 40, top: -95, left: -95 }),
+    new fabric.Circle({ radius: 40, top: 15, left: 15 })
+  ],
+  { left: -95, top: -95 }
+)
+const group = new fabric.Group([
+  new fabric.Rect({ width: 100, height: 100, fill: 'red' }),
+  new fabric.Rect({ width: 100, height: 100, fill: 'yellow', left: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: 'blue', top: 100 }),
+  new fabric.Rect({
+    width: 100,
+    height: 100,
+    fill: 'green',
+    left: 100,
+    top: 100
+  })
+])
+group.clipPath = clipPath
+```
+
+##### 12.5 组合裁剪
+
+设置一个图形为 clipPath 对另一个图形进行裁剪，然后把另一个图形作为 clipPath 再对另一个组（图形）进行裁剪，有点像套娃裁剪
+
+```js
+const clipPath = new fabric.Circle({ radius: 70, top: -50, left: -50 })
+const innerClipPath = new fabric.Circle({ radius: 70, top: -90, left: -90 })
+// 第一次裁剪
+clipPath.clipPath = innerClipPath
+const group = new fabric.Group([
+  new fabric.Rect({ width: 100, height: 100, fill: 'red' }),
+  new fabric.Rect({ width: 100, height: 100, fill: 'yellow', left: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: 'blue', top: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: 'green', left: 100, top: 100 }),
+])
+// 第二次裁剪
+group.clipPath = clipPath
+```
+
+##### 12.6 文字裁剪
+
+没错，文字也属于图形的一种，因此也可以当作是 clipPath，用于裁剪
+
+```js
+const clipPath = new fabric.Text(
+  'Hi I\'m the \nnew ClipPath!\nI hope we\'ll\nbe friends',
+  { top: -100, left: -100 }
+)
+const group = new fabric.Group([
+  new fabric.Rect({ width: 100, height: 100, fill: "red" }),
+  new fabric.Rect({ width: 100, height: 100, fill: "yellow", left: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: "blue", top: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: "green", left: 100, top: 100 }),
+])
+group.clipPath = clipPath
+```
+
+##### 12.7 画布裁剪
+
+画布也是可以被裁剪的，裁剪后只会显示裁剪后的画布的内容
+
+```js
+const group = new fabric.Group([
+  new fabric.Rect({ width: 100, height: 100, fill: "red" }),
+  new fabric.Rect({ width: 100, height: 100, fill: "yellow", left: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: "blue", top: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: "green", left: 100, top: 100 }),
+])
+const clipPath = new fabric.Circle({ radius: 100, top: 0, left: 50 })
+canvas.clipPath = clipPath
+```
+
+可以设置在被裁剪的画布之外，还能看见图形的控件，控制图形的缩放和旋转
+
+```js
+const group = new fabric.Group([
+  new fabric.Rect({ width: 100, height: 100, fill: "red" }),
+  new fabric.Rect({ width: 100, height: 100, fill: "yellow", left: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: "blue", top: 100 }),
+  new fabric.Rect({ width: 100, height: 100, fill: "green", left: 100, top: 100 }),
+])
+canvas.controlsAboveOverlay = true  // 设置可见控件
+const clipPath = new fabric.Circle({ radius: 100, top: 0, left: 50 })
+canvas.clipPath = clipPath
+```
+
+#### 13 序列化
+
+所谓序列化就是将画布内容转化为其他格式的数据去保存，fabric 除了能把画布转化为 JSON，还能转化为 base64 和 svg
+
+##### 13.1 JSON序列化
+
+三个方法都能进行 JSON 序列化，生成的 JSON 里包含了画布以及画布包含的图形的数据，如果需要特定的 JSON 数据，需要自行进行数据转换
+
+```js
+console.log('canvas stringify ', JSON.stringify(canvas))
+console.log('canvas toJSON', canvas.toJSON())
+console.log('canvas toObject', canvas.toObject())
+```
+
+##### 13.2 base64
+
+这个方法将会在控制台输出 base64 格式的 png 图片，由于此方法执行会打断 canvas 渲染，因此需要再执行一遍 `requestRenderAll` 才能显示渲染的图形
+
+```js
+console.log('toPng', canvas.toDataURL('png'))
+canvas.requestRenderAll()
+```
+
+##### 13.3 svg
+
+生成 svg 图片
+
+```js
+console.log('toSVG', canvas.toSVG())
+```
+
+#### 14 反序列化
+
+所谓反序列化就是序列化的逆过程，将 JSON 数据重新渲染到画布上生成图形
+
+```js
+const str = ''  // JSON字符串
+canvas.loadFromJSON(str)
+```
+
 
 
 #### x 使用图片
