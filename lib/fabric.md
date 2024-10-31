@@ -420,9 +420,111 @@ polygon.lockScalingX = true
 polygon.lockScalingY = true
 ```
 
-#### 10 移动、缩放画布
+#### 10 缩放、平移画布
 
-在 PC 端，监听的事件是 `mouse:wheel`
+##### 10.1 缩放画布
+
+在 PC 端，监听的事件是 `mouse:wheel`，默认是以原点为基准缩放的，原点就是左上角的（0，0）坐标
+
+```js
+// 监听鼠标滚轮事件
+canvas.on('mouse:wheel', opt => {
+  // 滚轮向上滚一下是 -100，向下滚一下是 100
+  let delta = opt.e.deltaY
+  // 获取画布当前缩放值
+  let zoom = canvas.getZoom()
+  // 控制缩放范围在 0.01~20 的区间内
+  zoom *= 0.999 ** delta
+  if (zoom > 20) zoom = 20
+  if (zoom < 0.01) zoom = 0.01
+  // 设置画布缩放比例
+  canvas.setZoom(zoom)
+})
+```
+
+如果想以鼠标坐标为基准缩放，需要调用设置缩放坐标的 api
+
+```js
+// 监听鼠标滚轮事件
+canvas.on('mouse:wheel', opt => {
+  // 滚轮向上滚一下是 -100，向下滚一下是 100
+  let delta = opt.e.deltaY
+  // 获取画布当前缩放值
+  let zoom = canvas.getZoom()
+  // 控制缩放范围在 0.01~20 的区间内
+  zoom *= 0.999 ** delta
+  if (zoom > 20) zoom = 20
+  if (zoom < 0.01) zoom = 0.01
+  // 这里调用调用设置缩放坐标的 api
+  // 参数1：将画布的缩放点设置成鼠标当前坐标
+  // 参数2：传入缩放值
+  canvas.zoomToPoint(
+    {
+      x: opt.e.offsetX, // 鼠标x轴坐标
+      y: opt.e.offsetY  // 鼠标y轴坐标
+    },
+    zoom // 画布缩放比例
+  )
+})
+```
+
+##### 10.2 平移画布
+
+这里实现 PC 端按住 `alt` 键平移画布的功能，想实现这个功能，我们可以将功能拆解一下
+
+1. 鼠标按下
+2. 鼠标移动
+3. 鼠标停止移动
+
+我们需要在这 3 个不同的阶段去处理对应的情况
+
+1. 鼠标按下可通过 `mouse:down` 去监听到，由于我们要按住 `alt` 键才可以平移，所以需要在监听函数中判断是否按下了 `alt` 键，如果按下了 `alt` 键，则设置一个变量值去 **开启移动状态**，并且记录下当前鼠标的坐标值 x 和 y
+2. 鼠标移动可通过 `mouse:move` 去监听到，判断是否需要移动，如果需要移动则立刻转换画布视图模式，将画布移动到鼠标坐标处
+3. 鼠标松开可通过 `mouse:up` 去监听到，鼠标松开时，将画布定格到鼠标松开的坐标处，**关闭移动状态**
+
+```js
+// 监听鼠标按下
+canvas.on('mouse:down', opt => {
+  let evt = opt.e
+  // 判断是否按住 alt 键
+  if (evt.altKey === true) {
+    // 开启移动状态，isDragging 是自定义变量
+    canvas.isDragging = true
+    // 记录鼠标按下时的坐标，lastPosX 和 lastPosY 是自定义变量
+    canvas.lastPosX = evt.clientX
+    canvas.lastPosY = evt.clientY
+  }
+})
+
+// 监听鼠标移动
+canvas.on('mouse:move', opt => {
+  // 判断是否在移动状态，只有移动状态才会执行
+  if (canvas.isDragging) {
+    let evt = opt.e
+    // 转换画布视图模式
+    let vpt = canvas.viewportTransform
+    vpt[4] += evt.clientX - canvas.lastPosX
+    vpt[5] += evt.clientY - canvas.lastPosY
+    // canvas 重新渲染
+    canvas.requestRenderAll()
+    // 更新按下时的坐标为移动时的新坐标
+    canvas.lastPosX  = evt.clientX
+    canvas.lastPosY  = evt.clientY
+  }
+})
+
+// 监听鼠标松开
+canvas.on('mouse:up', opt => {
+  // 设置画布的视口转换，即定格到最后鼠标松开的坐标处  
+  canvas.setViewportTransform(canvas.viewportTransform)
+  // 关闭移动状态
+  canvas.isDragging = false
+})
+```
+
+#### 11 选中状态
+
+
 
 #### x 使用图片
 
