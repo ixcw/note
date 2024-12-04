@@ -1059,9 +1059,7 @@ const app = Vue.createApp({
 })
 ```
 
-我们可以通过vue3的新语法让普通变量变成响应式变量
-
-利用`ref`处理基础类型的变量
+我们可以通过vue3的新语法让普通变量变成响应式变量，利用`ref`处理基础类型的变量
 
 ```js
 const app = Vue.createApp({
@@ -1072,7 +1070,7 @@ const app = Vue.createApp({
   `,
   setup(props, context) {
     const { ref } = Vue
-    let name = ref('james')
+    const name = ref('james')  // 可以用 const，因为不改变引用，而是改变 value
     setTimeout(() => name.value = 'jack', 2000)
     return { name }
   }
@@ -1653,7 +1651,7 @@ flex + box-sizing 常规布局，图标使用 iconfont
 >    import 'normalize.css'
 >    import './style/base.scss'
 >    import './style/iconfont.css'
->       
+>          
 >    createApp(App).use(store).use(router).mount('#app')
 >    ```
 >

@@ -643,6 +643,8 @@ canvas.on('mouse:up', function(e) { animate(e, 0) })
 
 这里（200，200）就是基准点，originX 和 originY 设置了相对于基准点的定位方式，这就是定位基准点
 
+> 注意：默认 originX 的值为 left，originY 的值为 top，意味着默认会以图形的左上角坐标与基准点重叠的方式定位
+
 ```js
 const rect = new fabric.Rect({
   width: 100,
@@ -821,7 +823,147 @@ const str = ''  // JSON字符串
 canvas.loadFromJSON(str)
 ```
 
+#### 15 右键菜单
 
+[右键菜单](https://juejin.cn/post/7051373700209180679)
+
+#### 16 更换图片
+
+[更换图片](https://juejin.cn/post/7052719026874613773)
+
+#### 17 修改画布宽高
+
+前面提到，在创建画布时，可以传入宽高的参数设置生成的画布大小
+
+```js
+canvas = new fabric.Canvas('c', {
+  width,
+  height
+})
+```
+
+但是生成完成后，还能不能动态的去修改画布的大小呢，答案是可以的，这在实际开发中可能会很重要，比如监听浏览器窗口的缩放，动态调整画布的宽高
+
+fabric 提供了 3 个 api 去修改画布大小，分别是修改宽度的 `setWidth`，修改高度的 `setHeight`，修改大小的 `setDimensions`
+
+```js
+canvas.setWidth(200)   // 修改宽度
+canvas.setHeight(200)  // 修改高度
+canvas.setDimensions({ 200, 200 })  // 修改大小，参数分别是宽度和高度
+```
+
+#### 18 本地图像上传当做画布背景
+
+[本地图像上传到画布背景](https://juejin.cn/post/7055201274693681160)
+
+#### 19 删除图形
+
+删除比较简单，直接调用 `remove` 函数传入图形对象即可，在 `renderOnAddRemove` 为 true（默认值）的情况下，删除会自动更新画布，否则需要手动调用 `renderAll` 方法更新画布
+
+```js
+canvas.remove(rect)
+```
+
+此外还有一个删除函数 `fxRemove`，这个删除函数不会立刻删除图形，而是会带有一个过渡动画
+
+```js
+canvas.fxRemove(rect)
+```
+
+`fxRemove` 还有第二个参数，接收一个函数对象，对象中有两个函数，具体作用如下，一般来讲，删除一个图形对象，change 函数会调用八九十次
+
+```js
+const deleteObject = () => {
+  canvas.fxRemove(rect, {
+    onChange() {
+      console.log('在动画的每一帧调用')
+    },
+    onComplete() {
+      console.log('删除成功后调用')
+    }
+  })
+}
+```
+
+20 框选绘制图形
+
+[绘制矩形](https://juejin.cn/post/7058093223566114847)
+
+[绘制圆形](https://juejin.cn/post/7061277449652273165)
+
+[绘制圆形](https://juejin.cn/post/7101906776202838024)
+
+#### 21 控制层级
+
+同 PS 一样，fabric 也有层级的概念，如何控制层级可以看这一篇文章 [控制层级](https://juejin.cn/post/7111191499932434439)
+
+#### 22 禁止元素超出画布
+
+[禁止元素超出画布](https://juejin.cn/post/7141191847640039460)
+
+#### 23 图形中心缩放
+
+fabric 创建的图形默认是按操作的控制角的对角点为原点进行缩放的，如果按住 `alt` 键，则原点会变为图形中心，如果想设置默认以图形中心为原点，可以设置 `centeredScaling` 属性，给 canvas 设置则全部图形都会变为以图形中心为原点，当然也可以单独给图形对象设置
+
+```js
+rect.centeredScaling = true
+```
+
+#### 24 监听图形相交
+
+`fabric.js` 提供了一个方法可以检查图形是否与另一个图形相交（也可以叫图形是否重叠），有什么用呢，这个功能在日常开发中其实很实用，在它的帮助下我们可以实现“防止图形碰撞”、“图形自动对齐贴合”等功能
+
+```js
+// 监听对象移动
+canvas.on('object:moving', function(options) {
+  // 通过 canvas.forEachObject 遍历画布上所有元素
+  canvas.forEachObject(function(obj) {
+    // 排除当前正在移动的元素
+    if (obj === options.target) return
+    // 检查对象是否与另一个对象相交
+    if (options.target.intersectsWithObject(obj)) {
+      // 输出当前被接触的对象类型
+      console.log(obj.type)
+    }
+  })
+})
+```
+
+#### 25 限制边框宽度缩放
+
+在我们缩放图形时，默认会将图形的边框宽度也给一起缩放了，如果你想在缩放时保持图形边框的宽度不变，可以设置 `strokeUniform` 属性为 true
+
+```js
+// 三角形 - 天蓝色
+const triangle = new fabric.Triangle({
+  width: 100,
+  height: 100,
+  left: 300,
+  top: 200,
+  fill: 'skyblue',
+  stroke: '#333',
+  strokeWidth: 10
+})
+triangle.strokeUniform = true
+```
+
+#### 26 拖放图形进画布
+
+这里的需求是将图形拖进到画布中并生成对应的图形或图片
+
+具体可参考：[拖放图形进画布](https://juejin.cn/post/7186836299209244733)
+
+#### 27 自定义控件
+
+[自定义控件](https://juejin.cn/post/7206302271079940156)
+
+#### 28 复制粘贴元素
+
+[复制粘贴元素](https://juejin.cn/post/7239739777687044152)
+
+#### 29 拖拽顶点修改多边形形状
+
+[拖拽顶点修改多边形形状](https://juejin.cn/post/7231050577366188087)
 
 #### x 使用图片
 
