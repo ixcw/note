@@ -143,17 +143,615 @@ import django
 
 还有的数据需要访问别的网页，可通过观察规律，得出访问规律，拼接数据进行访问，比如访问每辆车的参数页，参数页地址可通过参数页的前缀地址加上汽车 id 拼接而成
 
+#### 6 编写爬虫
+
+分析完网页后，我们开始编写 `spiders.py`
+
+##### 6.1 数据爬取
+
+首先定义一个爬虫类，将需要的爬取数据存储到一个临时的 csv 文件中
+
+```python
+class Spider(object):
+    def __init__(self):
+        pass
+    
+    @staticmethod
+    def init(self):
+        if not os.path.exists('./temp.csv'):
+            with open('./temp.csv', 'a', newline='', encoding='utf-8') as wf:
+                write = csv.writer(wf)
+                write.writerow([
+                    "brand", "carName", "carImg", "saleVolume",
+                    "price", "manufacturer", "rank", "carModel",
+                    "energyType", "marketTime", "insure"
+                ])
+
+    def main(self):
+        pass
 
 
+if __name__ == '__main__':
+    spiderObj = spider()
+    spiderObj.init()
+```
+
+将前面分析网页得到的请求地址通过 init 函数初始化，然后在 main 函数中通过 requests 库模拟请求该请求地址，获取到数据
+
+```python
+class Spider(object):
+    def __init__(self):
+        self.spiderUrl = (
+            'https://www.dongchedi.com/motor/pc/car/rank_data?				    aid=1839&app_name=auto_web_pc&city_name'
+                          '=贵阳&count=10&offset=10&month=&new_energy_type=&rank_data_type=11&brand_id=&price'
+                          '=&manufacturer=&series_type=&nation=0')
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'
+        }
+
+    @staticmethod
+    def init():
+        # 略
+
+    def main(self):
+        page_json = requests.get(self.spiderUrl, headers=self.headers).json()
+        page = page_json['data']['list']
+        print(page)
 
 
+if __name__ == '__main__':
+    spiderObj = Spider()
+    spiderObj.init()
+    spiderObj.main()
+```
+
+但是此时参数是固定的，我们需要修改请求地址的参数来获取新的数据，定义一个文件 `spiderPage.txt` 来存储页数
+
+```python
+import requests
+from lxml import etree
+import csv
+import os
+import time
+import json
+import pandas as pd
+import re
+import django
 
 
+class Spider(object):
+    def __init__(self):
+        self.spiderUrl = ('https://www.dongchedi.com/motor/pc/car/rank_data?aid=1839&app_name=auto_web_pc&city_name'
+                          '=贵阳&count=10&month=&new_energy_type=&rank_data_type=11&brand_id=&price'
+                          '=&manufacturer=&series_type=&nation=0')
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0'
+        }
+
+    @staticmethod
+    def init():
+        if not os.path.exists('./temp.csv'):
+            with open('./temp.csv', 'a', newline='', encoding='utf-8') as wf:
+                write = csv.writer(wf)
+                write.writerow([
+                    "brand", "carName", "carImg", "saleVolume",
+                    "price", "manufacturer", "rank", "carModel",
+                    "energyType", "marketTime", "insure"
+                ])
+
+    @staticmethod
+    def get_page():
+        with open('./spiderPage.txt', 'r') as r_f:
+            return r_f.readlines()[-1].strip()
+
+    @staticmethod
+    def set_page(new_page):
+        with open('./spiderPage.txt', 'a') as a_f:
+            a_f.write('\n' + str(new_page))
+
+    def main(self):
+        count = self.get_page()
+        params = {
+            'offset': int(count)
+        }
+        print('从第{}条数据开始爬取'.format(int(count) + 1))
+        page_json = requests.get(self.spiderUrl, headers=self.headers, params=params).json()
+        data_list = page_json['data']['list']
+        for index, car in enumerate(data_list):
+            print('正在爬取第%d' % (index + 1) + '条数据')
+            car_data = []
+            # 品牌名
+            car_data.append(car['brand_name'])
+            # 车名
+            car_data.append(car['series_name'])
+            # 图片
+            car_data.append(car['image'])
+            # 销量
+            car_data.append(car['count'])
+            # 价格（范围）
+            price = [car['min_price'], car['max_price']]
+            car_data.append(price)
+            #  厂商
+            car_data.append(car['sub_brand_name'])
+            # 排名
+            car_data.append(car['rank'])
+            # 车型（请求参数页获取）
+            series_id = car['series_id']
+            info_html = requests.get(
+                f'https://www.dongchedi.com/auto/params-carIds-x-{series_id}',
+                headers=self.headers
+            ).text
+            info_soup = etree.HTML(info_html)
+            car_model = info_soup.xpath('//div[@data-row-anchor="jb"]/div[2]/div/text()')[0]
+            # 能源类型
+            energy_type = info_soup.xpath('//div[@data-row-anchor="fuel_form"]/div[2]/div/text()')[0]
+            # 上市时间
+            market_time = info_soup.xpath('//div[@data-row-anchor="market_time"]/div[2]/div/text()')[0]
+            # 保修期限
+            period = info_soup.xpath('//div[@data-row-anchor="period"]/div[2]/div/text()')[0]
+            car_data.append(car_model)
+            car_data.append(energy_type)
+            car_data.append(market_time)
+            car_data.append(period)
+            print(car_data)
+            break
+        print(data_list)
+        self.set_page(int(count) + 10)
 
 
+if __name__ == '__main__':
+    spiderObj = Spider()
+    spiderObj.init()
+    spiderObj.main()
+```
+
+##### 6.2 数据存储
+
+###### 6.2.1 存储到 csv
+
+爬取到数据后，存储数据到 csv 文件，定义一个存储到 csv 文件的函数
+
+```python
+@staticmethod
+def save_to_csv(result_data):
+    with open('./temp.csv', 'a', newline='', encoding='utf-8') as wf:
+        writer = csv.writer(wf)
+        writer.writerow(result_data)
+```
+
+###### 6.2.2 存储到数据库
+
+接下来就是存储到数据库，Django 自带了存储到数据库的功能，我们可以将其利用起来，Django 的项目是由多个应用程序组成的，每个应用程序就是一个相对独立的模块，负责实现特定的功能，可以通过如下命令创建一个应用程序：
+
+```sh
+python manage.py startapp myApp
+```
+
+执行之后就会生成一个名为 `myApp` 的文件夹，这个文件夹就是创建的应用程序，里面有基本的结构，目录解析如下：
+
+```sh
+<myApp>/
+    ├── migrations/            # 数据库迁移文件（用于管理模型的变更）
+    │   └── __init__.py        # 使 migrations 成为一个 Python 包
+    ├── __init__.py            # 使 <myApp> 成为一个 Python 包
+    ├── admin.py               # 注册模型到 Django 管理后台
+    ├── apps.py                # 配置应用的相关信息
+    ├── models.py              # 定义应用的数据库模型
+    ├── tests.py               # 编写应用的单元测试
+    ├── views.py               # 定义应用的视图逻辑
+```
+
+Django 的这个功能可以快速创建标准应用结构，方便开发者专注于业务逻辑的实现，而不必耗费精力到搭建项目上
+
+打开 `models.py` 文件，创建用于存储数据库的类
+
+```python
+from django.db import models
+
+# Create your models here.
 
 
+class CarInfo(models.Model):
+    id = models.AutoField('id', primary_key=True)
+    brand = models.CharField('品牌', max_length=255, default='')
+    carName = models.CharField('车名', max_length=255, default='')
+    carImg = models.CharField('图片链接', max_length=255, default='')
+    saleVolume = models.CharField('销量', max_length=255, default='')
+    price = models.CharField('价格', max_length=255, default='')
+    manufacturer = models.CharField('厂商', max_length=255, default='')
+    rank = models.CharField('排名', max_length=255, default='')
+    carModel = models.CharField('车型', max_length=255, default='')
+    energyType = models.CharField('能源类型', max_length=255, default='')
+    marketTime = models.CharField('上市时间', max_length=255, default='')
+    insure = models.CharField('保修时间', max_length=255, default='')
+    createTime = models.DateField('创建时间', auto_now_add=True)
 
+    class Meta:
+        db_table = 'carInfo'
+
+
+class User(models.Model):
+    id = models.AutoField('id', primary_key=True)
+    userName = models.CharField('用户名', max_length=255, default='')
+    password = models.CharField('密码', max_length=255, default='')
+    createTime = models.DateField('创建时间', auto_now_add=True)
+
+    class Meta:
+        db_table = 'user'
+```
+
+接下来到 `settings.py` 注册创建的应用程序 `myApp`
+
+```python
+# Application definition
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "myApp"
+]
+```
+
+注册完成后就可以使用命令创建对应的数据库了，注意创建之前记得将数据库服务打开
+
+```sh
+python manage.py makemigrations
+python manage.py migrate
+```
+
+执行完成后数据库就会自动创建我们刚刚定义的两张表 carinfo 和 user 表，以及其他的 Django 需要的表
+
+接下来就是把存储到 csv 的数据进行简单的清洗，然后存入数据库
+
+```python
+@staticmethod
+def clear_csv(self):
+    # 数据清洗
+    df = pd.read_csv('./temp.csv')
+    # 删除空行
+    df.dropna(inplace=True)
+    # 删除重复行
+    df.drop_duplicates(inplace=True)
+    print(f'数据总数为{df.shape[0]}条')
+    return df.values
+
+def save_to_sql(self):
+    data = self.clear_csv(self)
+    for car in data:
+        CarInfo.objects.create(
+            brand=car[0],
+            carName=car[1],
+            carImg=car[2],
+            saleVolume=car[3],
+            price=car[4],
+            manufacturer=car[5],
+            rank=car[6],
+            carModel=car[7],
+            energyType=car[8],
+            marketTime=car[9],
+            insure=car[10]
+        )
+```
+
+存入数据库前，记得先引入之前定义好的数据库模型，这是固定的写法
+
+```python
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "carBigScreen.settings")
+django.setup()
+from myApp.models import CarInfo
+```
+
+之后就是等待爬虫爬取完成，然后在主函数中执行存入数据库的函数就可以了
+
+```python
+if __name__ == '__main__':
+    spiderObj = Spider()
+    # spiderObj.init()
+    # spiderObj.main()
+    spiderObj.save_to_sql()
+```
+
+#### 7 前端
+
+##### 7.1 前端初始化
+
+因为这个项目更注重后端，所以前端直接用模板来改写，[模板地址](https://gitee.com/MTrun/big-screen-vue-datav)，node 版本 18.18.2，使用 `pnpm install` 安装依赖，安装完成后就可以执行 `npm run serve` 运行项目了
+
+##### 7.2 编写 Django 路由
+
+返回 python 项目，编辑 `urls.py`，创建路由
+
+```python
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("myApp/", include("myApp.urls"))
+]
+```
+
+此时 `myApp` 没有 `urls.py` 文件，创建即可：
+
+```python
+from django.urls import path
+
+from myApp import views
+urlpatterns = [
+    path("center", views.center, name="center")
+]
+```
+
+此时 `views.py` 文件 没有 `center` 函数，创建即可：
+
+```python
+from django.shortcuts import render
+from django.http import JsonResponse
+
+# Create your views here.
+
+
+def center(request):
+    if request.method == 'GET':
+        return JsonResponse({'code': 200, 'msg': 'success'})
+```
+
+然后在 `myApp` 应用里创建一个 utils 文件夹，用于编写获取数据的工具
+
+首先新建 `getPublicData.py` 文件，用于获取所有数据
+
+```python
+from myApp.models import *
+
+
+def get_all_cars():
+    # 获取所有数据
+    return CarInfo.objects.all()
+```
+
+然后新建 `getCenterData.py` 文件，引入 `get_all_cars` 函数
+
+```python
+import json
+import time
+from .getPublicData import *
+
+
+def get_center_data():
+    cars = get_all_cars()
+    print(cars)
+```
+
+然后在 `views.py` 文件中引入工具文件
+
+```python
+from django.shortcuts import render
+from django.http import JsonResponse
+from .utils import getPublicData
+from .utils import getCenterData
+
+# Create your views here.
+
+
+def center(request):
+    if request.method == 'GET':
+        getCenterData.get_center_data()
+        return JsonResponse({'code': 200, 'msg': 'success'})
+```
+
+现在在浏览器中访问 `http://localhost:8000/myApp/center` 就能得到 json 数据了：
+
+```json
+{'code': 200, 'msg': 'success'}
+```
+
+现在对获取的总数据进行处理：
+
+```python
+# getCenterData.py
+
+import json
+import time
+from .getPublicData import *
+
+
+def get_center_data():
+    cars = list(get_all_cars())
+    # 车辆总数据
+    sum_cars = len(cars)
+    # 销量最多汽车
+    top_car = cars[0].carName
+    # 车辆最高销售额
+    top_car_volume = cars[0].saleVolume
+    # 销售最多车型
+    car_models = {}
+    max_model = 0
+    most_model = ''
+    for i in cars:
+        # 不存在车型返回 -1
+        if car_models.get(i.carModel, -1) == -1:
+            car_models[str(i.carModel)] = 1
+        else:
+            car_models[str(i.carModel)] += 1
+    # 排序
+    car_models = sorted(car_models.items(), key=lambda x: x[1], reverse=True)
+    most_model = car_models[0][0]
+    max_model = car_models[0][0]
+    # 车型最多品牌
+    car_brands = {}
+    max_brand = 0
+    most_brand = ''
+    for i in cars:
+        # 不存在车型返回 -1
+        if car_brands.get(i.brand, -1) == -1:
+            car_brands[str(i.brand)] = 1
+        else:
+            car_brands[str(i.brand)] += 1
+    # 排序
+    car_brands = sorted(car_brands.items(), key=lambda x: x[1], reverse=True)
+    most_brand = car_brands[0][0]
+    max_brand = car_brands[0][1]
+    # 车辆平均价格
+    car_prices = {}
+    average_price = 0
+    sum_price = 0
+    for i in cars:
+        x = json.loads(i.price)[0] + json.loads(i.price)[1]
+        sum_price += x
+    average_price = sum_price / (sum_cars * 2)
+    average_price = round(average_price, 2)
+    return sum_cars, top_car, top_car_volume, most_model, most_brand, average_price
+```
+
+返回处理的数据后，在 `views.py` 中接收数据，组装成 json 数据返回给路由
+
+```python
+# views.py
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from .utils import getPublicData
+from .utils import getCenterData
+
+# Create your views here.
+
+
+def center(request):
+    if request.method == 'GET':
+        (sum_cars,
+         top_car,
+         top_car_volume,
+         most_model,
+         most_brand,
+         average_price
+         ) = getCenterData.get_center_data()
+        return JsonResponse({
+            'code': 200,
+            'msg': 'success',
+            'data': [
+                {
+                    'title': '车辆总数据',
+                    'value': sum_cars
+                },
+                {
+                    'title': '销量最多汽车',
+                    'value': top_car
+                },
+                {
+                    'title': '车辆最高销售额',
+                    'value': top_car_volume
+                },
+                {
+                    'title': '销售最多车型',
+                    'value': most_model
+                },
+                {
+                    'title': '车型最多品牌',
+                    'value': most_brand
+                },
+                {
+                    'title': '车辆平均价格',
+                    'value': f'{average_price}万'
+                }
+            ]
+        })
+```
+
+##### 7.3 前端请求数据
+
+###### 7.3.1 axios
+
+模板没有安装 axios 库，需要先安装
+
+```sh
+pnpm add axios
+```
+
+然后新建 api 文件夹，新建 index js文件，引入 axios，编写请求对象
+
+```js
+import axios from 'axios'
+
+const api = axios.create({
+    baseURL: 'http://127.0.0.1:8000/',
+    timeout: 60000
+})
+
+export default api
+```
+
+然后在 `main.js` 文件中引入并绑定到 vue 原型上
+
+```js
+import $http from '@/api/index'
+Vue.prototype.$http = $http
+```
+
+然后在 `center.vue` 组件中使用请求
+
+```js
+async mounted() {
+  const res = await this.$http.get('myApp/center')
+  console.log(res)
+}
+```
+
+###### 7.3.2 跨域
+
+接着会遇到跨域问题，我们安装 Django 的一个 python 库来解决，打开 Django 项目，运行命令安装
+
+```sh
+pip install django-cors-headers
+```
+
+> 注意这里有坑，运行安装命令后，pip 会自动查找与最新版本的 django-cors-headers 兼容的 Django 版本，然后自动将项目的 Django 版本升级，导致项目报错，建议提前查找与当前 Django 版本兼容的版本，指定版本安装
+>
+> 如果已经升级报错，则需要卸载受影响的库，重新安装指定版本
+>
+> ```sh
+> pip install django-cors-headers==3.11.0
+> ```
+
+安装完成后打开 `settings.py` 文件，引入 `corsheaders` 并做相关配置
+
+```python
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "corsheaders",
+    "myApp"
+]
+
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_HEADERS = "*"
+ROOT_URLCONF = "carBigScreen.urls"
+```
+
+再次请求，就可以正常获取数据了
+
+##### 7.4 前端数据渲染
+
+可参考 [datav](http://datav.jiaminghi.com/) 的官方文档，完成数据渲染，如需更多数据，参照编写 Django 路由，编写更多路由返回数据即可
 
 
 
