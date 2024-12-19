@@ -248,14 +248,92 @@ View 层：负责数据展示，比如前端页面HTML，与模型解耦，通�
 
 Controller 层：作为模型和视图之间的中介，控制器接收来自视图的用户输入，调用模型去处理数据，并更新视图以展示新的数据，路由控制常常位于控制层
 
+首先介绍目录结构：
+
+```txt
+│  application.py  封装的 Flask 的全局变量，包括 app、全局变量等
+│  manager.py  主入口
+│  requirements.txt  依赖列表
+│  www.py  HTTP模块相关初始化
+├─common  公共包
+│  │
+│  ├─libs  公用方法或类库
+│  │  │  UrlManager.py
+│  ├─models  数据库model
+│
+├─config  配置文件
+│      base_setting.py  基础配置
+│      local_setting.py  开发配置
+│      production_setting.py  生产配置
+│
+├─docs  文档
+│      mysql.md  数据库变更
+│
+├─jobs  任务
+│  │
+│  └─tasks  定时任务
+│
+├─static  静态文件
+├─templates  模板
+├─web  前端存放
+│  │
+│  ├─controllers  控制层
+│  │  │  index.py
+```
+
+通过命令行启动应用
+
 ```sh
 # linux
 export ops_config=local && python manager.py runserver
 # windows
-set ops_config=local ; python manager.py runserver
+$env:ops_config="local"; python manager.py runserver
 ```
 
+#### 6 账户管理页面
 
+首先新建一个控制层 user
+
+```python
+# user.py
+
+from flask import Blueprint
+
+route_user = Blueprint('user_page', __name__)
+
+@route_user.route('/login')
+def login():
+    return 'login page'
+```
+
+然后在 `www.py` 中引入
+
+```python
+# www.py
+
+from application import app
+from web.controllers.index import route_index
+from web.controllers.user.User import route_user
+
+app.register_blueprint(route_index, url_prefix='/')
+app.register_blueprint(route_user, url_prefix='/user')
+```
+
+此时访问 `http://127.0.0.1:8999/user/login` 就得到了 login page 的返回，但是我们想要的是一个网页，于是引入模板渲染工具，返回渲染结果
+
+```python
+# user.py
+
+from flask import Blueprint, render_template
+
+route_user = Blueprint('user_page', __name__)
+
+@route_user.route('/login')
+def login():
+    return render_template('user/login.html')
+```
+
+此时会报找不到 login.html 模板的错误，这是正常的，我们去新建这个模板文件
 
 
 
