@@ -6,11 +6,11 @@
 
 ##### 1.1 安装
 
-1. 下载社区版解压并且添加bin目录到系统path环境变量
+1. 下载社区版解压并且添加 bin 目录到系统 path 环境变量
 
-2. 在安装目录中创建目录data及创建文件my.ini
+2. 在安装目录中创建目录 data 及创建文件 my.ini
 
-3. 将下面的内容写入文件my.ini，注意目录的路径
+3. 将下面的内容写入文件 my.ini，注意目录的路径
 
    ```ini
    [mysqld]
@@ -40,21 +40,61 @@
    default-character-set=utf8
    ```
 
-4. cd到安装目录，执行`mysqld -- initialize -- console`，初始化mysql，将命令行中生成的root密码记录下来
+4. cd 到安装目录，执行
 
-5. `mysqld install`，安装mysql
+   ```sh
+   mysqld -- initialize -- console
+   ```
 
-6. `net start mysql`，启动mysql服务，关闭是`net stop mysql`
+   初始化 mysql，将命令行中生成的 root 密码记录下来
 
-7. `mysql -u root -p`，输入root密码登录到mysql
+5. 安装 mysql
 
-8. `ALTER USER 'root'@'localhost' IDENTIFIED BY 'password' PASSWORD EXPIRE NEVER;`，修改加密规则
+   ```sh
+   mysqld install
+   ```
 
-9. ` alter user 'root'@'localhost' identified with mysql_native_password by 'xxx';`，修改root密码为xxx
+6. 启动 mysql 服务
 
-10. `SHOW VARIABLES LIKE '%char%';`，检查字符编码是否是`utf8`
+   ```sh
+   net start mysql
+   ```
 
-11. `SHOW VARIABLES LIKE '%autocommit%';`，查看是否开启autocommit，innodb引擎默认开启，不用手动commit
+   关闭 mysql 服务
+
+   ```sh
+   net stop mysql
+   ```
+
+7. 输入 root 密码登录到 mysql
+
+   ```sh
+   mysql -u root -p
+   ```
+
+8. 修改加密规则
+
+   ```sh
+   ALTER USER 'root'@'localhost' IDENTIFIED BY 'password' PASSWORD EXPIRE NEVER;
+   ```
+
+9. 修改root密码为 xxx
+
+   ```sh
+   ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'xxx';
+   ```
+
+10. 检查字符编码是否是 `utf8`
+
+    ```sh
+    SHOW VARIABLES LIKE '%char%';
+    ```
+
+11. 查看是否开启 autocommit，innodb 引擎默认开启，不用手动 commit
+
+    ```sh
+    SHOW VARIABLES LIKE '%autocommit%';
+    ```
 
 ##### 1.2 用户及权限
 
@@ -64,7 +104,7 @@
 >
 > 在文件里面就可以修改命令了，或者使用图形化工具MySQL Workbench等
 
-DCL(Data Control Language 数据控制语句)
+DCL (Data Control Language 数据控制语句)
 
 - `localhost`表示只能在本地登录数据库
 - ` %`是通配符，表示可以在任意主机登录数据库
