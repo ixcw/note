@@ -273,10 +273,10 @@ Controller 层：作为模型和视图之间的中介，控制器接收来自视
 │  │
 │  └─tasks  定时任务
 │
-├─static  静态文件
-├─templates  模板
 ├─web  前端存放
 │  │
+│  ├─static  静态文件
+│  ├─templates  模板
 │  ├─controllers  控制层
 │  │  │  index.py
 ```
@@ -290,7 +290,7 @@ export ops_config=local && python manager.py runserver
 $env:ops_config="local"; python manager.py runserver
 ```
 
-#### 6 账户管理页面
+#### 6 后台管理页面
 
 首先新建一个控制层 user
 
@@ -333,19 +333,248 @@ def login():
     return render_template('user/login.html')
 ```
 
-此时会报找不到 login.html 模板的错误，这是正常的，我们去新建这个模板文件
+此时会报找不到 login.html 模板的错误，这是正常的，我们去新建这个模板文件，将准备好的 static  静态文件和 templates  模板文件夹直接复制到 web 文件夹，但是此时还是不能访问，因为默认的模板文件夹不是指向的 web 文件夹下，需要做一些配置
+
+```python
+# application.py
+
+class Application(Flask):
+    def __init__(self, import_name, template_folder=None):
+        super(Application, self).__init__(import_name, template_folder=template_folder)
+        self.config.from_pyfile('config/base_setting.py')
+        # 通过命令行赋值 ops_config 环境变量，再启动应用
+        if "ops_config" in os.environ:
+            self.config.from_pyfile('config/%s_setting.py' % os.environ['ops_config'])
+        db.init_app(self)
 
 
+db = SQLAlchemy()
+# 配置模板文件所在目录
+app = Application(__name__, template_folder=os.getcwd() + '/web/templates/')
+manager = Manager(app)
+```
+
+这时会报方法未定义错误，这是因为模板文件中使用了未定义的方法，实际上就是链接管理器中的方法未定义，将准备好的代码拷贝过来如下
+
+```python
+# UrlManager.py
+
+class UrlManager(object):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def buildUrl(path):
+        return path
+
+    @staticmethod
+    def buildStaticUrl(path):
+        ver = "%s" % 22222222
+        path = "/static" + path + "?ver=" + ver
+        return UrlManager.buildUrl(path)
+```
+
+但你也许会问这是 py 文件中的方法，怎么在模板文件中使用呢，我们可以通过函数模板进行注入
+
+```python
+# application.py
+
+from common.libs.UrlManager import UrlManager
+
+# 注入函数模板
+app.add_template_global(UrlManager.buildUrl, 'buildUrl')
+app.add_template_global(UrlManager.buildStaticUrl, 'buildStaticUrl')
+```
+
+现在再次访问 `http://127.0.0.1:8999/user/login` 就能访问到 html 模板文件了，但是会发现没有图片和样式，调试发现静态资源返回了 404 找不到资源，所以还要再配置静态资源的目录，这个问题只有在本地开发时会遇到
+
+```python
+# static.py
+
+from flask import Blueprint, send_from_directory
+from application import app
+
+route_static = Blueprint('static', __name__)
 
 
+@route_static.route("/<path:filename>")
+def index(filename):
+    return send_from_directory(app.root_path + '/web/static/', filename)
+```
+
+配置根路径 root_path
+
+```python
+class Application(Flask):
+    def __init__(self, import_name, template_folder=None, root_path=None):
+        super(Application, self).__init__(
+            import_name,
+            template_folder=template_folder,
+            root_path=root_path,
+            static_folder=None
+        )
+        self.config.from_pyfile('config/base_setting.py')
+        # 通过命令行赋值 ops_config 环境变量，再启动应用
+        if "ops_config" in os.environ:
+            self.config.from_pyfile('config/%s_setting.py' % os.environ['ops_config'])
+        db.init_app(self)
 
 
+db = SQLAlchemy()
+# 配置模板文件所在目录
+app = Application(__name__, template_folder=os.getcwd() + '/web/templates/', root_path=os.getcwd())
+```
+
+在 `www.py` 中引入路由
+
+```python
+# www.py
+
+from application import app
+from web.controllers.index import route_index
+from web.controllers.user.User import route_user
+from web.controllers.static import route_static
+
+app.register_blueprint(route_index, url_prefix='/')
+app.register_blueprint(route_user, url_prefix='/user')
+app.register_blueprint(route_static, url_prefix='/static')
+```
+
+接下来就按照路由的添加方式添加静态页面的访问路径就能搭建后台管理页面了
+
+#### 7 小程序页面
+
+这里按照正常流程创建小程序就可以了，创建完成后将提前准备好的小程序文件复制进来，就得到了基础的小程序前端页面
+
+#### 8 后台账号模块开发
+
+经过前面的基础框架和前端页面的搭建，项目已经有了一个基础样貌，但是具体功能还未实现，接下来就进入正式的功能开发，每个功能的开发从需求到数据库设计再到功能开发，整个流程走通是非常重要的，在这里我们也会按照这样的顺序进行讲解
+
+##### 8.1 需求分析
+
+首先开发后台的账号模块，先来分析需求
+
+```mermaid
+graph TD
+    Account["账号模块"]
+    Manager1["账户管理"]
+    Manager2["认证功能"]
+    AccountList["账户列表"]
+    AccountAdd["添加账户"]
+    AccountEdit["编辑账户"]
+    AccountDelete["删除账户"]
+    AccountRestore["恢复账户"]
+    LoginOut["登录登出"]
+    ResetPwd["重置密码"]
+    InfoEdit["编辑信息"]
+    
+    Account --> Manager1
+    Account --> Manager2
+    Manager1 --> AccountList
+    Manager1 --> AccountAdd
+    Manager1 --> AccountEdit
+    Manager1 --> AccountDelete
+    Manager1 --> AccountRestore
+    Manager2 --> LoginOut
+    Manager2 --> ResetPwd
+    Manager2 --> InfoEdit
+```
+
+账户模块可以对自己的账号进行修改和登录，也可以管理别的账号，我们首先实现登录功能
+
+##### 8.2 创建用户表
+
+登录 mysql
+
+```sh
+mysql -u root -p
+```
+
+创建数据库 order_food
+
+```sh
+CREATE DATABASE `order_food` DEFAULT CHARACTER SET = `utf8mb4`;
+```
+
+查看创建结果
+
+```sh
+SHOW DATABASES;
+```
+
+使用 food_db 数据库
+
+```sh
+USE order_food;
+```
+
+执行创建用户表的命令
+
+```sql
+DROP TABLE IF EXISTS `user`;
+CREATE TABLE `user` (
+  `uid` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '用户uid',
+  `nickname` varchar(100) NOT NULL DEFAULT '' COMMENT '用户名',
+  `mobile` varchar(20) NOT NULL DEFAULT '' COMMENT '手机号码',
+  `email` varchar(100) NOT NULL DEFAULT '' COMMENT '邮箱地址',
+  `sex` tinyint(1) NOT NULL DEFAULT '0' COMMENT '1: 男 2: 女 0: 没填写',
+  `avatar` varchar(64) NOT NULL DEFAULT '' COMMENT '头像',
+  `login_name` varchar(20) NOT NULL DEFAULT '' COMMENT '登录用户名',
+  `login_pwd` varchar(32) NOT NULL DEFAULT '' COMMENT '登录密码',
+  `login_salt` varchar(32) NOT NULL DEFAULT '' COMMENT '登录密码的随机加密秘钥',
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1: 有效 0: 无效',
+  `updated_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' COMMENT '最后一次更新时间',
+  `created_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' COMMENT '插入时间',
+  PRIMARY KEY(`uid`),
+  UNIQUE KEY `login_name` (`login_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户表(管理员)';
+```
+
+> 此处时间字段可能会报无效默认值，设置 mysql 的配置解决
+
+##### 8.3 创建 ORM model
+
+我们可以使用一款 flask 的工具库 `flask-sqlacodegen` 快速创建对应表的 model，首先安装
+
+```sh
+pip install flask-sqlacodegen==1.1.6.1
+```
+
+安装完成后执行下面的命令
+
+```sh
+flask-sqlacodegen 'mysql://root:root@127.0.0.1/order_food' --tables user --outfile "common/models/User.py" --flask
+```
+
+在 models 文件夹下就生成了 `User.py` 文件，但是生成的 model 文件中的 db 变量是默认生成的，需要换成我们项目中自定义生成的 db
+
+```python
+# User.py
+# coding: utf-8
+
+from sqlalchemy import BigInteger, Column, DateTime, Integer, String
+from sqlalchemy.schema import FetchedValue
+from application import db
 
 
+class User(db.Model):
+    __tablename__ = 'user'
 
+    uid = db.Column(db.BigInteger, primary_key=True)
+    nickname = db.Column(db.String(100), nullable=False, server_default=db.FetchedValue())
+    mobile = db.Column(db.String(20), nullable=False, server_default=db.FetchedValue())
+    email = db.Column(db.String(100), nullable=False, server_default=db.FetchedValue())
+    sex = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
+    avatar = db.Column(db.String(64), nullable=False, server_default=db.FetchedValue())
+    login_name = db.Column(db.String(20), nullable=False, unique=True, server_default=db.FetchedValue())
+    login_pwd = db.Column(db.String(32), nullable=False, server_default=db.FetchedValue())
+    Login_Salt = db.Column(db.String(32), nullable=False, server_default=db.FetchedValue())
+    status = db.Column(db.Integer, nullable=False, server_default=db.FetchedValue())
+    updated_time = db.Column(db.DateTime, nullable=False, server_default=db.FetchedValue())
+    created_time = db.Column(db.DateTime, nullable=False, server_default=db.FetchedValue())
+```
 
-
-
+##### 8.4 实现登录功能
 
 
 
