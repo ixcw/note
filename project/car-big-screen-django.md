@@ -753,7 +753,58 @@ ROOT_URLCONF = "carBigScreen.urls"
 
 可参考 [datav](http://datav.jiaminghi.com/) 的官方文档，完成数据渲染，如需更多数据，参照编写 Django 路由，编写更多路由返回数据即可
 
+##### 7.5 生成词云图
 
+在 python 项目中新建 `word-cloud.py` 文件
+
+```python
+# word-cloud.py
+
+from matplotlib import pyplot as plt
+from wordcloud import WordCloud
+from PIL import Image
+from pymysql import *
+import jieba
+import numpy as np
+
+
+def get_img(field, target_img_src, res_img_src):
+    con = connect(host='localhost', user='car', password='123456', database='car_big_data', port=3306, charset='utf8')
+    cursor = con.cursor()
+    sql = f'select {field} from carinfo'
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    text = ''
+    for i in data:
+        if i[0] != '':
+            tag_arr = i
+            for j in tag_arr:
+                text += j
+    cursor.close()
+    con.close()
+    data_cut = jieba.cut(text, cut_all=False)
+    string = ' '.join(data_cut)
+
+    # 图片
+    img = Image.open(target_img_src)
+    img_arr = np.array(img)
+    wc = WordCloud(
+        font_path='STHUPO.TTF',
+        mask=img_arr,
+        background_color='#04122c'
+    )
+    wc.generate_from_text(string)
+    # 绘制图片
+    fig = plt.figure(1)
+    plt.imshow(wc)
+    plt.axis('off')
+    plt.savefig(res_img_src, dpi=800, bbox_inches='tight', pad_inches=-0.1)
+
+
+get_img('manufacturer', './big-screen-vue-datav/public/car.png', './big-screen-vue-datav/public/car-cloud.png')
+```
+
+在前端项目的 `big-screen-vue-datav/public/` 目录下存放一张 `car.png` 图片作为词云图生成的源图片，运行 `get_img` 函数，生成词云图片 `car-cloud.png`，将其放在前端展示即可
 
 
 
