@@ -152,6 +152,8 @@ import django
 首先定义一个爬虫类，将需要的爬取数据存储到一个临时的 csv 文件中
 
 ```python
+# spiders.py
+
 class Spider(object):
     def __init__(self):
         pass
@@ -179,6 +181,8 @@ if __name__ == '__main__':
 将前面分析网页得到的请求地址通过 init 函数初始化，然后在 main 函数中通过 requests 库模拟请求该请求地址，获取到数据
 
 ```python
+# spiders.py
+
 class Spider(object):
     def __init__(self):
         self.spiderUrl = (
@@ -208,6 +212,8 @@ if __name__ == '__main__':
 但是此时参数是固定的，我们需要修改请求地址的参数来获取新的数据，定义一个文件 `spiderPage.txt` 来存储页数
 
 ```python
+# spiders.py
+
 import requests
 from lxml import etree
 import csv
@@ -396,14 +402,14 @@ INSTALLED_APPS = [
 ]
 ```
 
-注册完成后就可以使用命令创建对应的数据库了，注意创建之前记得将数据库服务打开
+注册完成后就可以使用命令创建对应的数据库表了，注意创建之前记得将数据库服务打开
 
 ```sh
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-执行完成后数据库就会自动创建我们刚刚定义的两张表 carinfo 和 user 表，以及其他的 Django 需要的表
+执行完成后数据库就会自动创建我们刚刚定义的两张数据库表 carinfo 和 user 表，以及其他的 Django 需要的表
 
 接下来就是把存储到 csv 的数据进行简单的清洗，然后存入数据库
 
@@ -454,6 +460,8 @@ if __name__ == '__main__':
     # spiderObj.main()
     spiderObj.save_to_sql()
 ```
+
+这里进行了改写，将存储数据库功能单独抽取出了模块 `save_to_sql.py`，运行这个模块文件就可以了
 
 #### 7 前端
 
@@ -806,7 +814,36 @@ get_img('manufacturer', './big-screen-vue-datav/public/car.png', './big-screen-v
 
 在前端项目的 `big-screen-vue-datav/public/` 目录下存放一张 `car.png` 图片作为词云图生成的源图片，运行 `get_img` 函数，生成词云图片 `car-cloud.png`，将其放在前端展示即可
 
+#### X 部署
 
+1. 设置 python 环境为 3.8，安装依赖
+
+   ```sh
+   pip install -r requirements.txt
+   ```
+
+2. 创建 mysql 数据库 `car_big_data`，用户名 `root`，密码 `123456`，端口默认 3306
+
+3. 创建数据库数据表
+
+   ```sh
+   python manage.py makemigrations
+   python manage.py migrate
+   ```
+
+4. 运行模块文件 `spiderMan/save_to_sql.py` 存储数据到数据库
+
+5. 前端项目安装依赖，node 版本 18.18.2
+
+   ```sh
+   pnpm install
+   ```
+
+   运行项目
+
+   ```sh
+   npm run serve
+   ```
 
 
 
