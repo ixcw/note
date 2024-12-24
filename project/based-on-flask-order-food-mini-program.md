@@ -576,11 +576,203 @@ class User(db.Model):
 
 ##### 8.4 实现登录功能
 
+###### 8.4.1 请求方式
+
+打开登录页面，点击登录，发现报错 `method not allowed`，原因是默认只有 get 请求方式，我们将 post 请求方式加上
+
+```python
+# web/controllers/user/User.py
+
+from flask import Blueprint, render_template
+
+route_user = Blueprint('user_page', __name__)
 
 
+@route_user.route('/login', methods=["GET", "POST"])
+def login():
+    return render_template('user/login.html')
+```
+
+但是按照这里的逻辑，无论是通过 get 直接访问登录页，还是点击按钮用 post 访问，都会直接返回登录页，我们想要的效果是点击登录按钮时是登录功能，而不是返回登录页，因此对请求方式进行判断分开处理
+
+```python
+# web/controllers/user/User.py
+
+from flask import Blueprint, render_template, request, jsonify
+
+route_user = Blueprint('user_page', __name__)
 
 
+@route_user.route('/login', methods=["GET", "POST"])
+def login():
+    if request.method == 'GET':
+        return render_template('user/login.html')
+    res_json = {'code': 200, 'msg': '登录成功', 'data': {}}
+    req = request.values
+    login_name = req['login_name'] if 'login_name' in req else ''
+    login_pwd = req['login_pwd'] if 'login_pwd' in req else ''
+    
+    if login_name is None or len(login_name) < 1:
+        res_json['code'] = -1
+        res_json['msg'] = '登录失败，请输入正确的用户名~~'
+        return jsonify(res_json)
+    if login_pwd is None or len(login_pwd) < 1:
+        res_json['code'] = -1
+        res_json['msg'] = '登录失败，请输入正确的密码~~'
+        return jsonify(res_json)
 
+    return "%s - %s" % (login_name, login_pwd)
+```
+
+###### 8.4.2 数据库查询
+
+但是这里只是进行了判空处理，接下来进行数据库查询处理
+
+```python
+# web/controllers/user/User.py
+
+from common.models.User import User
+
+@route_user.route('/login', methods=["GET", "POST"])
+def login():
+    # 略
+    user_info = User.query.filter_by(login_name=login_name).first()
+    if not user_info:
+        res_json['code'] = -1
+        res_json['msg'] = '登录失败，请输入正确的用户名和密码~~'
+        return jsonify(res_json)
+
+    return "%s - %s" % (login_name, login_pwd)
+```
+
+此时数据库还没有用户数据，我们插入一条数据用于测试
+
+```sql
+INSERT INTO `user` (`uid`, `nickname`, `mobile`, `email`, `sex`, `avatar`, `login_name`, `login_pwd`, `login_salt`, `status`, `updated_time`, `created_time`) VALUES (1, 'james', '18888888888', 'james@qq.com', 1, '', 'james', '816440c40b7a9d55ff9eb7b20760862c', 'cF3JfH5FJfQ8B2Ba', 1, '2024-12-24 14:00', '2024-12-24 14:00');
+```
+
+插入完成后，再去使用用户名 `james` 进行登录，就能通过校验了
+
+###### 8.4.3 密码加密
+
+此时还未校验登录密码，这里的登录密码是通过盐值进行加密的，下面说一下如何进行加密
+
+首先在 `common/libs` 下新建一个包 `user`，然后在包下新建一个服务类 `UserService.py`，利用 md5 和 base64 进行加密密码
+
+```python
+# UserService.py
+
+import base64
+import hashlib
+
+
+class UserService():
+    @staticmethod
+    def get_pwd(pwd, salt):
+        md5 = hashlib.md5()
+        pwd_str = "%s-%s" % (base64.encodebytes(pwd.encode('utf-8')), salt)
+        md5.update(pwd_str.encode('utf-8'))
+        return md5.hexdigest()
+```
+
+返回 controller，引入 service
+
+```python
+# web/controllers/user/User.py
+
+from common.libs.user.UserService import UserService
+
+@route_user.route('/login', methods=["GET", "POST"])
+def login():
+    # 略
+    if user_info.login_pwd != UserService.get_pwd(login_pwd, user_info.Login_Salt):
+        res_json['code'] = -1
+        # 一样的提示，防止用户试密码
+        res_json['msg'] = '登录失败，请输入正确的用户名和密码~~'
+        return jsonify(res_json)
+```
+
+###### 8.4.4 前端处理
+
+然后处理前端，在静态文件夹新建登录文件，用于处理登录，这里使用 jQuery 编写，以及自定义的封装函数
+
+```js
+// static/js/user/login.js
+
+;
+const userLoginOps = {
+  init: function () {
+    this.eventBind()
+  },
+  eventBind: function () {
+    $('.login-wrap .login-btn').click(function () {
+      let loginBtn = $(this)
+      if (loginBtn.hasClass('disabled')) {
+        common_ops.alert('正在处理，勿重复提交')
+        return
+      }
+      const loginName = $('.login-wrap input[name=login_name]').val().trim()
+      const loginPwd = $('.login-wrap input[name=login_pwd]').val().trim()
+      if(!loginName) {
+        common_ops.alert('请输入正确的用户名')
+        return
+      }
+      if(!loginPwd) {
+        common_ops.alert('请输入正确的密码')
+        return
+      }
+
+      loginBtn.addClass('disabled')
+
+      $.ajax({
+        url: common_ops.buildUrl('/user/login'),
+        type: 'POST',
+        data: {loginName, loginPwd},
+        dataType: 'json',
+        success: function (res) {
+          let callback = null
+          if (res.code === 200) {
+            loginBtn.removeClass('disabled')
+            callback = function () {
+              window.location.href = common_ops.buildUrl('/')
+            }
+            common_ops.alert(res.msg, callback)
+          }
+        }
+      })
+    })
+  }
+}
+
+$(document).ready(function () {
+  userLoginOps.init()
+})
+```
+
+###### 8.4.5 cookie 凭证
+
+完成了基本校验，这里我们选择生成 cookie 作为用户凭证，依然在 service 中利用 md5 和 盐值 进行加密生成，最后调用 `make_response` 工具生成返回信息，返回给前端，这样登录成功时，浏览器就会存储 cookie
+
+```python
+# web/controllers/user/User.py
+
+# 生成cookie
+response = make_response(json.dumps(res_json))
+response.set_cookie(app.config['AUTH_COOKIE_NAME'], '%s#%s' % (UserService.generate_auth_code(user_info), user_info.uid))
+
+return response
+```
+
+###### 8.4.6 登录拦截器
+
+到这里我们发现，即使前面做了这么多登录工作，在我们不登录的时候，直接访问后台首页，还是可以访问到的，既然这样可以的话，那登录还有什么用呢，因此我们要对这些情况做个统一的登录拦截
+
+我们当然可以对每个需要登录访问的路径在 controller 里面做拦截，但是这样非常麻烦，因此只需要做统一拦截即可
+
+在web目录下新建 `interceptors` 包，然后新建一个 `AuthInterceptor.py` 拦截模块
+
+```python
+```
 
 
 
