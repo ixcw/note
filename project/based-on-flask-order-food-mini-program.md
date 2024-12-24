@@ -755,12 +755,17 @@ $(document).ready(function () {
 
 ```python
 # web/controllers/user/User.py
+@route_user.route('/login', methods=["GET", "POST"])
+def login():
+    # 略
+	# 生成cookie
+	response = make_response(json.dumps(res_json))
+	response.set_cookie(
+        app.config['AUTH_COOKIE_NAME'],
+        '%s#%s' % (UserService.generate_auth_code(user_info), user_info.uid)
+    )
 
-# 生成cookie
-response = make_response(json.dumps(res_json))
-response.set_cookie(app.config['AUTH_COOKIE_NAME'], '%s#%s' % (UserService.generate_auth_code(user_info), user_info.uid))
-
-return response
+	return response
 ```
 
 ###### 8.4.6 登录拦截器
@@ -772,6 +777,120 @@ return response
 在web目录下新建 `interceptors` 包，然后新建一个 `AuthInterceptor.py` 拦截模块
 
 ```python
+# web/interceptors/AuthInterceptor.py
+
+from flask import request, redirect
+from application import app
+from common.models.User import User
+from common.libs.user.UserService import UserService
+from common.libs.UrlManager import UrlManager
+
+
+# 拦截器装饰器
+@app.before_request
+def before_request():
+    path = request.path
+    user_info = check_login()
+    if not user_info:
+        return redirect(UrlManager.buildUrl('/user/login'))
+    return
+
+
+def check_login():
+    """
+    从 cookie 中取出 uid，然后查询数据库，通过查询到的个人信息生成加密授权码，和接收到的加密授权码进行对比，是否一致
+    """
+    cookies = request.cookies
+    auth_cookie = cookies[app.config['AUTH_COOKIE_NAME']] if app.config['AUTH_COOKIE_NAME'] in cookies else None
+    if auth_cookie is None:
+        return False
+    auth_info = auth_cookie.split('#')
+    if len(auth_info) != 2:
+        return False
+    try:
+        # 查询数据库用户信息
+        user_info = User.query.filter_by(uid=auth_info[0]).first()
+    except Exception as e:
+        app.logger.error(e)
+        return False
+    if user_info is None:
+        return False
+    if auth_info[0] != UserService.generate_auth_code(user_info):
+        # 对比不一致
+        return False
+    return user_info
+```
+
+拦截器会对所有请求进行拦截处理，这时再去访问后台，却发现报错了，报了无限循环重定向错误，原因是只要没有登录，那么就会一直重定向到登录页，正常访问登录页也会被重定向，这肯定是不行的，需要对正常访问的情况进行处理
+
+先在配置文件中配置需要放行的路由地址
+
+```python
+# config/base_setting.py
+
+# 基础配置
+
+SERVER_PORT = 8999
+DEBUG = False
+SQLALCHEMY_ECHO = False
+
+AUTH_COOKIE_NAME = 'food_admin'
+
+IGNORE_URLS = [
+    "^/user/login"
+]
+
+IGNORE_CHECK_LOGIN_URLS = [
+    "^/static",
+    "^/favicon.ico"
+]
+```
+
+然后在拦截器中利用正则进行匹配处理
+
+```python
+# web/interceptors/AuthInterceptor.py
+
+from flask import request, redirect
+import re
+from application import app
+from common.models.User import User
+from common.libs.user.UserService import UserService
+from common.libs.UrlManager import UrlManager
+
+
+# 拦截器装饰器
+@app.before_request
+def before_request():
+    path = request.path
+    ignore_urls = app.config['IGNORE_URLS']
+    ignore_check_login_urls = app.config['IGNORE_CHECK_LOGIN_URLS']
+    pattern = re.compile('%s' % '|'.join(ignore_check_login_urls))
+    if pattern.match(path):
+        return
+    user_info = check_login()
+    pattern = re.compile('%s' % '|'.join(ignore_urls))
+    if pattern.match(path):
+        return
+    if not user_info:
+        return redirect(UrlManager.buildUrl('/user/login'))
+    return
+```
+
+经过处理后，就可以正常登录了，未登录访问首页时，会自动跳转到登录页
+
+###### 8.4.7 退出登录
+
+退出登录其实就是清除 cookie
+
+```python
+# web/controllers/user/User.py
+
+@route_user.route('/logout')
+def logout():
+    response = make_response(redirect(UrlManager.buildUrl('/user/login')))
+    response.delete_cookie(app.config['AUTH_COOKIE_NAME'])
+    return response
 ```
 
 
