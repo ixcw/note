@@ -893,6 +893,182 @@ def logout():
     return response
 ```
 
+##### 8.5 用户信息编辑
+
+###### 8.5.1 信息编辑
+
+首先获取已登录的用户信息，利用 flask 自带的全局变量 g 存储用户信息
+
+```python
+# web/interceptors/AuthInterceptor.py
+
+user_info = check_login()
+g.current_user = None
+if user_info:
+    g.current_user = user_info
+```
+
+然后可以在路由的 `render_template` 中传递这个数据过去，但是这样做的话，每个需要用到这个全局变量的地方都要传递一次，很麻烦，这时就又需要做统一处理了，由于这些路由都是通过 `render_template` 去渲染的，因此我们可以直接改造这个方法，传递全局变量过去
+
+在 `common/libs` 下新建 `Custom.py`
+
+```python
+# common/libs/Custom.py
+
+from flask import render_template, g
+
+
+def custom_render(template, context=None):
+    """
+    自定义渲染方法，获取全局变量
+    """
+    if context is None:
+        context = {}
+    if 'current_user' in g:
+        context['current_user'] = g.current_user
+    return render_template(template, **context)
+```
+
+然后将 controller 里面的原有 `render_template` 替换成 `custom_render`，比如
+
+```python
+# web/controllers/index.py
+
+from flask import Blueprint
+from common.libs.Custom import custom_render
+
+route_index = Blueprint('index_page', __name__)
+
+
+@route_index.route("/")
+def index():
+    return custom_render('index/index.html')
+```
+
+其余的 controller 全部替换即可
+
+接下来就是编写前端 js 文件获取输入，提交给编辑接口，编辑接口将全局变量的值修改，然后修改数据库中的值，完成修改
+
+```python
+# web/controllers/user/User.py
+
+@route_user.route('/edit', methods=["GET", "POST"])
+def edit():
+    """
+    修改用户信息
+    :return: 修改结果
+    """
+    if request.method == 'GET':
+        return custom_render('user/edit.html')
+    res_json = {'code': 200, 'msg': '修改成功', 'data': {}}
+    req = request.values
+    nick_name = req['nickName'] if 'nickName' in req else ''
+    email = req['email'] if 'email' in req else ''
+
+    if nick_name is None or len(nick_name) < 1:
+        res_json['code'] = -1
+        res_json['msg'] = '修改失败，请输入正确的姓名~~'
+        return jsonify(res_json)
+    if email is None or len(email) < 1:
+        res_json['code'] = -1
+        res_json['msg'] = '修改失败，请输入正确的邮箱~~'
+        return jsonify(res_json)
+
+    user_info = g.current_user
+    user_info.nickname = nick_name
+    user_info.email = email
+    db.session.add(user_info)
+    db.session.commit()
+    return jsonify(res_json)
+```
+
+###### 8.5.2 修改密码
+
+修改密码大致相同，只是得注意，由于修改了` login_pwd`，而 cookie 是根据这个进行校验的，会导致修改完成后退出登录到登录页，解决办法也很简单，在修改完密码返回之前，将 cookie 也给更新一下就行
+
+```python
+@route_user.route('/reset-pwd', methods=['GET', 'POST'])
+def reset_pwd():
+    """
+    修改密码
+    :return: 修改结果
+    """
+    if request.method == 'GET':
+        return custom_render('user/reset_pwd.html')
+    res_json = {'code': 200, 'msg': '修改成功', 'data': {}}
+    req = request.values
+    old_password = req['oldPassword'] if 'oldPassword' in req else ''
+    new_password = req['newPassword'] if 'newPassword' in req else ''
+
+    if old_password is None or len(old_password) < 6:
+        res_json['code'] = -1
+        res_json['msg'] = '修改失败，请输入正确的原密码~~'
+        return jsonify(res_json)
+    if new_password is None or len(new_password) < 6:
+        res_json['code'] = -1
+        res_json['msg'] = '修改失败，请输入正确的新密码~~'
+        return jsonify(res_json)
+    if old_password == new_password:
+        res_json['code'] = -1
+        res_json['msg'] = '修改失败，新密码和原密码不能相同哦~~'
+        return jsonify(res_json)
+
+    user_info = g.current_user
+    user_info.login_pwd = UserService.get_pwd(new_password, user_info.Login_Salt)
+    db.session.add(user_info)
+    db.session.commit()
+
+    # 重新生成cookie，防止退出登录
+    response = make_response(json.dumps(res_json))
+    response.set_cookie(
+        app.config['AUTH_COOKIE_NAME'],
+        '%s#%s' % (UserService.generate_auth_code(user_info), user_info.uid),
+        60 * 60 * 24 * 120  # 保存 120 天
+    )
+
+    return response
+```
+
+对于用户信息页面的 tab 栏不能正确切换的问题，可以修改路径，然后抽取公共组件，并传递相应的值到路由页面，实现 tab 高亮
+
+##### 8.6 账号管理
+
+###### 8.6.1 账号列表和详情
+
+首先做展示账号列表的功能，查出所有用户信息，返回给账号页面进行处理即可
+
+```python
+# web/controllers/account/Account.py
+
+from flask import Blueprint
+from common.libs.Custom import custom_render
+from common.models.User import User
+
+route_account = Blueprint('account_page', __name__)
+
+
+@route_account.route('/index')
+def index():
+    user_list_data = {}
+    user_list = User.query.order_by(User.uid.desc()).all()
+    user_list_data['list'] = user_list
+    return custom_render('account/index.html', user_list_data)
+```
+
+然后是分页，这里不用三方插件实现，类似这种简单功能，自己就能封装，只要知道总数据条数，每一页需要的数据条数，就能算出总页数来进行分页了
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
