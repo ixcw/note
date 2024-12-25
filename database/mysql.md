@@ -114,9 +114,14 @@ SELECT * FROM USER;  -- 查询用户，在自带的“mysql”数据库里查询
 CREATE USER 'username'@'host' IDENTIFIED BY 'password'; -- 添加用户
 DROP USER ‘username’@'host’; -- 删除用户
 
-SET PASSWORD FOR 'username'@'host' = PASSWORD('newpassword'); -- 设置用户密码
-UPDATE USER SET PASSWORD = PASSWORD('newpassword') WHERE USER = 'username';  -- 设置用户密码
-SET PASSWORD = PASSWORD("newpassword"); -- 设置当前用户密码
+-- 设置用户密码（mysql5.6及之前）
+SET PASSWORD FOR 'username'@'host' = PASSWORD('newpassword');
+-- 设置用户密码（mysql5.6及之前）
+UPDATE USER SET PASSWORD = PASSWORD('newpassword') WHERE USER = 'username';
+-- 设置当前用户密码（mysql5.6及之前）
+SET PASSWORD = PASSWORD("newpassword");
+-- 设置用户密码（mysql5.7及之后）
+ALTER USER 'username'@'host' IDENTIFIED BY 'newpassword';
 
 SHOW GRANTS FOR 'username'@'host';  -- 查询用户权限
 GRANT PRIVILEGES ON db_name.tb_name TO 'username'@'host'; -- 给用户授权
