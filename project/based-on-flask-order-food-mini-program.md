@@ -1057,6 +1057,36 @@ def index():
 
 然后是分页，这里不用三方插件实现，类似这种简单功能，自己就能封装，只要知道总数据条数，每一页需要的数据条数，就能算出总页数来进行分页了
 
+###### 8.6.2 添加账号
+
+添加账号比较简单，获取到输入的用户信息，进行校验，然后创建用户进行提交即可，注意用户是否已存在，盐值的生成和密码的生成即可
+
+```python
+# 查询用户是否已存在
+has_user = User.query.filter(User.login_name == login_name).first()
+if has_user:
+    res_json['code'] = -1
+    res_json['msg'] = '修改失败，该登录名已存在~~'
+    return jsonify(res_json)
+# 新增用户
+model_user = User()
+model_user.nickname = nick_name
+model_user.mobile = mobile
+model_user.email = email
+model_user.login_name = login_name
+model_user.Login_Salt = UserService.generate_salt()
+model_user.login_pwd = UserService.get_pwd(login_pwd, model_user.Login_Salt)
+model_user.updated_time = get_current_time()
+model_user.created_time = get_current_time()
+db.session.add(model_user)
+db.session.commit()
+return jsonify(res_json)
+```
+
+###### 8.6.3 编辑账号
+
+账号编辑和新增是同一个页面和同一个路由函数，因此需要做区分，这里通过传递的页面参数 id 来区分，通过 id 查询数据库用户是否存在，存在即为编辑，而且可以根据存在的用户信息去自动填写页面信息
+
 
 
 
