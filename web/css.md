@@ -2270,6 +2270,24 @@ div {
   3. order
 
      默认值为 0，以数字方式设置，越小越靠前
+     
+  4. flex-grow
+
+     这个属性规定了 `flex-grow` 项在 flex 容器中分配剩余空间的相对比例，负值无效，默认为 0，设置为 1 将占满剩余空间
+
+     比如左边的元素占满剩余空间，右边的子元素宽度自适应
+
+     ```css
+     .left {
+         flex-grow: 1;
+     }
+     
+     .right {
+         width: fit-content;
+     }
+     ```
+
+     
 ##### 15.5 grid网格布局
 grid网格布局，将网页划分为网格，然后任意组合网格实现布局，可以参考 [CSS Grid 网格布局教程(阮一峰)](https://www.ruanyifeng.com/blog/2019/03/grid-layout-tutorial.html)
 
