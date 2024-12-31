@@ -457,6 +457,28 @@ git diff branch1 branch2  # 显示详细差异
 git diff branch1 branch2 文件路径  # 显示具体某一文件的详细差异
 ```
 
+##### 4.17 合并单一提交
+
+有时需要将其他分支的某个单一提交合并过来，并不需要将其他分支的所有提交都合并过来，这时可以使用如下命令
+
+```sh
+git checkout master
+git log
+```
+
+记录下单一提交的 hash 值，然后切换到要合并的分支
+
+```sh
+git checkout branchA
+git cherry-pick <hash>
+```
+
+可以合并多个提交
+
+```sh
+git cherry-pick <hashA> <hashB>
+```
+
 
 #### 5 开源协议
 
@@ -613,251 +635,251 @@ git clone git@github.com:ixcw/test.git
 
 git中有分支的概念，不同的分支可用于开发不同的功能，最后将这些分支合并到一起，就完成了多功能的开发，有利于多人合作，每个人负责自己的分支，互不干扰
 
-1. master主分支
+###### 6.3.1 master 主分支
 
-   在我们初始化git项目时，git会帮我们建立一个默认分支同时也是主分支master
+在我们初始化git项目时，git会帮我们建立一个默认分支同时也是主分支master
 
-   在实际工作中，master主分支的作用就是保存记录整个项目**已完成功能的代码**，只有已经完成的功能代码可以提交到主分支上面
+在实际工作中，master主分支的作用就是保存记录整个项目**已完成功能的代码**，只有已经完成的功能代码可以提交到主分支上面
 
-2. 功能分支
+###### 6.3.2 功能分支
 
-   就是用于开发新功能的分支，是临时从master分支上分叉出来的，新功能开发测试完成后需要合并回主分支
+就是用于开发新功能的分支，是临时从master分支上分叉出来的，新功能开发测试完成后需要合并回主分支
 
-3. 查看分支列表
+###### 6.3.3 查看分支列表
 
-   ```bash
-   git branch
-   # * master
-   ```
+```bash
+git branch
+# * master
+```
 
-   由于当前只有master分支，故只列出了master分支，在分支的前面有一个*号，表明当前所处的分支是哪一个
+由于当前只有master分支，故只列出了master分支，在分支的前面有一个*号，表明当前所处的分支是哪一个
 
-4. 创建新的分支
+###### 6.3.4 创建新的分支
 
-   ```bash
-   # git branch 新分支名称
-   git branch login
-   
-   # 再次查看分支列表
-   git branch
-   #   login
-   # * master
-   ```
+```bash
+# git branch 新分支名称
+git branch login
 
-   创建分支的操作是基于当前所处分支创建的，新分支会完全克隆所基于的分支，两者的代码完全一致
+# 再次查看分支列表
+git branch
+#   login
+# * master
+```
 
-   创建分支完成后，当前所处分支不会改变，除非手动切换
+创建分支的操作是基于当前所处分支创建的，新分支会完全克隆所基于的分支，两者的代码完全一致
 
-5. 切换分支
+创建分支完成后，当前所处分支不会改变，除非手动切换
 
-   ```bash
-   # git checkout 分支名称
-   git checkout login
-   # Switched to branch 'login'
-   ```
+###### 6.3.5 切换分支
 
-   出现如上输出表示切换成功，同时发现命令行提示变成了`(login)`，表示当前所处分支是login分支
+```bash
+# git checkout 分支名称
+git checkout login
+# Switched to branch 'login'
+```
 
-   有时候，如果觉得每次都要执行两条命令有点麻烦，可以将两条命令合并成一条来写，可以立即创建并切换到新分支（果然懒是第一生产力）
+出现如上输出表示切换成功，同时发现命令行提示变成了`(login)`，表示当前所处分支是login分支
 
-   ```bash
-   # 先切换回master主分支，建议新建分支都从master分支新建
-   git checkout master
-   
-   git checkout -b reg
-   # Switched to a new branch 'reg'
-   
-   git branch
-   #   login
-   #   master
-   # * reg
-   ```
+有时候，如果觉得每次都要执行两条命令有点麻烦，可以将两条命令合并成一条来写，可以立即创建并切换到新分支（果然懒是第一生产力）
 
-6. 合并分支
+```bash
+# 先切换回master主分支，建议新建分支都从master分支新建
+git checkout master
 
-   当新功能开发完毕，需要将其合并到主分支，需要将A分支的代码合并到B分支，则需要先切换到B分支再合并A分支
+git checkout -b reg
+# Switched to a new branch 'reg'
 
-   ```bash
-   # 因为要合并到主分支，所以先切换到主分支
-   git checkout master
-   # Switched to branch 'master'
-   # Your branch is up to date with 'origin/master'.
-   ```
+git branch
+#   login
+#   master
+# * reg
+```
 
-   切换回主分支时，会提示分支和主分支更新保持一致了，这时去工作文件夹查看，发现login的功能代码文件不见了，而是变为了主分支的代码文件，因为此时我们已经切换回了主分支，理应工作区中只有主分支的代码文件，下面执行分支合并命令
+###### 6.3.6 合并分支
 
-   ```bash
-   git merge login
-   # Updating 7fd98d8..d190950
-   # Fast-forward
-   #  login.css  |  9 +++++++++
-   #  login.html | 13 +++++++++++++
-   #  2 files changed, 22 insertions(+)
-   #  create mode 100644 login.css
-   #  create mode 100644 login.html
-   ```
+当新功能开发完毕，需要将其合并到主分支，需要将A分支的代码合并到B分支，则需要先切换到B分支再合并A分支
 
-   显示如上信息表示合并成功，工作区的代码文件也增加了login的代码文件
+```bash
+# 因为要合并到主分支，所以先切换到主分支
+git checkout master
+# Switched to branch 'master'
+# Your branch is up to date with 'origin/master'.
+```
 
-   如果不小心误合并，可以撤销合并
+切换回主分支时，会提示分支和主分支更新保持一致了，这时去工作文件夹查看，发现login的功能代码文件不见了，而是变为了主分支的代码文件，因为此时我们已经切换回了主分支，理应工作区中只有主分支的代码文件，下面执行分支合并命令
 
-   ```bash
-   git merge --abort
-   ```
+```bash
+git merge login
+# Updating 7fd98d8..d190950
+# Fast-forward
+#  login.css  |  9 +++++++++
+#  login.html | 13 +++++++++++++
+#  2 files changed, 22 insertions(+)
+#  create mode 100644 login.css
+#  create mode 100644 login.html
+```
 
-7. 删除分支
+显示如上信息表示合并成功，工作区的代码文件也增加了login的代码文件
 
-   当我们把功能分支的代码合并到主分支上以后，功能分支就失去了它的作用，可以卸磨杀驴了（不是）
+如果不小心误合并，可以撤销合并
 
-   ```bash
-   git branch -d login
-   # Deleted branch login (was d190950).
-   ```
+```bash
+git merge --abort
+```
 
-   > 注意删除分支时不能处于该分支上
+###### 6.3.7 删除分支
 
-   再次检查分支列表，login分支已经消失
+当我们把功能分支的代码合并到主分支上以后，功能分支就失去了它的作用，可以卸磨杀驴了（不是）
 
-   ```bash
-   git branch
-   # * master
-   #  reg
-   ```
+```bash
+git branch -d login
+# Deleted branch login (was d190950).
+```
 
-8. 合并冲突分支
+> 注意删除分支时不能处于该分支上
 
-   在多人合作开发中，难免会遇见不同的人对同一个文件进行了修改的情况，这时Git不知道具体修改了什么内容，就不能合并了，如果强行合并可能导致代码逻辑错乱，这时就产生了合并冲突，这种情况下我们只能选择
+再次检查分支列表，login分支已经消失
 
-   **手动解决冲突** 
+```bash
+git branch
+# * master
+#  reg
+```
 
-   **手动解决冲突** 
+###### 6.3.8 合并冲突分支
 
-   **手动解决冲突**
+在多人合作开发中，难免会遇见不同的人对同一个文件进行了修改的情况，这时Git不知道具体修改了什么内容，就不能合并了，如果强行合并可能导致代码逻辑错乱，这时就产生了合并冲突，这种情况下我们只能选择
 
-   当我们在reg分支和master分支上都修改了index.html文件之后，在master分支合并reg分支，就会出现如下提示
+**手动解决冲突** 
 
-   命令行的提示变成了`(master|MERGING)`，表明出现了冲突，正在合并中，需要先解决冲突再合并分支
+**手动解决冲突** 
 
-   ```bash
-   git merge reg
-   # Auto-merging index.html
-   # CONFLICT (content): Merge conflict in index.html
-   # Automatic merge failed; fix conflicts and then commit the result.
-   ```
+**手动解决冲突**
 
-   我们在master分支下手动打开index.html文件，发现vscode已经帮我们贴心地标记出了产生冲突的地方，如下图所示
+当我们在reg分支和master分支上都修改了index.html文件之后，在master分支合并reg分支，就会出现如下提示
 
-   ![](../images/tool/git/git.png)
+命令行的提示变成了`(master|MERGING)`，表明出现了冲突，正在合并中，需要先解决冲突再合并分支
 
-   并且vscode为我们提供了选项，是保留当前修改，还是保留合并分支的修改，还是保留双方的修改，都由我们自己判断选择，甚至为了帮助我们判断，还有比较文件改变的选项，那我们自然要用一用了，点击比较改变，这时编辑器会分裂为2部分，左边显示当前修改，右边显示合并分支的修改，同时标记出不同点，然后我们就根据自己的需要去判断解决冲突
+```bash
+git merge reg
+# Auto-merging index.html
+# CONFLICT (content): Merge conflict in index.html
+# Automatic merge failed; fix conflicts and then commit the result.
+```
 
-   解决完毕冲突之后，执行如下命令告知Git冲突已解决，重新提交更新
+我们在master分支下手动打开index.html文件，发现vscode已经帮我们贴心地标记出了产生冲突的地方，如下图所示
 
-   ```bash
-   git add .
-   git commit -m "解决了master分支和reg分支的合并冲突"
-   ```
+![](../images/tool/git/git.png)
 
-   执行完毕后就成功合并了冲突分支
+并且vscode为我们提供了选项，是保留当前修改，还是保留合并分支的修改，还是保留双方的修改，都由我们自己判断选择，甚至为了帮助我们判断，还有比较文件改变的选项，那我们自然要用一用了，点击比较改变，这时编辑器会分裂为2部分，左边显示当前修改，右边显示合并分支的修改，同时标记出不同点，然后我们就根据自己的需要去判断解决冲突
 
-9. 将本地分支推送到远程仓库
+解决完毕冲突之后，执行如下命令告知Git冲突已解决，重新提交更新
 
-   第一次推送分支，需要执行如下命令
+```bash
+git add .
+git commit -m "解决了master分支和reg分支的合并冲突"
+```
 
-   ```bash
-   # git push -u 远程仓库别名 本地分支:远程分支
-   git push -u origin master:master
-   # 如果希望远程分支和本地分支命名一致，则可以简化命令
-   git push -u origin master
-   ```
+执行完毕后就成功合并了冲突分支
 
-   第二次及以后只需要执行`git push`命令即可
+###### 6.3.9 第一次推送到远程仓库
 
-10. 查看远程分支
+第一次推送分支，需要执行如下命令
 
-    ```bash
-    # git remote show 远程仓库名称
-    git remote show origin
-    # * remote origin
-    #   Fetch URL: https://github.com/ixcw/test.git
-    #   Push  URL: https://github.com/ixcw/test.git
-    #   HEAD branch: master
-    #   Remote branches:
-    #     main     new (next fetch will store in remotes/origin)
-    #     master   tracked
-    #     register tracked
-    #   Local branches configured for 'git pull':
-    #     master merges with remote master
-    #     reg    merges with remote register
-    #   Local ref configured for 'git push':
-    #     master pushes to master (fast-forwardable)
-    ```
+```bash
+# git push -u 远程仓库别名 本地分支:远程分支
+git push -u origin master:master
+# 如果希望远程分支和本地分支命名一致，则可以简化命令
+git push -u origin master
+```
 
-11. 跟踪分支
+第二次及以后只需要执行`git push`命令即可
 
-    跟踪分支指的是从远程仓库中把远程分支下载到本地仓库中
+###### 6.3.10 查看远程分支
 
-    ```bash
-    # 从远程仓库中下载远程分支到本地仓库，本地分支和远程分支的命名一致
-    # git checkout 远程分支名称
-    git checkout register
-    # Switched to a new branch 'register'
-    # Branch 'register' set up to track remote branch 'register' from 'origin'.
-    
-    # 从远程仓库中下载远程分支到本地仓库，本地分支和远程分支的命名不一致
-    # git checkout -b 本地分支名称 远程仓库名称/远程分支名称
-    git checkout -b reg origin/register
-    # Switched to a new branch 'reg'
-    # Branch 'reg' set up to track remote branch 'register' from 'origin'.
-    ```
+```bash
+# git remote show 远程仓库名称
+git remote show origin
+# * remote origin
+#   Fetch URL: https://github.com/ixcw/test.git
+#   Push  URL: https://github.com/ixcw/test.git
+#   HEAD branch: master
+#   Remote branches:
+#     main     new (next fetch will store in remotes/origin)
+#     master   tracked
+#     register tracked
+#   Local branches configured for 'git pull':
+#     master merges with remote master
+#     reg    merges with remote register
+#   Local ref configured for 'git push':
+#     master pushes to master (fast-forwardable)
+```
 
-    远程分支下载后会立即切换到该分支	
+###### 6.3.11 跟踪分支
 
-12. 拉取远程分支的最新代码
+跟踪分支指的是从远程仓库中把远程分支下载到本地仓库中
 
-    有时候远程分支的代码比本地代码更新，我们需要拉取远程分支的最新代码到本地，使得两者保持一致
+```bash
+# 从远程仓库中下载远程分支到本地仓库，本地分支和远程分支的命名一致
+# git checkout 远程分支名称
+git checkout register
+# Switched to a new branch 'register'
+# Branch 'register' set up to track remote branch 'register' from 'origin'.
 
-    ```bash
-    git pull
-    # remote: Enumerating objects: 9, done.
-    # remote: Counting objects: 100% (9/9), done.
-    # remote: Compressing objects: 100% (6/6), done.
-    # remote: Total 7 (delta 1), reused 0 (delta 0), pack-reused 0
-    # Unpacking objects: 100% (7/7), done.
-    # From https://github.com/ixcw/test
-    #    a3fc6cb..81bd9f7  register   -> origin/register
-    #  * [new branch]      main       -> origin/main
-    # Updating a3fc6cb..81bd9f7
-    # Fast-forward
-    #  index.js | 1 +
-    #  1 file changed, 1 insertion(+)
-    ```
+# 从远程仓库中下载远程分支到本地仓库，本地分支和远程分支的命名不一致
+# git checkout -b 本地分支名称 远程仓库名称/远程分支名称
+git checkout -b reg origin/register
+# Switched to a new branch 'reg'
+# Branch 'reg' set up to track remote branch 'register' from 'origin'.
+```
 
-13. 删除远程分支
+远程分支下载后会立即切换到该分支	
 
-    ```bash
-    # git push 远程仓库名称 --delete 远程分支名称
-    git push origin --delete register
-    # To https://github.com/ixcw/test.git
-    #  - [deleted]         register
-    ```
+###### 6.3.12 拉取远程分支的最新代码
 
-    删除本地分支时如果分支代码没有合并到主分支会报错，但是也可以改变参数为大写强行删除，或者合并之后再删除
+有时候远程分支的代码比本地代码更新，我们需要拉取远程分支的最新代码到本地，使得两者保持一致
 
-    ```bash
-    git branch -d reg
-    # error: The branch 'reg' is not fully merged.
-    # If you are sure you want to delete it, run 'git branch -D reg'.
-    
-    git branch -D reg
-    ```
+```bash
+git pull
+# remote: Enumerating objects: 9, done.
+# remote: Counting objects: 100% (9/9), done.
+# remote: Compressing objects: 100% (6/6), done.
+# remote: Total 7 (delta 1), reused 0 (delta 0), pack-reused 0
+# Unpacking objects: 100% (7/7), done.
+# From https://github.com/ixcw/test
+#    a3fc6cb..81bd9f7  register   -> origin/register
+#  * [new branch]      main       -> origin/main
+# Updating a3fc6cb..81bd9f7
+# Fast-forward
+#  index.js | 1 +
+#  1 file changed, 1 insertion(+)
+```
 
-14. 推送本地分支到远程分支
+###### 6.3.13 删除远程分支
 
-    ```bash
-    # 前面个dev是本地分支，后面个dev是远程分支，名字相同可简写
-    git push origin dev:dev
-    ```
+```bash
+# git push 远程仓库名称 --delete 远程分支名称
+git push origin --delete register
+# To https://github.com/ixcw/test.git
+#  - [deleted]         register
+```
+
+删除本地分支时如果分支代码没有合并到主分支会报错，但是也可以改变参数为大写强行删除，或者合并之后再删除
+
+```bash
+git branch -d reg
+# error: The branch 'reg' is not fully merged.
+# If you are sure you want to delete it, run 'git branch -D reg'.
+
+git branch -D reg
+```
+
+###### 6.3.14 推送本地分支到远程分支
+
+```bash
+# 前面个dev是本地分支，后面个dev是远程分支，名字相同可简写
+git push origin dev:dev
+```
 
 ##### 6.4 提交命令简化
 
