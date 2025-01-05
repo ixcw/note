@@ -814,9 +814,19 @@ get_img('manufacturer', './big-screen-vue-datav/public/car.png', './big-screen-v
 
 在前端项目的 `big-screen-vue-datav/public/` 目录下存放一张 `car.png` 图片作为词云图生成的源图片，运行 `get_img` 函数，生成词云图片 `car-cloud.png`，将其放在前端展示即可
 
-#### X 部署
+#### 8 部署
 
-1. 设置 python 环境为 3.8，安装依赖
+**环境要求：**
+
+- python 3.8.20
+
+- mysql 5.7.26
+
+- node 18.18.2
+
+**部署步骤：**
+
+1. python 安装依赖
 
    ```sh
    pip install -r requirements.txt
@@ -833,13 +843,15 @@ get_img('manufacturer', './big-screen-vue-datav/public/car.png', './big-screen-v
 
 4. 运行模块文件 `spiderMan/save_to_sql.py` 存储数据到数据库
 
-5. 前端项目安装依赖，node 版本 18.18.2
+4. 运行 `manage.py` 文件，启动 python 后端
+
+5. 前端项目安装依赖
 
    ```sh
    pnpm install
    ```
 
-   运行项目
+   启动 vue 前端
 
    ```sh
    npm run serve
