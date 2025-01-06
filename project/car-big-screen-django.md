@@ -814,7 +814,52 @@ get_img('manufacturer', './big-screen-vue-datav/public/car.png', './big-screen-v
 
 在前端项目的 `big-screen-vue-datav/public/` 目录下存放一张 `car.png` 图片作为词云图生成的源图片，运行 `get_img` 函数，生成词云图片 `car-cloud.png`，将其放在前端展示即可
 
-#### 8 部署
+#### 8 创建后台管理
+
+Django 自带了后台管理系统，不过需要先创建超级管理员账号
+
+```sh
+python manage.py createsuperuser
+```
+
+输入命令后，就会提醒输入用户名和邮箱及密码，启动项目，然后访问如下地址
+
+```sh
+http://127.0.0.1:8000/admin
+```
+
+进入站点后，没有更多的内容，只能对用户进行管理，我们可以添加新的内容
+
+要在后台管理界面中显示某个模型，需要将模型注册到  `admin.py`  文件，在 Django 项目中，每个应用（App）都有一个独立的目录结构，其中会包含一个 `admin.py` 文件。这个文件专门用于配置 Django Admin 后台管理界面，例如注册模型或自定义后台显示
+
+打开 myApp 应用文件夹，找到 `admin.py` 文件，根据模型文件信息，注册模型到这个文件
+
+```python
+from django.contrib import admin
+from .models import CarInfo, User
+
+# Register your models here.
+class CarInfoAdmin(admin.ModelAdmin):
+    list_display = ('brand', 'carName', 'price', 'rank', 'energyType', 'createTime')
+    search_fields = ('brand', 'carName')
+    list_filter = ('energyType', 'marketTime')
+    ordering = ('rank',)
+
+
+class UserAdmin(admin.ModelAdmin):
+    list_display = ('userName', 'createTime')
+    search_fields = ('userName',)
+    ordering = ('-createTime',)
+
+
+# 注册模型及对应的管理类
+admin.site.register(CarInfo, CarInfoAdmin)
+admin.site.register(User, UserAdmin)
+```
+
+注册完成后，重启项目，就能在后台管理模型了
+
+#### 9 部署
 
 **环境要求：**
 
@@ -843,9 +888,9 @@ get_img('manufacturer', './big-screen-vue-datav/public/car.png', './big-screen-v
 
 4. 运行模块文件 `spiderMan/save_to_sql.py` 存储数据到数据库
 
-4. 运行 `manage.py` 文件，启动 python 后端
+5. 运行 `manage.py` 文件，启动 python 后端
 
-5. 前端项目安装依赖
+6. 前端项目安装依赖
 
    ```sh
    pnpm install
@@ -856,6 +901,14 @@ get_img('manufacturer', './big-screen-vue-datav/public/car.png', './big-screen-v
    ```sh
    npm run serve
    ```
+   
+7. 访问后台管理
+
+   ```sh
+   http://127.0.0.1:8000/admin
+   ```
+
+   
 
 
 
