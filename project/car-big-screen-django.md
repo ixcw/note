@@ -835,6 +835,8 @@ http://127.0.0.1:8000/admin
 打开 myApp 应用文件夹，找到 `admin.py` 文件，根据模型文件信息，注册模型到这个文件
 
 ```python
+# myApp/admin.py
+
 from django.contrib import admin
 from .models import CarInfo, User
 
@@ -858,6 +860,41 @@ admin.site.register(User, UserAdmin)
 ```
 
 注册完成后，重启项目，就能在后台管理模型了
+
+由于每次都需要访问 `http://127.0.0.1:8000/admin/` 来访问管理后台，我们可以做个重定向，访问根目录就进行自动重定向到 admin，打开项目根目录下的 `urls.py` 文件
+
+```python
+# carBigScreen/urls.py
+
+"""
+URL configuration for carBigScreen project.
+
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/4.2/topics/http/urls/
+Examples:
+Function views
+    1. Add an import:  from my_app import views
+    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+Class-based views
+    1. Add an import:  from other_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+Including another URLconf
+    1. Import the include() function: from django.urls import include, path
+    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+"""
+
+from django.contrib import admin
+from django.urls import (path, include)
+from django.shortcuts import redirect
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("myApp/", include("myApp.urls")),
+    path('', lambda request: redirect('admin/', permanent=True)),
+]
+```
+
+这样访问 `http://127.0.0.1:8000` 就能直接访问管理后台了
 
 #### 9 部署
 
@@ -902,12 +939,20 @@ admin.site.register(User, UserAdmin)
    npm run serve
    ```
    
-7. 访问后台管理
+7. 管理后台
 
+   创建超级管理员
+   
    ```sh
-   http://127.0.0.1:8000/admin
+   python manage.py createsuperuser
    ```
-
+   
+   访问并登录
+   
+   ```sh
+   http://127.0.0.1:8000
+   ```
+   
    
 
 
