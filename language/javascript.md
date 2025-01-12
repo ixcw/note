@@ -961,7 +961,7 @@ console.log(Array.isArray(obj)) // false
 
    查找给定元素在数组中出现的 **第一个索引**
 
-   **参数：**(searchElement [, fromIndex])
+   **参数：** (searchElement [, fromIndex])
 
    `searchElement`：
 
@@ -1038,15 +1038,22 @@ console.log(Array.isArray(obj)) // false
 
 1. **forEach**
 
-   对于数组的每一个元素执行一次给定的回调函数
+   对于数组的每个元素按其索引升序地执行一次给定的回调函数
 
-   > forEach接收的参数是一个回调函数，故不能使用break或continue
+   **参数：** (callbackFn [, thisArg])
+   
+   `callbackFn`：回调函数，数组的每个元素都会执行一次
+   
+   - `element`：数组当前项的值
+   - `index`：当前数组元素的索引
+   - `array`：调用了 foreach 的数组本身
+   
+   `thisArg`：可选，执行 `callbackFn` 时用作 `this` 的值
+   
+   **返回值：**undefined
    
    ```js
-   // currentValue：数组当前项的值
-   // index：数组当前项的索引号
-   // arr：数组本身
-   array.forEach(function (currentValue, index, arr) {})
+   array.forEach(function (element, index, array) {})
    
    let numArr = [1, 2, 3]
    numArr.forEach(function (elem, i, arr) {
@@ -1059,15 +1066,33 @@ console.log(Array.isArray(obj)) // false
      console.log(arr === numArr)  // true
    })
    ```
-   forEach不会改变原数组，由于forEach接收参数是函数，而在js中函数参数是值传递的，故在函数中操作的数组元素只是一份值拷贝，因此如果数组元素是基本数据类型，那么不管如何操作都不会影响原数组，但是如果是引用数据类型，则可以修改其内容，同样的，重新给引用数据类型赋值也是不会生效的，因为被赋值的只是一份值拷贝，不会影响原数组元素
+   forEach 接收的参数是一个回调函数，故不能使用在回调函数中使用 break 或 continue，如想终止循环，可以使用 return 或 抛出错误 throw new Error()
+   
+   数组调用 forEach，foreach 本身是不会改变原数组的，但是回调函数可以，具体解释如下
+   
+   首先，forEach 接收的参数是一个回调函数，在 js 中函数的参数是作为值传递的，因此传入回调函数中的数组元素是一份原数组的数组元素的值拷贝，所以如果原数组的数组元素只是基本数据类型，那么不管在回调函数中如何操作这个数组元素都不会改变原数组中的数组元素，因为操作修改的只是一份原数组元素的拷贝，与原数组元素已经没有关系了
+   
+   但是，如果原数组元素是引用数据类型，虽然同样传进回调函数的值依然是一份值拷贝，但是这份值拷贝是对 **引用** 的拷贝，这份值拷贝与原数组元素所指向的，都是同一个对象，这里可以参考 c 语言中指针的概念，引用即是地址，因此当我们操作这份引用进行修改时，修改的是原数组元素指向的对象，也就是说，原数组被修改了
    
 2. **map**
 
-   创建一个**新数组**，新数组由原数组中的每个元素都调用一次提供的函数后的**返回值**组成，map的参数与forEach一致
+   对于数组的每个元素按其索引升序地执行一次给定的回调函数，回调函数的 **返回值** 将组成一个新的数组，作为 map 的返回值返回
 
-   map不会改变原数组，这点和forEach是一样的，但是map会返回一个**新数组**
+   **参数：** (callbackFn [, thisArg])
    
-   >虽然forEach和map不会改变原数组，但是还是要注意当数组元素是引用数据类型时，依然可以更改原数组元素的内容
+   `callbackFn`：回调函数，数组的每个元素都会执行一次
+   
+   - `element`：数组当前项的值
+   - `index`：当前数组元素的索引
+   - `array`：调用了 map 的数组本身
+   
+   `thisArg`：可选，执行 `callbackFn` 时用作 `this` 的值
+   
+   **返回值：**回调函数的 **返回值** 组成的新数组
+   
+   map 接收的参数也是一个回调函数，故也不能使用在回调函数中使用 break 或 continue，终止循环的方式也一样
+   
+   map 本身不会改变原数组，这点和 forEach 是一样的，根据原数组元素的不同数据类型，基本数据类型不会改变，而引用数据类型有可能会改变，取决于具体的函数操作
    
    ```js
    const array = [1, 2, 3]
@@ -1083,7 +1108,7 @@ console.log(Array.isArray(obj)) // false
    console.log(array, newArray);  // name全部为d
    ```
    
-   当无法满足返回条件而无法返回值的时候，默认会返回undefined，这意味着**新数组的长度与原数组保持一致**
+   当无法满足返回条件而无法返回值的时候，默认会返回 undefined，这意味着 **新数组的长度与原数组保持一致**，可见，通过 map 去过滤一个数组可能不是一个好的选择，使用 filter 更为恰当
    
    ```js
    let numbers = [1, 2, 3, 4]
@@ -1094,17 +1119,66 @@ console.log(Array.isArray(obj)) // false
    })
    console.log(filteredNumbers);  // Array(4) [ 1, 2, 3, undefined ]
    ```
-   可见，通过map去筛选过滤一个数组可能不是一个好的选择，下一个介绍filter，就是用来筛选过滤数组的
+   需要注意，回调函数的函数体，如果使用了 {}，则需要显式的 return 一个返回值，否则新数组的元素将会全是 undefined
+   
+   ```js
+   const array = [1, 2, 3]
+   const newArray = array.map(elem => {
+     const newElem = elem + 1
+   })
+   console.log(newArray)  // [undefined, undefined, undefined]
+   ```
+   
+   如果只是想返回一个对象，这时候对象的 {} 与函数的 {} 是冲突的，可以使用 () 进行包裹返回
+   
+   ```js
+   const array = [1, 2, 3]
+   const newArray = array.map(elem => ({num: elem + 1}))
+   console.log(newArray)  // [{num: 2}, {num: 3}, {num: 4}]
+   ```
+   
+   我们可以利用 map，简便地把字符串类型的数字转为真正的数字
+   
+   ```js
+   const newArray = ["1", "2", "3"].map(parseInt)
+   console.log(newArray)  // [1, NaN, NaN]
+   ```
+   
+   这时候你也许会奇怪了，咦，怎么转出了 NaN 呢，你这个不行啊，的确，这是因为 parseInt 通常只使用一个参数，但其实可以传入两个参数，一个参数是表达式，第二个参数是解析该表达式的基数，但是 map 会给回调函数传递三个参数 currentValue, index, arr，parseInt 会忽略第三个参数，但第二个不会，因此导致出错，正确做法是只传入一个参数
+   
+   ```js
+   const newArray = ["1", "2", "3"].map((str) => parseInt(str))
+   console.log(newArray)  // [1, 2, 3]
+   ```
+   
+   或者使用 Number 作为回调函数，同时 Number 还能处理浮点数
+   
+   ```js
+   const newArray = ["1", "2", "3", "3.14"].map(Number)
+   console.log(newArray)  // [1, 2, 3, 3.14]
+   ```
+   
+   由于 map 会创建一个新数组，在没有使用返回的新数组的情况下调用它是不恰当的，应该使用 forEach 或 for of 作为替代
    
 3. **filter**
 
-   创建一个**新数组**，新数组由原数组中的每个**通过了测试条件的数组元素**组成
+   对于数组的每个元素按其索引升序地执行一次给定的回调函数，根据回调函数的**返回值是否为真值**，将**所有通过了测试条件的数组元素**组成一个新的数组，作为 filter 的返回值返回
 
-   同样的新数组获得的数组元素是一份浅拷贝，因为函数参数是值传递的
+   **参数：** (callbackFn [, thisArg])
    
-   filter的参数与forEach一致，会不会改变原数组的注意事项与forEach一致
+   `callbackFn`：回调函数，数组的每个元素都会执行一次
    
-   filter只会返回通过测试条件的元素，用于筛选数组元素时比map更为适合
+   - `element`：数组当前项的值
+   - `index`：当前数组元素的索引
+   - `array`：调用了 filter 的数组本身
+   
+   `thisArg`：可选，执行 `callbackFn` 时用作 `this` 的值
+   
+   **返回值：**所有通过了测试条件的数组元素组成的新数组
+   
+   filter 不能使用 break 和 continue 和 会不会改变原数组与 foreach 和 map 一致
+   
+   filter 只会返回通过测试条件的元素，用于过滤数组元素时比 map 更为适合，使用时应该在回调函数中返回一个布尔值以供判断
    
    ```js
    let arr = [2, 6, 8, 12, 66, 88]
@@ -1112,13 +1186,25 @@ console.log(Array.isArray(obj)) // false
    console.log(newArr)  // Array(4) [ 8, 12, 66, 88 ]
    ```
    
-4. **some**
+4. **some & every**
 
-   检查数组中是否至少有一个元素满足测试条件，返回值为true或false
+   some 测试数组中是否**至少有一个元素**满足测试条件
 
-   如果找到了满足测试条件的**第一个元素**，则立即终止循环并返回true，否则跑完整个循环并返回false
+   **参数：** (callbackFn [, thisArg])
    
-   some的参数与forEach一致，会不会改变原数组的注意事项与forEach一致
+   `callbackFn`：回调函数，数组的每个元素都会执行一次
+   
+   - `element`：数组当前项的值
+   - `index`：当前数组元素的索引
+   - `array`：调用了 some 的数组本身
+   
+   `thisArg`：可选，执行 `callbackFn` 时用作 `this` 的值
+   
+   **返回值：**布尔值，true 或 false
+   
+   如果找到了满足测试条件的 **第一个元素**，则**立即终止循环**并返回 true，否则跑完整个循环并返回 false
+   
+   some 不能使用 break 和 continue 和 会不会改变原数组与 foreach 和 map 一致
    
    ```js
    let arr = [2, 6, 8, 12, 66, 88]
@@ -1128,35 +1214,62 @@ console.log(Array.isArray(obj)) // false
    })
    console.log(flag) // true
    ```
-   与some类似的一个函数叫做every，同样返回值为true或false，参数也是一致的，唯一不同点是，every需要**所有的数组元素**都满足测试条件，才会返回true，否则返回false，同样的，当检测到一个元素不满足测试条件时会立即终止循环并返还false
+   与 some 功能相似的另一个函数叫做 every
+   
+   every 测试数组中是否**所有元素**都满足测试条件
+   
+   every 的参数与返回值与 some 一致，注意事项一致
+   
+   如果找到了**不不不满足测试条件**的**第一个元素**，则**立即终止循环**并返回 false，否则跑完整个循环并返回 true
+   
+   ```js
+   const newArray = [1, 2, 3].every(item => item < 3)
+   console.log(newArray)  // false
+   ```
    
 5. **reduce**
 
-   返回一个处理后的值，参数接收一个处理函数和一个初始值，初始值可选
+   对于数组的每个元素按其索引升序地执行一次给定的回调函数，每一次运行回调函数时都会将**先前元素的计算结果**作为**参数**传入，最后将其结果**汇总为单个返回值**
 
-   处理函数的参数与forEach的处理函数的参数基本一致，只不过第一个参数为累加器，后面三个参数保持一致
+   **参数：** (callbackFn [, initialValue])
 
-   累加器的值起初为传入的初始值的值，若没有传入初始值，则为数组第一个元素的值
+   `callbackFn`：回调函数，数组的每个元素都会执行一次
 
-   处理函数的执行位置起初为数组第一个元素，若没有传入初始值，则为数组第二个元素
-
-   处理函数每次处理的结果将会赋值给累加器
-
-   有了如上条件，reduce可实现如下应用：
-
+   - `accumulator`：累加器，上一次调用 `callbackFn` 的处理结果
+   - `currentValue`：当前数组元素值
+   - `currentIndex`：当前数组元素的索引
+   - `array`：调用了 reduce 的数组本身
+   
+   `initialValue`：可选，初始值，用于第一次执行 callbackFn 时作为 accumulator 的初始值
+   
+   **返回值：**回调函数遍历整个数组后的处理结果，即累加器值
+   
+   reduce 的回调函数的参数与 forEach 等函数的参数基本一致，但是会多出一个参数 accumulator 累加器，后面三个参数是一致的
+   
+   让我们重点关注累加器，第一次执行回调函数时，不存在“先前元素的计算结果”，那么 accumulator 取什么值呢？accumulator 在**第一次执行** callbackFn 时会取 initialValue 作为初始值，此时 currentValue 自然是取数组的第一个元素作为当前元素值开始遍历
+   
+   但是 initialValue 是可选的，若没有传递 initialValue，accumulator 又取什么值呢，这时 accumulator 将会取数组的**第一个元素**作为初始值，但是取了数组的第一个元素作为初始值，currentValue 又该取什么呢，函数设计者早就考虑到了，顺延一位取数组的**第二个元素**即可
+   
+   回调函数会把每次处理的结果累加给累加器，最后返回累加器值
+   
+   reduce 作为递归处理函数，可能较难理解，但是却可以实现不少强大的功能，理解它是值得的
+   
    ```js
    const arr = [1, 1, 2, 3, 4, 5, 6]
-   const sum = arr.reduce((t, v) => t + v, 0)  // 数组求和
-   const product = arr.reduce((t, v) => t * v, 1)  // 数组累乘
-   const maxNum = arr.reduce((t, v) => Math.max(t, v))  // 求最大值
-   const uniqueArr = arr.reduce((t, v) => t.includes(v) ? t : [...t, v], [])  // 数组去重
-   const elemCount = arr.reduce((t, v) => (t[v] = (t[v] || 0) + 1, t), {})  // 元素计数
+   const sum = arr.reduce((a, v) => a + v, 0)  // 数组求和
+   const product = arr.reduce((a, v) => a * v, 1)  // 数组累乘
+   const maxNum = arr.reduce((a, v) => Math.max(a, v))  // 求最大值
+   const uniqueArr = arr.reduce((a, v) => a.includes(v) ? a : [...a, v], [])  // 数组去重
+   // 元素计数
+   const elemCount = arr.reduce((a, v) => (a[v] = (a[v] || 0) + 1, a), {})  
    console.log(sum)  // 22
    console.log(product)  // 720
    console.log(maxNum)  // 6
    console.log(uniqueArr)  // Array(6) [ 1, 2, 3, 4, 5, 6 ]
    console.log(elemCount)  // Object { 1: 2, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1 }
    ```
+   
+   元素计数的实现使用了逗号运算符，(expression1, expression2, expression3, ..., expressionN)，表达式会被依次执行，但只返回最后一个表达式 expressionN
 
 ###### 7.5.4 ES6新增函数
 
