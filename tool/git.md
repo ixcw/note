@@ -911,6 +911,8 @@ git config --global alias.cmp '!f() { git add -A && git commit -m "$@" && git pu
 
 ##### 6.5 git加速
 
+###### 6.5.1 使用 ssh 协议
+
 基于众所周知的原因，github的访问速度是非常拉胯的，甚至在代码推送拉取是也会失败，并且报443 time out的错误，但是墙只是墙了https，用ssh协议就不会出现这个问题了，所以在代码拉取时推荐使用ssh的方式，并且在github上配置自己的ssh密钥
 
 https的方式：
@@ -926,4 +928,29 @@ git clone git@github.com:ixcw/note.git
 ```
 
 密钥可以使用git的Windows客户端git gui生成，然后配置到github上
+
+###### 6.5.2 代理加速
+
+如果想直接使用代理软件加速，则需要进行配置，因为一般情况下 git 是不走代理软件的，即使把代理软件设置成全局加速，对于 git 来说也是不生效的
+
+配置 git 代理到本地代理端口，比如我的代理软件的本地代理端口是 10809，则命令为
+
+```sh
+git config --global http.proxy http://127.0.0.1:10809
+git config --global https.proxy http://127.0.0.1:10809
+```
+
+检查一下 git 配置是否正确
+
+```sh
+git config --global -l
+```
+
+打开 cmd 命令行，刷新一下 dns
+
+```sh
+ipconfig/flushdns
+```
+
+然后再执行 git 命令，应该就能正常访问 github 了
 
