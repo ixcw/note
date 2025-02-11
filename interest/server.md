@@ -20,7 +20,13 @@
 
    配置路径为：domain manager => manage dns for this domain（蓝色球）
 
-   删掉所有默认 records，添加 A record，添加两个，一个 hostname 留空，一个 hostname 填写 www
+   删掉所有默认 records，添加 A record
+
+   添加两个
+
+   一个 hostname 留空
+
+   一个 hostname 填写 www
 
    后面都填 vps 的 ipv4 地址
 
