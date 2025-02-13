@@ -369,72 +369,74 @@ Component({
 
 ###### 9.2.1 传递数据
 
-组件的数据一般不是写死的，而是动态的，如何向组件传递数据呢，这里就需要用到组件的properties属性了
+组件的数据一般不是写死的，而是动态传递的，如何向组件传递数据呢，主要有两种方法
 
-observer可以检测数据的改变从而做出一些行为
+1. 使用组件的 properties 属性
 
-```js
-/**
- * 组件的属性列表
- */
-properties: {
-    title: {
-        type: String,
-        value: '默认标题',
-        observer: function(newValue, oldValue) {
-            console.log(newValue, oldValue);
-        }
-    }
-}
-```
+   首先定义好组件的 properties 属性
 
-在组件上通过定义好的属性传值：
+   ```js
+   /**
+    * 组件的属性列表
+    */
+   properties: {
+       title: {
+           type: String,  // 数据类型
+           value: '默认标题',  // 默认值
+           observer: function(newValue, oldValue) {  // 可以检测到传递数据的改变从而进行处理
+               console.log(newValue, oldValue);
+           }
+       }
+   }
+   ```
+   然后在组件上通过定义好的 properties 属性值的名称进行传值，如果不传递数据则使用默认值
 
-如果不传则使用默认值
+   ```html
+   <my-comp title="传递标题" />
+   <my-comp />
 
-```js
-<my-comp title="传递标题" />
-<my-comp />
-```
+2. 页面之间传值
 
-通过 `wx.navigateTo()` 传递对象需要借助 JSON 序列化
+   页面之间传值通过 `wx.navigateTo()` 进行传递，如果传递对象需要借助 JSON 序列化及 URI 编码
 
-```js
-wx.navigateTo({
-  url: `/pages/detail/detail?userInfo=${encodeURIComponent(JSON.stringify(userInfo))}`
-})
-```
+   ```js
+   wx.navigateTo({
+     url: `/pages/detail/detail?userInfo=${encodeURIComponent(JSON.stringify(userInfo))}`
+   })
+   ```
 
-接收时需要解码
+   接收时解码
 
-```js
-onLoad(options) {
-  const userInfo = JSON.parse(decodeURIComponent(options.userInfo))
-}
-```
+   ```js
+   onLoad(options) {
+     const userInfo = JSON.parse(decodeURIComponent(options.userInfo))
+   }
+   ```
 
 ###### 9.2.2 传递样式
 
-如果想传递样式给组件，可以利用`externalClasses`属性，该属性为数组，在自定义组件中定义好该属性
+如果父组件想传递样式给子组件
+
+可以利用 `externalClasses` 属性，该属性为数组，在自定义组件中定义好该属性
 
 ```js
 properties: {},
 externalClasses: ['titleclass'],
 ```
 
-组件内部正常使用这个class属性
+在组件内部正常使用这个class属性
 
 ```html
 <view class="titleclass">{{title}}</view>
 ```
 
-父组件中使用自定义组件时传递这个class属性
+然后在父组件中使用自定义组件时传递这个class属性
 
 ```html
 <my-comp title="传递标题" titleclass="red" />
 ```
 
-父组件在`page.wxss`中定义样式
+在父组件的`page.wxss`中定义样式
 
 ```css
 .red {
@@ -444,9 +446,13 @@ externalClasses: ['titleclass'],
 
 ###### 9.2.3 传递事件
 
-有时候我们希望在子组件上触发事件的时候能够改变父组件中的数据，一般来说子组件是不允许直接修改父组件数据的，这时就需要将事件传递出去，通知父组件去修改父组件自己的数据
+有时候我们希望在子组件上触发事件的时候能够 **改变父组件中的数据**，一般来说子组件是不允许直接修改父组件数据的，这时就需要将事件传递出去，通知父组件去 **自己改自己的数据**
 
-在子组件中定义事件，触发框架函数`triggerEvent`传递出一个自定义事件名称，以及如有需要传递出去的数据也可在此进行传递，最后一个参数是选项配置，参见 [触发事件](https://developers.weixin.qq.com/miniprogram/dev/framework/custom-component/events.html#触发事件)
+首先在子组件中定义好函数事件
+
+在函数事件中通过调用小程序自带的触发事件函数 `triggerEvent`  向父组件传递出一系列的参数
+
+这些参数包括一个自定义的事件名称，需要传递的数据，以及需要传递的选项配置，具体参见 [触发事件](https://developers.weixin.qq.com/miniprogram/dev/framework/custom-component/events.html#触发事件)
 
 ```html
 <button size="mini" bind:tap="handleIncrement">+1</button>
@@ -460,9 +466,7 @@ methods: {
 }
 ```
 
-在父组件中监听这个自定义事件，并编写自己的事件处理这个自定义事件
-
-在传递过来的event参数的detail属性中可获取子组件传递过来的数据
+然后在父组件中使用子组件，在子组件上监听这个传递的自定义事件，在自定义事件触发的时候，调用父组件的处理函数去处理子组件的自定义事件传递过来的数据，可以在处理函数的 event 参数中获取到传递的数据
 
 ```html
 <view>{{count}}</view>
@@ -484,13 +488,17 @@ handleIncrease(e) {
 
 ###### 9.2.4 传递内容
 
-有时候我们需要传递的既不是单纯的数据也不是样式和事件，而是一整块内容时，可以使用插槽slot进行传递
+有时候我们需要给子组件传递的既不是单纯的数据也不是样式或者事件，而是一整块的内容
 
-基本的插槽使用很简单，只需要在组件内部定义好slot标签，然后使用组件时传递想传递的内容进去就行，slot标签会被替换为传递的内容
+这个时候可以使用插槽 slot 进行传递
+
+首先在组件内部定义好 slot 标签
 
 ```html
 <slot />
 ```
+
+然后在使用子组件时，把想传递的内容放到子组件的标签之间，这样子组件的 slot 标签就会被替换为传递的内容
 
 ```html
 <my-comp>
@@ -501,7 +509,7 @@ handleIncrease(e) {
 </my-comp>
 ```
 
-假如插槽不止一个，那么我们就需要给插槽取名，否则无法知道要插入到哪一个插槽，通过name属性起名
+但是假如 slot 插槽不止一个，那么我们就需要给每个插槽取个名称，否则无法区分插槽
 
 ```html
 <slot name="slot1" />
@@ -509,7 +517,7 @@ handleIncrease(e) {
 <slot name="slot3" />
 ```
 
-然后需要开启多插槽模式
+组件默认只有一个插槽，如果想要使用多个插槽，得在组件中开启多插槽模式
 
 ```js
 Component({
@@ -519,7 +527,7 @@ Component({
 })
 ```
 
-最后在插入内容时，通过slot属性指定想插入到哪一个插槽
+然后在使用组件时，在传递的内容上使用 slot 属性去指定想要替换的插槽，这样该内容就会被替换到指定名称的插槽上
 
 ```html
 <my-comp>
@@ -532,7 +540,9 @@ Component({
 
 ##### 9.3 启用全局样式
 
-自定义组件默认不启用全局样式，需要自行开启，才能使用`app.wxss`中的样式
+自定义的组件默认不启用全局样式，需要自行开启，才能使用 `app.wxss` 中的样式
+
+> 需要注意，开启全局样式后父组件的样式也会影响到子组件
 
 ```js
 Component({
