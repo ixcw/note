@@ -394,6 +394,24 @@ Component({
    ```html
    <my-comp title="传递标题" />
    <my-comp />
+   ```
+
+   有时候组件内的请求函数可能需要依赖传递的值来执行请求，这时可以监听 properties 传递的值
+
+   ```js
+   properties: {
+     paginationId: {
+       type: Number,
+       value: 0
+     }
+   },
+   
+   observers: {
+     'paginationId': function(newPaginationId) {
+       this.queryPaginationItemList()
+     }
+   }
+   ```
 
 2. 页面之间传值
 
