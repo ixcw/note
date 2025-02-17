@@ -1534,6 +1534,16 @@ temp = null
    console.log(result1) // hello world!hello world!
    console.log(result2) // hello world!hello world!hello world!
    ```
+   
+- `padStart() && padEnd()` （ES6新增函数）
+
+   用另一个字符串填充当前字符串，如果需要会重复填充，直到达到指定长度
+
+   ```js
+   const numStr = "5"
+   console.log(numStr.padStart(6, "0"))  // "000005"
+   console.log(numStr.padEnd(6, "0"))    // "500000"
+   ```
 
 #### 9 函数
 
