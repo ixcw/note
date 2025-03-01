@@ -21,15 +21,53 @@
   ```sh
   ./src/redis-server redis.conf
   ```
+  
 - Windows
+
+  安装方式1：
 
   redis本身不支持windows，但是微软为其提供了支持，只是已经很久没有更新了，可用来学习，生产环境用linux版本的redis
 
   可以到github下载：https://github.com/MicrosoftArchive/redis/releases，下载好后解压，双击`redis-server.exe`就可以运行了，如果想加载指定配置文件，可以在redis目录下用命令行启动
-
+  
   ```cmd
   redis-server redis.windows.conf
   ```
+  
+  安装方式2：
+  
+  到另一个仓库下载：https://github.com/tporadowski/redis/releases
+  
+  安装后到安装目录找到 `redis.windows-service.conf` 文件，查找 `requirepass foobared` ，在其后添加 `requirepass 123456` 设置密码
+  
+  按下快捷键 ctrl + alt + del 打开进程管理，找到 redis 服务，重新启动
+  
+  在安装目录下执行命令测试
+  
+  ```sh
+  redis-cli
+  ```
+  
+  如果出现 `127.0.0.1:6379>` 的命令符提示，则安装成功
+  
+  继续测试密码设置
+  
+  ```sh
+  auth 123456
+  ```
+  
+  输出 OK 则为成功
+  
+  设置一个 key-value 值
+  
+  ```sh
+  set key1 hello
+  get key1
+  ```
+  
+  输出 hello 则为成功
+  
+  此时可以安装 Another redis desktop manager 通过图形界面与 redis 进行交互
 
 #### 3 守护进程
 
