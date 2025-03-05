@@ -70,12 +70,12 @@ pnpm dev
 > }
 > ```
 
-这样就成功创建了基于 vue3 的项目，使用 ts 作为开发语言，vue router 作为路由管理，pinia 作为状态管理的项目
+这样就成功创建了使用 ts 作为开发语言，vue router 作为路由管理，pinia 作为状态管理的 vue3 项目
 
 
 #### 3 tailwind css
 
-根据 Tailwind css 官网安装文档，直接安装 Tailwind css 提供给 vite 的插件进行安装即可
+根据 Tailwind css 官网安装文档，直接安装 Tailwind css 提供给 vite 的插件即可
 
 ```sh
 pnpm add tailwindcss @tailwindcss/vite
@@ -99,10 +99,10 @@ export default defineConfig({
 })
 ```
 
-最后在项目的公共 css 文件 `src/style.css` 中引入 Tailwind css 的样式
+最后在项目的主 css 文件 `src/assets/main.css` 中引入 Tailwind css 的样式
 
 ```css
-/* src/style.css */
+/* src/assets/main.css */
 
 @import "tailwindcss";
 ...
@@ -111,7 +111,7 @@ export default defineConfig({
 编辑组件进行测试，出现样式则说明引入成功
 
 ```vue
-// src/components/HelloWorld.vue
+// src/App.vue
 
 <h1 class="text-3xl font-bold underline">Hello world! Tailwind css</h1>
 ```
@@ -160,7 +160,9 @@ export default defineConfig({
 然后就可以测试了，编写组件测试，展示出按钮和图标则表示引入成功
 
 ```vue
-// src/components/HelloWorld.vue
+// src/App.vue
+import { Loading } from '@element-plus/icons-vue'
+
 
 <div class="mb-4">
     <el-button>Default</el-button>
@@ -171,105 +173,76 @@ export default defineConfig({
     <el-button type="danger">Danger</el-button>
 </div>
 <div class="mb-4">
-    <el-icon :size="20">
-        <Edit />
-    </el-icon>
-    <el-icon color="#409efc" class="no-inherit">
-        <Share />
-    </el-icon>
-    <el-icon>
-        <Delete />
-    </el-icon>
     <el-icon class="is-loading">
         <Loading />
     </el-icon>
-    <el-button type="primary">
-        <el-icon style="vertical-align: middle">
-            <Search />
-        </el-icon>
-        <span style="vertical-align: middle"> Search </span>
-    </el-button>
 </div>
 ```
 
 > 需要注意，图标还是要手动导入才能使用的，也可以变成自动导入，可以参考 [官网](https://element-plus.org/zh-CN/component/icon.html)
+>
+> 也可以选择直接全部导入（前提是不考虑打包体积），这样就不用手动去导入了，编辑 `main.ts`
+>
+> ```ts
+> // main.ts
+> 
+> import './assets/main.css'
+> 
+> import { createApp } from 'vue'
+> import { createPinia } from 'pinia'
+> import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+> 
+> import App from './App.vue'
+> import router from './router'
+> 
+> const app = createApp(App)
+> 
+> app.use(createPinia())
+> app.use(router)
+> for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+>   app.component(key, component)
+> }
+> 
+> app.mount('#app')
+> ```
 
 #### 5 pinia
 
-接下来集成 pinia，作为项目的状态管理工具，首先安装
-
-```sh
-pnpm add pinia
-```
-
-创建状态管理文件 `src/stores/counter.ts`
+pinia 在项目创建时，我们已经选择了安装，所以可以直接使用，我们选择 vue 为我们准备好的示例文件 `src/stores/counter`，
 
 ```ts
+// src/stores/counter.ts
+
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 
-export const useCounterStore = defineStore('counter', {
-  state: () => ({
-    count: 0
-  }),
-  actions: {
-    increment() {
-      this.count++
-    }
+export const useCounterStore = defineStore('counter', () => {
+  const count = ref(0)
+  const doubleCount = computed(() => count.value * 2)
+  function increment() {
+    count.value++
   }
+
+  return { count, doubleCount, increment }
 })
 ```
 
-然后在主入口文件 `main.ts` 里引入 pinia
-
-```ts
-// main.ts
-
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import './style.css'
-import App from './App.vue'
-
-const app = createApp(App)
-app.use(createPinia())
-app.mount('#app')
-```
-
-然后在组件中使用
+在组件中使用：
 
 ```vue
+// src/App.vue
+
+<script setup lang="ts">
+import { useCounterStore } from '@/stores/counter';
 const counterStore = useCounterStore()
+</script>
 
-<el-button type="primary" @click="counterStore.increment">
-    Count is: {{ counterStore.count }}
-</el-button>
-```
-
-但是这样直接使用会报 `Uncaught ReferenceError: useCounterStore is not defined` 错误，因为我们没有导入使用，其实我们前面已经安装了 `unplugin-auto-import/vite` 插件，可以配置常用的库的自动导入，比如 vue、vue router、pinia 等，这样就不用每次使用都需要手动导入了，在 `vite.config.ts` 配置
-
-```ts
-// vite.config.ts
-
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import tailwindcss from '@tailwindcss/vite'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    tailwindcss(),
-    AutoImport({
-      resolvers: [ElementPlusResolver()],
-      imports: ['vue', 'vue-router', 'pinia']
-    }),
-    Components({
-      resolvers: [ElementPlusResolver()],
-    }),
-  ],
-})
+<template>
+	<el-button type="primary" @click="counterStore.increment">
+	    Count is: {{ counterStore.count }}
+    	DoubleCount is: {{ counterStore.doubleCount }}
+	</el-button>
+</template>
 ```
 
 
