@@ -38,18 +38,40 @@
 
 node 版本 20.11.1，使用 pnpm 版本 9.15.4 进行项目搭建，首先使用命令创建项目
 
+根据 vue 官网的 [快速开始](https://cn.vuejs.org/guide/quick-start.html)，输入如下命令创建项目：
+
 ```sh
-pnpm create vite my-vue-app --template vue-ts
+pnpm create vue@latest
 ```
 
-这将会创建一个基于 vite 和 ts 的 vue3 模板项目，创建完成后进入项目根目录，运行如下命令启动项目
+然后命令行会依次询问创建选项
 
-安装依赖 && 运行项目：
+输入项目名称后，选择 ts、jsx、vue router、pinia，其余选否
+
+创建完成后进入项目根目录，运行如下命令启动项目：
 
 ```sh
 pnpm install
-pnpm run dev
+pnpm dev
 ```
+
+> 打开 `main.ts` 文件，会发现引入 `App.vue` 报错了 `找不到模块“./App.vue”或其相应的类型声明。`
+>
+> 配置一下 `env.d.ts` 文件
+>
+> ```ts
+> // env.d.ts
+> 
+> /// <reference types="vite/client" />
+> declare module "*.vue" {
+>   import type { DefineComponent } from "vue";
+>   const vueComponent: DefineComponent<{}, {}, any>;
+>   export default vueComponent;
+> }
+> ```
+
+这样就成功创建了基于 vue3 的项目，使用 ts 作为开发语言，vue router 作为路由管理，pinia 作为状态管理的项目
+
 
 #### 3 tailwind css
 
@@ -197,7 +219,60 @@ export const useCounterStore = defineStore('counter', {
 })
 ```
 
-然后在主入口文件 `main.ts` 里
+然后在主入口文件 `main.ts` 里引入 pinia
+
+```ts
+// main.ts
+
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import './style.css'
+import App from './App.vue'
+
+const app = createApp(App)
+app.use(createPinia())
+app.mount('#app')
+```
+
+然后在组件中使用
+
+```vue
+const counterStore = useCounterStore()
+
+<el-button type="primary" @click="counterStore.increment">
+    Count is: {{ counterStore.count }}
+</el-button>
+```
+
+但是这样直接使用会报 `Uncaught ReferenceError: useCounterStore is not defined` 错误，因为我们没有导入使用，其实我们前面已经安装了 `unplugin-auto-import/vite` 插件，可以配置常用的库的自动导入，比如 vue、vue router、pinia 等，这样就不用每次使用都需要手动导入了，在 `vite.config.ts` 配置
+
+```ts
+// vite.config.ts
+
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [
+    vue(),
+    tailwindcss(),
+    AutoImport({
+      resolvers: [ElementPlusResolver()],
+      imports: ['vue', 'vue-router', 'pinia']
+    }),
+    Components({
+      resolvers: [ElementPlusResolver()],
+    }),
+  ],
+})
+```
+
+
 
 
 
