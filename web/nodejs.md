@@ -1641,3 +1641,13 @@ app.use((err, req, res, next) => {
 ##### 13.2 cnpm
 
 部分老项目使用的是 cnpm 安装的，使用 npm 安装会出现问题，即使已经换成了 taobao 源也不行，网上说使用 cnpm 会忽略 package-lock 文件，暂时未知原因
+
+##### 13.3 npm 缓存
+
+npm 缓存有时候会导致，可以使用命令清除缓存
+
+```sh
+npm cache verify
+npm cache clean --force
+```
+
