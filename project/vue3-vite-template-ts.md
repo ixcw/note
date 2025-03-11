@@ -245,7 +245,19 @@ const counterStore = useCounterStore()
 </template>
 ```
 
+#### 6 sass
 
+Vite 已经内置了对 Sass 的支持，因此你只需要安装 `sass` 包即可，不需要额外安装 `sass-loader`
+
+```sh
+pnpm add sass --save-dev
+```
+
+重新运行项目即可
+
+```vue
+<style scoped lang="scss"></style>
+```
 
 
 
