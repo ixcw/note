@@ -954,3 +954,10 @@ ipconfig/flushdns
 
 然后再执行 git 命令，应该就能正常访问 github 了
 
+如果想取消代理，命令如下
+
+```sh
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+```
+
