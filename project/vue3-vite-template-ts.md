@@ -259,9 +259,148 @@ pnpm add sass --save-dev
 <style scoped lang="scss"></style>
 ```
 
+#### 7 router 传参
 
+示例如下：
 
+```vue
+// Home.vue
 
+<script setup lang="ts">
+  import { useRouter } from 'vue-router'
+  const router = useRouter()
+  
+  const toPhotographerPage = (id: number) => {
+    router.push({
+      path: '/personal',
+      query: { id }
+    })
+  }
+</script>
+
+<template>
+  <div
+   @click="toPhotographerPage(photographer.id)"
+   v-for="photographer in recommendPhotographers"
+   :key="photographer.name"
+  ></div>
+</template>
+```
+
+```vue
+// Personal.vue
+
+<script lang="ts" setup>
+  import { useRoute, useRouter } from 'vue-router'
+  const router = useRouter()
+  const route = useRoute()
+  const userId = route.query.id
+</script>
+```
+
+#### 8 pinia 持久化
+
+pinia 中的数据默认刷新页面会丢失，因为 pinia 的数据既不是存在会话级的 sessionStorage，也不是存在能持久化存储的 localStorage 中，而是存在浏览器内存中的，存在内存中的数据的特点就是页面刷新就会导致数据丢失，解决办法是安装插件去将 pinia 中的数据存储到 storage 中
+
+安装插件：
+
+```sh
+pnpm add pinia-plugin-persistedstate
+```
+
+然后在 `main.ts` 中配置 pinia
+
+```ts
+// main.ts
+
+import './assets/main.css'
+
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
+
+import App from './App.vue'
+
+const app = createApp(App)
+const pinia = createPinia()
+
+pinia.use(piniaPluginPersistedstate)
+app.use(pinia)
+
+app.mount('#app')
+```
+
+然后在创建 store 时进行配置：
+
+```ts
+import { defineStore } from 'pinia'
+import { userApi } from '@/api/user'
+import type { UserInfo, LoginParams } from '@/api/user'
+import { ElMessage } from 'element-plus'
+
+interface UserState {
+  userInfo: UserInfo | null
+}
+
+export const useUserStore = defineStore('user', {
+  state: (): UserState => ({ userInfo: null }),
+  actions: {
+    async login(credentials: LoginParams) {
+      const data = await userApi.login(credentials)
+      const token = data.token
+      if (token) {
+        localStorage.setItem('token', token)
+        this.setUser(data.sysUser)
+      }
+    },
+    async register(credentials: LoginParams) {
+      await userApi.register(credentials)
+    },
+    logout() {
+      this.userInfo = null
+      localStorage.removeItem('user')
+      localStorage.removeItem('token')
+      ElMessage.success('退出登录')
+    },
+    setUser(user: UserInfo) {
+      this.userInfo = user
+    },
+  },
+  persist: {
+    enabled: true,
+    strategies: [
+      {
+        key: 'user',
+        storage: localStorage,
+      },
+    ],
+  },
+})
+```
+
+#### 9 element plus 中文国际化
+
+element plus 的组件默认是英文显示的，比如 pagination 组件默认显示 total、page 等
+
+如果想要显示中文需要在 `main.ts` 中进行全局配置：
+
+```ts
+// main.ts
+
+import './assets/main.css'
+import 'element-plus/dist/index.css';
+
+import { createApp } from 'vue'
+import ElementPlus from 'element-plus';
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
+
+import App from './App.vue'
+
+const app = createApp(App)
+app.use(ElementPlus, { locale: zhCn })
+
+app.mount('#app')
+```
 
 
 
