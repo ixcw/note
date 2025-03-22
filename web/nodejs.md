@@ -1651,3 +1651,22 @@ npm cache verify
 npm cache clean --force
 ```
 
+##### 13.4 脚本禁止
+
+Windows 的 powershell 有时候会默认禁止脚本执行，这会导致 pnpm 等脚本程序不能执行，需要修改脚本禁止策略
+
+获取当前策略：
+
+```sh
+Get-ExecutionPolicy
+```
+
+一般会看到输出为：`Restricted`
+
+设置策略需要以管理员身份打开 powershell，设置允许策略：
+
+```sh
+Set-ExecutionPolicy RemoteSigned
+```
+
+输入 y 以确认设置，重新打开 powershell，就可以运行脚本了
