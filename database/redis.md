@@ -116,7 +116,7 @@
 
 #### 4 Redis基本配置
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/redis/redis常用配置.png)
+![](./imgs/redis常用配置.png)
 
 修改`redis.conf`配置文件可以修改常用配置
 - port
@@ -171,7 +171,7 @@
 
 #### 5 Redis通用命令
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/redis/redis通用命令.png)
+![](./imgs/redis通用命令.png)
 
 - 不同编号的数据库保存的数据彼此独立
 
@@ -202,7 +202,7 @@ redis有5种数据类型，String、Hash、List、Set、Zset，下面分别讲�
 
 - String 字符串
 
-  ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/redis/redis字符串命令.png)
+  ![](./imgs/redis字符串命令.png)
 
   > incr/decr/incrby/decrby只能对数字类型的字符串使用，对不是数字类型的字符串使用会报错
 
@@ -210,7 +210,7 @@ redis有5种数据类型，String、Hash、List、Set、Zset，下面分别讲�
 
   hash类型用于存储结构化类型的数据，它的值可以存储键值对
 
-  ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/redis/redis哈希命令.png)
+  ![](./imgs/redis哈希命令.png)
 
   > hdel只能删除哈希类型的值里面的指定键值，不能删除整个哈希类型的键值，需要整个删除使用del
   >
@@ -218,10 +218,10 @@ redis有5种数据类型，String、Hash、List、Set、Zset，下面分别讲�
 
 - List 集合列表
 
-  ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/redis/redis列表命令.png)
+  ![](./imgs/redis列表命令.png)
   从右或左插入元素
 
-  ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/redis/redis列表命令1.png)
+  ![](./imgs/redis列表命令1.png)
   从右或左删除元素，一次删一个
 
   > list按插入的顺序排序，最大长度是2的32次方-1，约为40亿

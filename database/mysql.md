@@ -192,7 +192,7 @@ UPDATE USER SET HOST='%' WHERE USER='xxx'; --修改xxx用户的连接方式为�
 
 - SQL关键字自动大写设置
 
-  ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/mysql/Snipaste_2021-01-12_15-37-19.png)
+  ![](./imgs/Snipaste_2021-01-12_15-37-19.png)
   
 - 查询的结果表格是只读的不允许修改，原因：表没有设置主键，添加主键后即可修改
 
@@ -663,7 +663,7 @@ CREATE TABLE tab_favorite (
 );
 ```
 ER图如图所示：
-![ER图](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/mysql/diagram1.jpg)
+![ER图](./imgs/diagram1.jpg)
 
 ##### 4.2 范式
 数据库规范化，又称正规化、标准化，目的是减少数据库中的数据冗余，增进数据的一致性
@@ -676,7 +676,7 @@ ER图如图所示：
 
 我们通过一张表的设计来说明三个问题：
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/mysql/Snipaste_2021-01-14_19-39-33.png)
+![](./imgs/Snipaste_2021-01-14_19-39-33.png)
 
 随后通过范式的学习解决问题
 
@@ -717,7 +717,7 @@ ER图如图所示：
 
 由上面的概念可知，第二范式就是在满足第一范式的前提下，表中的每一个字段都完全依赖于主键，若不满足第二范式，一般解决办法是将表拆分为几张符合第二范式的表：
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/mysql/Snipaste_2021-01-14_19-38-25.png)
+![](./imgs/Snipaste_2021-01-14_19-38-25.png)
 
 拆分为两张表后，数据冗余的问题得到解决
 
@@ -728,7 +728,7 @@ ER图如图所示：
 
 要消除传递依赖，一般解决办法是继续拆分表：
 
-![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/mysql/Snipaste_2021-01-14_19-37-41.png)
+![](./imgs/Snipaste_2021-01-14_19-37-41.png)
 
 这样数据添加删除的问题也得到了解决
 
@@ -812,9 +812,9 @@ SET GLOBAL TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
    可以使用navicat、workbench等图形化工具点击备份还原，都是生成sql文件，注意mysql8版本导出的sql不能直接拿到mysql5的版本使用，因为字符集和排序规则可能不一样，比如下面两个数据库就不一样，需要根据目标数据库的信息进行替换
    
-    ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/mysql/MySQL字符集2.png)
+    ![](./imgs/MySQL字符集2.png)
    
-    ![](https://cdn.jsdelivr.net/gh/ixcw/note/images/database/mysql/MySQL字符集1.png)
+    ![](./imgs/MySQL字符集1.png)
    
    ```mysql
    utf8mb4 替换为 utf8 或者保持不变

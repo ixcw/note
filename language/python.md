@@ -124,6 +124,12 @@ pip freeze
 pip freeze > requirements.txt
 ```
 
+> 需要注意的是，这种方式导出的文件，可能会包含本地路径，以及没有版本号，不能直接提供给别人使用，在别的电脑上是不能使用的，可以使用如下命令生成只带包名和版本号的依赖文件，会忽略本地路径
+>
+> ```sh
+> pip list --format=freeze > requirements.txt
+> ```
+
 使用 pip 命令重新安装依赖包：
 
 ```sh
@@ -348,6 +354,62 @@ if __name__ == '__main__':
 9. 项目名
 
    小写字母 + 短横线
+
+#### 5 Django
+
+##### 5.1 websocket
+
+1. 安装 channels 库
+
+   ```sh
+   pip install channels
+   ```
+
+2. 在 `settings.py` 中配置 Channels：
+
+   ```py
+   INSTALLED_APPS = [
+       "channels",
+   ]
+   ```
+
+3. 在 `consumers.py` 中创建 websocket 消费者
+
+   ```python
+   from channels.generic.websocket import AsyncWebsocketConsumer
+   import json
+   
+   class ProgressConsumer(AsyncWebsocketConsumer):
+       async def connect(self):
+           await self.accept()
+   
+       async def disconnect(self, close_code):
+           pass
+   
+       async def receive(self, text_data):
+           text_data_json = json.loads(text_data)
+           message = text_data_json['message']
+   
+           # 处理耗时任务，并发送进度
+           for i in range(100):
+               await self.send(json.dumps({
+                   'progress': i + 1
+               }))
+               # 模拟耗时任务
+               await asyncio.sleep(1)
+   ```
+
+   
+
+4. e
+
+5. e
+
+6. e
+
+7. e
+
+
 
 
 

@@ -12,17 +12,17 @@ maven是项目管理工具，对项目提供构建和依赖管理。主要作用
 
 #### 3 更换阿里镜像
 
-由于maven的中央仓库位于国外，下载jar包很慢，所以更换为阿里云Maven中央仓库作为下载源，速度更快更稳定，找到`maven安装目录\conf\settings.xml`或者`C:\Users\用户名\.m2\settings.xml`文件，修改并添加以下标签：
+由于maven的中央仓库位于国外，下载jar包很慢，所以更换为阿里云Maven中央仓库作为下载源，速度更快更稳定
+
+找到 `maven安装目录\conf\settings.xml` 或者 `C:\Users\用户名\.m2\settings.xml` 文件，修改并添加以下标签：
 
 ```xml
-<mirrors>
-  <mirror>
+<mirror>
     <id>aliyunmaven</id>
     <mirrorOf>central</mirrorOf>
     <name>aliyun public repository</name>
     <url>https://maven.aliyun.com/repository/public</url>
-  </mirror>
-</mirrors>
+</mirror>
 ```
 
 #### 4 设置本地仓库
