@@ -24,7 +24,14 @@ pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 [参考文章](https://blog.csdn.net/tqlisno1/article/details/108908775)
 
-使用 [Anaconda](https://www.anaconda.com/) 管理 python 环境，安装对应版本即可，这里使用的 Anaconda 版本为 2.6.3，pycharm 版本为 2024.1.1
+使用 [Anaconda](https://www.anaconda.com/) 管理 python 环境
+
+Anaconda 成为科学计算的事实标准，核心在于它解决了科学计算中的三大痛点：
+✅ **复杂依赖管理**（Python + 非 Python）
+✅ **性能优化**（MKL/CUDA 集成）
+✅ **复现性**（跨平台环境隔离）
+
+这里使用的 Anaconda 版本为 2.6.3，pycharm 版本为 2024.1.1
 
 安装完后，使用 Anaconda Navigator 图形化管理软件进行 python 的环境管理
 
@@ -41,6 +48,60 @@ pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 这样就完成了 python 环境的创建
 
+也可以使用 conda 命令完成创建
+
+```sh
+conda create -n myenv python=3.8  # myenv 为环境名，3.8 为 Python 版本
+conda activate myenv
+```
+
+安装包
+
+```sh
+conda install --file requirements.txt
+```
+
+但是 conda 的依赖文件最好是 yml 格式的，比如 `environment.yml`
+
+```yaml
+name: myenv      # 环境名（可选）
+channels:
+  - conda-forge  # 优先从 conda-forge 安装
+  - defaults
+dependencies:
+  - python=3.8   # 指定 Python 版本
+  - numpy        # 直接写包名（conda 会自动解析版本）
+  - pandas
+  - pip:         # 通过 pip 安装的包
+    - torch
+    - transformers
+```
+
+使用 `environment.yml` 创建环境
+
+```sh
+conda env create -f environment.yml
+```
+
+如果 yml 文件中未指定环境名，则需通过 `-n <env_name>` 手动命名
+
+```sh
+conda env create -f env.yml -n my_env
+```
+
+如何生成 yml 文件呢，可以手动编写，但是更推荐直接导出，确保环境的一致性
+
+```sh
+conda activate your_env_name  # 激活环境
+conda env export > environment.yml  # 导出当前环境中的依赖到 environment.yml
+```
+
+另一种安装方法，会删减未在 yml 文件中声明的包
+
+```sh
+conda env update -f environment.yml --prune
+```
+
 ##### 2.2 切换使用 python 版本
 
 接下来是使用 pycharm 开发时如何选择 python 环境
@@ -49,6 +110,7 @@ pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 2. 选择 `interpreter type` 时，选择 `custom environment`，然后选择 `select existing`
 3. `type` 选择 `Conda`，这时会提示没有可执行的  conda，没关系，手动选择即可，选择 `select path`，定位到 Anaconda 的安装路径，选择这个 bat 文件：`D:\Develop\Anaconda\condabin\conda.bat`
 4. 完成上诉步骤后，此时下方应该会出现使用 Anaconda 安装的 python 环境的名称，选择对应的 python 环境即可
+4. 在 pycharm 中选择 python 解释器时，下方会出现 conda 的蟒蛇图标鼠标移动上去会显示 Use Conda Package Manager，选中与不选中该图标，下方的依赖列表会有变化，这是因为如果选中，则代表使用 conda 管理项目的依赖，如果不勾选，则默认使用 pip 管理项目的依赖
 
 > 使用清华源注意记得关闭代理软件，否则可能会报错
 

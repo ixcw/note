@@ -4,18 +4,20 @@
 
 简单介绍一下 django 项目的项目文件：
 
-生成项目文件目录树可在项目根目录下使用如下命令，此命令为 windows 内置
+> 生成项目文件目录树可在项目根目录下使用如下命令，此命令为 windows 内置
+>
+> ```sh
+> # 生成第一层目录
+> tree
+> # 生成详细目录
+> tree /f
+> # 或写入到文件
+> tree /f > tree.txt
+> ```
+>
+> 
 
-```sh
-# 生成第一层目录
-tree
-# 生成详细目录
-tree /f
-# 或写入到文件
-tree /f > tree.txt
-```
-
-目录如下
+项目目录如下：
 
 ```text
 │  manage.py  // 主入口文件
@@ -30,13 +32,13 @@ tree /f > tree.txt
 └─templates  // 前端相关文件
 ```
 
-打开 pycharm 的设置，点击项目设置，打开 python 解释器设置，这里可以看见当前 python 环境已经安装的相关的库
+打开 pycharm 的设置，点击项目设置，打开 python 解释器设置，这里可以看见当前 python 环境已经安装的相关的依赖库列表
 
-如果是使用 conda 管理的 python 版本，还需要点击一下 conda 图标，才能看见 conda 安装的库
+如果是使用 conda 管理的 python 版本，需要点击一下 conda 图标，pycharm 就会使用 conda 去管理依赖，下方也会切换显示 conda 所管理的依赖库列表
 
 #### 2 安装项目依赖库
 
-将准备好的 `requirements.txt` 文件复制到项目根目录，就类似于前端项目的 `package.json` 文件，复制完成后回到 pycharm，会发现 pycharm 已经检测到了这个依赖配置文件，提醒是否安装依赖，这里不用管它，我们通过命令行安装：
+将准备好的 `requirements.txt` 文件复制到项目根目录，这个文件就类似于前端项目里的 `package.json` 文件，是依赖列表文件，复制完成后回到 pycharm，会发现 pycharm 已经检测到了这个依赖配置文件，提醒是否安装依赖，这里先不用管它，我们通过命令行去安装：
 
 ```sh
 pip install -r requirements.txt
@@ -48,70 +50,52 @@ pip install -r requirements.txt
 
 #### 3 修改基础配置
 
-打开 `settings.py` 文件，将英文改为中文：
+1. 打开 `settings.py` 文件，将英文改为中文，以及把时区改回上海时区，
 
-```python
-LANGUAGE_CODE = "en-us"
-# 改为
-LANGUAGE_CODE = "zh-hans"
-```
+   ```python
+   # settings.py
+   
+   LANGUAGE_CODE = "en-us"
+   # 改为
+   LANGUAGE_CODE = "zh-hans"
+   
+   TIME_ZONE = "UTC"
+   # 改为
+   TIME_ZONE = "Asia/Shanghai"
+   ```
+   
+   修改完后返回网页，会发现英文网页变成了中文网页，时间也变成了中国时间
 
-修改完后返回网页，会发现英文网页变成了中文网页
+2. 打开 Navicat，连接 MySQL 数据库，新建一个数据库，名字就叫 `car_big_data`，字符集选择默认
 
-时间改回上海时区：
+   继续配置 `settings.py` 配置文件，数据库配置从默认的 sqlite 改成 mysql，数据库名称命名为新建的数据库，配置端口、账号密码，最后引入 pymysql 模块并进行配置
+   
+   ```python
+   # settings.py
+   import pymysql
+   pymysql.install_as_MySQLdb()
+   
+   # 配置 mysql
+   DATABASES = {
+       "default": {
+           "ENGINE": "django.db.backends.mysql",
+           "NAME": "car_big_data",
+           "User": "root",
+           "PASSWORD": "123456",
+           "HOST": "localhost",
+           "PORT": "3306",
+       }
+   }
+   ```
 
-```python
-TIME_ZONE = "UTC"
-# 改为
-TIME_ZONE = "Asia/Shanghai"
-```
-
-数据库配置从默认的 sqlite 改成 mysql，名字暂时留空：
-
-```python
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": ,
-    }
-}
-```
-
-打开 Navicat，连接 MySQL 数据库，新建一个数据库，名字就叫 `car_big_data`，字符集默认就行，返回配置文件，把名字命名为刚刚创建的数据库名字，顺便增加数据库地址端口及用户名和密码配置
-
-```python
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "car_big_data",
-        "User": "root",
-        "PASSWORD": "123456",
-        "HOST": "localhost",
-        "PORT": "3306",
-    }
-}
-```
-项目报错
-
-```sh
-ModuleNotFoundError: No module named 'MySQLdb'
-```
-
-原因是未找到模块，但是项目已经安装了 pymysql 库，在 `settings.py` 中引入库
-
-```python
-import pymysql
-pymysql.install_as_MySQLdb()
-```
-
-此时再次运行项目报错用户权限不能连接，重新打开所在数据库以 root 用户登录检查权限，重新赋权即可
-
-```sh
-.\mysql -u root -p
-SHOW GRANTS FOR 'James Lee'@'localhost';
-GRANT ALL PRIVILEGES ON car_big_data.* TO 'James Lee'@'localhost' IDENTIFIED BY '123456';
-FLUSH PRIVILEGES;
-```
+   > 此时再次运行项目报错用户权限不能连接，重新打开所在数据库以 root 用户登录检查权限，重新赋权即可
+   >
+   > ```sh
+   > .\mysql -u root -p
+   > SHOW GRANTS FOR 'James Lee'@'localhost';
+   > GRANT ALL PRIVILEGES ON car_big_data.* TO 'James Lee'@'localhost' IDENTIFIED BY '123456';
+   > FLUSH PRIVILEGES;
+   > ```
 
 #### 4 创建爬虫文件
 
@@ -131,25 +115,35 @@ import django
 
 #### 5 网页分析
 
-要做爬虫，第一步就是对网页进行分析，针对具体的网页采相应的爬取策略，这个项目爬取的是 [懂车帝](https://www.dongchedi.com/)
+要做爬虫，第一步就是要对网页进行分析，针对具体的网页采取具体的爬取策略
 
-打开懂车帝的网站，点击排行榜进入排行榜网页，发现排行榜上的汽车相关消息比较齐全，比如车辆价格、销量等等，于是决定可以爬取这个网页
+1. 爬取对象
 
-分析网页数据的类型，一般分两类，一类是服务器渲染，另一类是异步渲染
+   首先确认爬取对象，这个项目的爬取对象是  [懂车帝网页](https://www.dongchedi.com/)
 
-服务器渲染就是第一次访问网页，网页渲染好的内容
+2. 爬取页面
 
-异步渲染则是通过网页上的某些按钮或行为触发网络请求得到的数据进行渲染的，比如一个长列表，网页滚动时，加载新的列表数据，新的列表数据就是异步渲染的数据，异步渲染可通过调试模式查看网络获取请求地址和请求数据，可选择自己需要的数据进行记录
+   然后确认爬取页面，打开懂车帝的网站，点击排行榜进入排行榜网页，发现排行榜上的汽车相关消息比较齐全，比如车辆价格、销量等等，于是决定可以爬取排行榜网页
 
-还有的数据需要访问别的网页，可通过观察规律，得出访问规律，拼接数据进行访问，比如访问每辆车的参数页，参数页地址可通过参数页的前缀地址加上汽车 id 拼接而成
+3. 分析数据类型
+
+   分析网页数据的类型，一般分两类，一种是服务器渲染，另一种是异步渲染
+
+   **服务器渲染：**第一次访问网页，网页上渲染已经好的数据内容
+
+   **异步渲染：**通过网页上的某些按钮或行为触发网络请求得到的数据内容
+
+   服务器渲染可以理解为网页上的静态内容，异步渲染就是通过网络请求获得的动态内容，比如一个长列表，网页滚动时，加载新的列表数据，新的列表数据就是异步渲染的数据
+
+   异步渲染可通过调试模式查看网络获取请求地址和请求数据，然后选择自己需要的请求接口进行记录，有些异步数据是通过访问别的网页获得的，这时我们可以通过观察规律，得出访问规律，然后拼接数据进行访问，比如访问每辆车的参数页，参数页地址可通过参数页的前缀地址加上汽车 id 拼接而成
 
 #### 6 编写爬虫
 
-分析完网页后，我们开始编写 `spiders.py`
+分析完网页后，我们就可以正式开始编写爬虫文件 `spiders.py` 了
 
 ##### 6.1 数据爬取
 
-首先定义一个爬虫类，将需要的爬取数据存储到一个临时的 csv 文件中
+首先我们定义一个爬虫类，类的功能是将需要爬取的数据存储到一个**临时 csv 文件**中
 
 ```python
 # spiders.py
@@ -409,7 +403,7 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-执行完成后数据库就会自动创建我们刚刚定义的两张数据库表 carinfo 和 user 表，以及其他的 Django 需要的表
+执行完成后数据库就会自动创建我们刚刚定义的两张数据库表 carinfo 表 和 user 表，以及其他的 Django 需要用到的表
 
 接下来就是把存储到 csv 的数据进行简单的清洗，然后存入数据库
 
@@ -471,46 +465,53 @@ if __name__ == '__main__':
 
 ##### 7.2 编写 Django 路由
 
-返回 python 项目，编辑 `urls.py`，创建路由
+1. 首先我们在应用 `myApp` 中创建视图文件 `views.py` ，然后编写路由函数 center，路由函数的功能很简单，判断请求方法，返回一个 json 对象作为响应数据
 
-```python
-from django.contrib import admin
-from django.urls import path, include
+   ```python
+   # views.py
+   
+   from django.shortcuts import render
+   from django.http import JsonResponse
+   
+   # Create your views here.
+   
+   def center(request):
+       if request.method == 'GET':
+           return JsonResponse({'code': 200, 'msg': 'success'})
+   ```
 
-urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("myApp/", include("myApp.urls"))
-]
-```
+2. 然后在应用 `myApp` 中创建路由文件 `urls.py`，指定路由路径 `center` 指向的是视图文件 `views.py` 的 center 函数
 
-此时 `myApp` 没有 `urls.py` 文件，创建即可：
+   ```python
+   # urls.py
+   
+   from django.urls import path
+   
+   from myApp import views
+   urlpatterns = [
+       path("center", views.center, name="center")
+   ]
+   ```
 
-```python
-from django.urls import path
+3. 编辑 python 项目总应用的总路由文件 `urls.py`，创建项目的总路由，指定路由路径 `myApp` 指向的是应用 `myApp` 的路由，到这里，路由就配置完成了
 
-from myApp import views
-urlpatterns = [
-    path("center", views.center, name="center")
-]
-```
+   访问 `http://localhost:8000/myApp/center` 时，就会执行视图文件 `views.py` 中的路由函数 center 去处理请求，返回响应 `{'code': 200, 'msg': 'success'}`
 
-此时 `views.py` 文件 没有 `center` 函数，创建即可：
+   ```python
+   from django.contrib import admin
+   from django.urls import path, include
+   
+   urlpatterns = [
+       path("admin/", admin.site.urls),
+       path("myApp/", include("myApp.urls"))
+   ]
+   ```
 
-```python
-from django.shortcuts import render
-from django.http import JsonResponse
+##### 7.3 处理响应数据
 
-# Create your views here.
+在 `myApp` 里创建一个 utils 文件夹，用于存放获取响应数据的模块文件
 
-
-def center(request):
-    if request.method == 'GET':
-        return JsonResponse({'code': 200, 'msg': 'success'})
-```
-
-然后在 `myApp` 应用里创建一个 utils 文件夹，用于编写获取数据的工具
-
-首先新建 `getPublicData.py` 文件，用于获取所有数据
+首先新建 `getPublicData.py` 文件，用于获取所有的车辆数据
 
 ```python
 from myApp.models import *
@@ -521,7 +522,7 @@ def get_all_cars():
     return CarInfo.objects.all()
 ```
 
-然后新建 `getCenterData.py` 文件，引入 `get_all_cars` 函数
+然后新建 `getCenterData.py` 文件，引入 `get_all_cars` 函数获取所有的车辆数据
 
 ```python
 import json
@@ -534,7 +535,7 @@ def get_center_data():
     print(cars)
 ```
 
-然后在 `views.py` 文件中引入工具文件
+最后在视图文件 `views.py` 文件中引入工具文件
 
 ```python
 from django.shortcuts import render
@@ -551,13 +552,7 @@ def center(request):
         return JsonResponse({'code': 200, 'msg': 'success'})
 ```
 
-现在在浏览器中访问 `http://localhost:8000/myApp/center` 就能得到 json 数据了：
-
-```json
-{'code': 200, 'msg': 'success'}
-```
-
-现在对获取的总数据进行处理：
+在工具模块 `getCenterData.py` 中对获取的总数据进行处理，然后返回处理后的数据
 
 ```python
 # getCenterData.py
@@ -615,7 +610,9 @@ def get_center_data():
     return sum_cars, top_car, top_car_volume, most_model, most_brand, average_price
 ```
 
-返回处理的数据后，在 `views.py` 中接收数据，组装成 json 数据返回给路由
+在 `views.py` 中接收数据，将数据组装成 json 数据作为路由函数的返回响应
+
+至此，一个 python 后台接口就编写完成了
 
 ```python
 # views.py
