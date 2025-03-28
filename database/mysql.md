@@ -810,7 +810,9 @@ SET GLOBAL TRANSACTION ISOLATION LEVEL READ COMMITTED;
    
 2. 图形化工具：
 
-   可以使用navicat、workbench等图形化工具点击备份还原，都是生成sql文件，注意mysql8版本导出的sql不能直接拿到mysql5的版本使用，因为字符集和排序规则可能不一样，比如下面两个数据库就不一样，需要根据目标数据库的信息进行替换
+   可以使用navicat、workbench等图形化工具点击备份还原，都是生成sql文件
+   
+   注意mysql8版本导出的sql不能直接拿到mysql5的版本使用，因为字符集和排序规则可能不一样，比如下面两个数据库就不一样，需要根据目标数据库的信息进行替换
    
     ![](./imgs/MySQL字符集2.png)
    
@@ -827,3 +829,55 @@ SET GLOBAL TRANSACTION ISOLATION LEVEL READ COMMITTED;
 #### 8 建表规范
 1. 表名一般采用单数，不用复数
 2. 表名加上项目前缀
+
+#### 9 phpstudy 启动失败
+
+phpstudy 是一款安装启动 MySQL 数据库的图形化软件，数据库的安装和启动都很方便，但有时安装后启动数据库会启动之后会立马停止
+
+原因一：可能是端口号占用冲突，对于这个原因修改端口号就行
+
+原因二：和之前安装的数据库冲突了，对于这种情况，需要卸载之前安装的数据库
+
+搜索 cmd 以管理员身份打开 cmd，输入命令删除数据库服务，删除之前可以先暂停数据库服务
+
+```sh
+net stop mysql
+sc delete mysql
+```
+
+win + r 输入 regedit 打开注册表，删除以下值
+
+```txt
+HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\Eventlog\Application\MySQL
+HKEY_LOCAL_MACHINE\SYSTEM\ControlSet002\Services\Eventlog\Application\MySQL
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Eventlog\Application\MySQL
+```
+
+然后重新安装 phpstudy 里的数据库，重新启动即可
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
