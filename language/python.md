@@ -201,7 +201,7 @@ pip install -r requirements.txt
 pip install -r requirements.txt -i https://pypi.org/simple
 ```
 
-#### 4 语法
+#### 4 模块
 
 ##### 4.1 python 模块
 
@@ -461,15 +461,8 @@ if __name__ == '__main__':
                await asyncio.sleep(1)
    ```
 
-   
 
-4. e
-
-5. e
-
-6. e
-
-7. e
+#### 6 语法
 
 
 
