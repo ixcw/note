@@ -724,7 +724,7 @@ npm uninstall 模块名称
 
 ```sh
 npm config get registry  # 检查当前源地址
-npm config set registry=https://registry.npm.taobao.org/  # 设置为淘宝镜像地址
+npm config set registry=https://registry.npmmirror.com/  # 设置为淘宝镜像地址
 ```
 
 命令执行完成之后会在电脑的用户文件夹`C:\Users\用户名\`下生成一个名为`.npmrc`的配置文件
@@ -732,10 +732,12 @@ npm config set registry=https://registry.npm.taobao.org/  # 设置为淘宝镜�
 内容表明源地址目前是淘宝镜像服务器地址，如果我们不用命令而是直接去创建这个文件也是可以的，只不过命令会更方便
 
 ```text
-registry=https://registry.npm.taobao.org/
+registry=https://registry.npmmirror.com/
 ```
 
 另一个更为常见的更改的方式是我们下载安装一个名为`nrm`的全局模块，使用这个模块来更改镜像地址
+
+> 网络如果实在太差，还是只能使用上面的方法直接配置
 
 ```sh
 npm i nrm -g  # 全局安装nrm
