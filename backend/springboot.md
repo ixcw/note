@@ -1515,7 +1515,1485 @@ public class GlobalExceptionHandler {
 
 ##### 6.3 MD5 加密
 
-到目前为止，用户的密码是以明文的形式存储到数据库中的，这给黑客攻击数据库获取密码带来了机会，需要杜绝此种情况的发生，因此我们需要引入 MD5 对密码进行加密存储
+到目前为止，用户的密码是以明文的形式存储到数据库中的，这给黑客攻击数据库获取密码带来了机会，需要杜绝此种情况的发生，因此我们需要引入 MD5 对密码进行加密存储，这样数据库里保存的就是加密后的密码，而且就算拿到了加密密码，也是无法直接使用加密密码登录的
+
+这里使用三方库实现 MD5 加密，新建包 `util` ，再建一个工具类 `MD5Utils`
+
+```java
+package com.mall.bootmall.util;
+
+import com.mall.bootmall.common.Constant;
+import org.apache.tomcat.util.codec.binary.Base64;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+public class MD5Utils {
+    public static String getMD5(String str) throws NoSuchAlgorithmException {
+         MessageDigest md5 = MessageDigest.getInstance("MD5");
+         return Base64.encodeBase64String(md5.digest(str.getBytes()));
+    }
+}
+```
+
+MD5是一种哈希算法，无法通过加密后的字符串反推原始字符串，但也存在安全性隐患，比如可以用彩虹表破解，所谓彩虹表就是把常见的密码的 MD5 值给存起来形成一张对照表，这样虽然无法反推密码，但是可以查表得到常见密码的哈希值，为了防止这种破解方式，我们可以自定义一个无规则的字符串常量，叫做盐值，生成 MD5 哈希值时，加上这个盐值进行加密，这样即使有了彩虹表，也很难反推原始密码
+
+```java
+package com.mall.bootmall.util;
+
+import com.mall.bootmall.common.Constant;
+import org.apache.tomcat.util.codec.binary.Base64;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+public class MD5Utils {
+    public static String getMD5(String str) throws NoSuchAlgorithmException {
+         MessageDigest md5 = MessageDigest.getInstance("MD5");
+         return Base64.encodeBase64String(md5.digest((str + Constant.SALT).getBytes()));
+    }
+}
+```
+
+写好 MD5 加密工具类后，在用户服务类 `UserServiceImpl`  中存储注册密码时，调用该工具类对密码进行加密即可
+
+```java
+package com.mall.bootmall.service.impl;
+
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.mapper.UsersMapper;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.service.UserService;
+import com.mall.bootmall.util.MD5Utils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.security.NoSuchAlgorithmException;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    UsersMapper usersMapper;
+
+    @Override
+    public Users getUserById(Integer id) {
+        return usersMapper.selectByPrimaryKey(id);
+    }
+
+    @Override
+    public void register(String userName, String password) throws CustomException {
+        Users dbUser = usersMapper.selectByUserName(userName);
+        if (dbUser != null) {
+            throw new CustomException(ExceptionEnum.USER_NAME_EXISTED);
+        }
+        Users user = new Users();
+        user.setName(userName);
+        try {
+            user.setPassword(MD5Utils.getMD5(password));
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        int count = usersMapper.insertSelective(user);
+        if (count != 1) {
+            throw new CustomException(ExceptionEnum.INSERT_FAILED);
+        }
+    }
+}
+```
+
+重新访问注册接口，新注册的用户的密码就是加密后的密码了，因为盐值固定，相同密码输入，生成的哈希值是一样的
+
+##### 6.4 登录接口
+
+登录是一种状态，用户登录后，登录状态会保存一段时间，所以服务端需要将用户的登录状态给保存下来，这里先使用 session 去保存用户的登录状态，后续会换成 token
+
+登录接口的开发流程和注册接口一样，从上往下写，先写 controller，我们先来到 `UserController`
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.servlet.http.HttpSession;
+
+@Controller
+public class UserController {
+    @Autowired
+    UserService userService;
+
+    /**
+     * 登录接口
+     */
+    @PostMapping("/login")
+    @ResponseBody
+    public ApiRestResponse login(
+            @RequestParam("userName") String userName,
+            @RequestParam("password") String password,
+            HttpSession session
+    ) throws CustomException {
+        if (!StringUtils.hasText(userName)) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_USER_NAME);
+        }
+        if (!StringUtils.hasText(password)) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_PASSWORD);
+        }
+        if (password.length() < 6) {
+            return ApiRestResponse.error(ExceptionEnum.PASSWORD_TOO_SHORT);
+        }
+        userService.login(userName, password);
+        return ApiRestResponse.success();
+    }
+}
+```
+
+登录方法与注册方法一样，不同的是会多一个 session 参数，这就是用来存储登录状态的，具体的登录逻辑是放在业务层 `UserService` 中的，目前还没有 `login` 方法，我们来到 `UserService` 中定义登录方法，然后在 `UserServiceImpl` 中实现登录方法
+
+> 这里也可以不用先在 `UserService` 中定义接口登录方法，而是直接在实现类中编写登录方法，编写完成后添加 `@Override` 注解，此时 idea 会报错，解决报错，idea 会自动在 `UserService` 中生成接口方法，这样也是很方便的
+
+```java
+package com.mall.bootmall.service.impl;
+
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.mapper.UsersMapper;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.service.UserService;
+import com.mall.bootmall.util.MD5Utils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.security.NoSuchAlgorithmException;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    UsersMapper usersMapper;
+
+    @Override
+    public Users login(String userName, String password) throws CustomException {
+        String md5Password = null;
+        try {
+            md5Password = MD5Utils.getMD5(password);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+}
+```
+
+首先获取输入密码的 MD5 哈希值，然后用输入的用户名和哈希值去数据库中查找对应用户，找到说明登录成功，否则登录失败，此时还没有通过用户名和密码查找用户的方法，我们去 `UsersMapper` 中定义查找方法 `selectByLogin`，传入用户名和密码
+
+> mybatis 的 mapper 中参数大于两个时，需要加 `@Param` 注解
+
+```java
+package com.mall.bootmall.model.mapper;
+
+import com.mall.bootmall.model.pojo.Users;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UsersMapper {
+    int deleteByPrimaryKey(Integer id);
+
+    int insert(Users record);
+
+    int insertSelective(Users record);
+
+    Users selectByPrimaryKey(Integer id);
+
+    int updateByPrimaryKeySelective(Users record);
+
+    int updateByPrimaryKey(Users record);
+
+    Users selectByUserName(String userName);
+
+    Users selectByLogin(@Param("userName") String userName, @Param("password") String password);
+}
+```
+
+然后去 mapper 对应的 xml 文件 `UsersMapper.xml` 中实现 `selectByLogin` 方法
+
+>parameterType 改为 map，表示不止一个参数
+
+```xml
+<select id="selectByUserName" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from users
+    where name = #{username, jdbcType=VARCHAR}
+</select>
+<select id="selectByLogin" parameterType="map" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from users
+    where name = #{username, jdbcType=VARCHAR}
+    and password = #{password, jdbcType=VARCHAR}
+</select>
+```
+
+定义好了数据库查找方法，我们返回 `UserServiceImpl` 继续实现登录业务，通过用户名和输入的加密密码查找用户，没有找到即报错登录失败，找到就返回找到的用户，返回到 controller 层处理成功返回
+
+```java
+package com.mall.bootmall.service.impl;
+
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.mapper.UsersMapper;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.service.UserService;
+import com.mall.bootmall.util.MD5Utils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.security.NoSuchAlgorithmException;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    UsersMapper usersMapper;
+
+    @Override
+    public Users login(String userName, String password) throws CustomException {
+        String md5Password = null;
+        try {
+            md5Password = MD5Utils.getMD5(password);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        Users user = usersMapper.selectByLogin(userName, md5Password);
+        if (user == null) {
+            throw new CustomException(ExceptionEnum.WRONG_PASSWORD);
+        }
+        return user;
+    }
+}
+```
+
+回到 `UserController`，完成登录接口的开发，在返回用户信息到前台之前，先把密码重置为 null，这样更安全，然后将用户信息存到 session 里面，最后将用户信息保存到成功响应的 data 里面返回给前台
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Controller
+public class UserController {
+    @Autowired
+    UserService userService;
+
+    /**
+     * 登录接口
+     */
+    @PostMapping("/login")
+    @ResponseBody
+    public ApiRestResponse login(
+            @RequestParam("userName") String userName,
+            @RequestParam("password") String password,
+            HttpSession session
+    ) throws CustomException {
+        if (!StringUtils.hasText(userName)) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_USER_NAME);
+        }
+        if (!StringUtils.hasText(password)) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_PASSWORD);
+        }
+        if (password.length() < 6) {
+            return ApiRestResponse.error(ExceptionEnum.PASSWORD_TOO_SHORT);
+        }
+        Users user = userService.login(userName, password);
+        user.setPassword(null);
+        session.setAttribute(Constant.SESSION_USER, user);
+        return ApiRestResponse.success(user);
+    }
+}
+```
+
+##### 6.5 更新用户
+
+继续在 `UserController` 中实现更新用户个人信息的方法，首先从 session 中获取已登录用户信息，然后通过已登录用户的id去查找对应的用户，部分更新对应的字段
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+    /**
+     * 更新用户
+     */
+    @PostMapping("/user/update")
+    @ResponseBody
+    public ApiRestResponse updateUserInfo(HttpSession session, @RequestParam String signature) throws CustomException {
+        Users loggedUser = (Users) session.getAttribute(Constant.SESSION_USER);
+        if (loggedUser == null) {
+            throw new CustomException(ExceptionEnum.NOT_LOGGED);
+        }
+        Users user = new Users();
+        user.setId(loggedUser.getId());
+        user.setSignature(signature);
+        userService.updateUserInfo(user);
+        return ApiRestResponse.success();
+    }
+}
+```
+
+`UserServiceImpl` 中实现的更新方法，直接调用 mapper 方法更新对应用户
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    UsersMapper usersMapper;
+
+    @Override
+    public void updateUserInfo(Users user) throws CustomException {
+        int updateCount = usersMapper.updateByPrimaryKeySelective(user);
+        if (updateCount != 1) {
+            throw new CustomException(ExceptionEnum.UPDATE_FAILED);
+        }
+    }
+}
+```
+
+##### 6.6 退出登录
+
+要做退出登录，首先需要知道登录的原理，我们目前做的是使用 session 保存登录信息，所以只需要将 session 中的登录信息清除，就可以实现退出登录了
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Controller
+public class UserController {
+    @Autowired
+    UserService userService;
+    
+    /**
+     * 退出登录
+     */
+    @PostMapping("/logout")
+    @ResponseBody
+    public ApiRestResponse logout(HttpSession session) throws CustomException {
+        session.removeAttribute(Constant.SESSION_USER);
+        return ApiRestResponse.success();
+    }
+}
+```
+
+##### 6.7 管理员登录
+
+管理员登录和用户登录本质是一样的，所以可以复制登录方法调整一下，变成管理员登录方法，来到 `UserController`，编写管理员登录方法，获取登录用户信息，判断是否是管理员，是就执行正常登录逻辑，否则报错提醒非管理员无权限
+
+> 编码技巧，快速打出 if 语句，表达式后输入 `.if` 可出现 if 语句提示
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+import javax.servlet.http.HttpSession;
+
+@Controller
+public class UserController {
+    @Autowired
+    UserService userService;
+
+    /**
+     * 管理员登录
+     */
+    @PostMapping("/adminLogin")
+    @ResponseBody
+    public ApiRestResponse adminLogin(
+            @RequestParam("userName") String userName,
+            @RequestParam("password") String password,
+            HttpSession session
+    ) throws CustomException {
+        if (!StringUtils.hasText(userName)) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_USER_NAME);
+        }
+        if (!StringUtils.hasText(password)) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_PASSWORD);
+        }
+        if (password.length() < 6) {
+            return ApiRestResponse.error(ExceptionEnum.PASSWORD_TOO_SHORT);
+        }
+        Users user = userService.login(userName, password);
+        if (userService.checkIsAdmin(user)) {
+            user.setPassword(null);
+            session.setAttribute(Constant.SESSION_USER, user);
+            return ApiRestResponse.success(user);
+        } else {
+            return ApiRestResponse.error(ExceptionEnum.NOT_ADMIN);
+        }
+    }
+}
+```
+
+`UserServiceImpl` 实现判断管理员方法
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    UsersMapper usersMapper;
+
+    @Override
+    public boolean checkIsAdmin(Users user) throws CustomException {
+        return user.getRole().equals(2);
+    }
+}
+```
+
+至此，用户模块编写完成
+
+#### 7 商品分类模块
+
+商品众多，需要进行归类，因此开发商品分类模块，对于这个模块，主要要实现两个功能：
+
+1. 商品分类的 crud
+2. 商品分类的父子目录、递归查找
+
+##### 7.1 添加分类
+
+首先开发后台的添加分类接口，来到 `controller` 包，新建 `CategoryController` 类，因为是后台接口，所以要接收 session 参数，用于判断登录身份
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import org.springframework.stereotype.Controller;
+
+import javax.servlet.http.HttpSession;
+
+@Controller
+public class CategoryController {
+    public ApiRestResponse addCategory(HttpSession session) {}
+}
+```
+
+添加分类必然要接收分类的各个参数，这些参数我们已经知道会有四五个左右，是比较多的，直接写在函数参数里面进行接收，会导致代码混乱难以维护，因此我们需要封装一个专门的请求类，用来封装请求参数，使得参数列表变得简洁，来到 `model` 包下新建 `request` 包，然后新建 `AddCategoryReq` 类
+
+```java
+package com.mall.bootmall.model.request;
+
+public class AddCategoryReq {
+    private String name;
+    private Integer rank;
+    private Integer order;
+    private Integer parentId;
+    
+    // getter and setter
+}
+```
+
+> 到这里你也许会问，这个请求类和 pojo 类如此相似，都是对应数据库中表的字段，为什么不直接使用 pojo 类，而是要新建一个请求类呢？好问题，下面进行回答：
+>
+> 1. 首先，类的指责应该单一，不应该同时负责好几件事情，pojo 类的职责就是和数据库表的字段一一对应，只负责作为映射数据库表的实体而存在；
+> 2. 其次是基于系统安全考虑，假设直接用 pojo 类，那么会有好几个字段是多余的，比如 id、createTime、updateTime 等，假如黑客攻击系统，传入了这些参数，那么由于 sql 是自动生成的，就会执行一些不必要的查询，为系统带来安全隐患
+>
+> 基于上诉两点原因，需要另外封装单独的请求类
+
+回到 `CategoryController` 类，继续编写，这里对参数进行了校验，然后获取登录用户判断用户权限是否是管理员，如果是管理员则执行添加分类的业务
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import com.mall.bootmall.common.Constant;
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.model.request.AddCategoryReq;
+import com.mall.bootmall.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.servlet.http.HttpSession;
+
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+
+    @PostMapping("/admin/category/add")
+    @ResponseBody
+    public ApiRestResponse addCategory(HttpSession session, AddCategoryReq addCategoryReq) throws CustomException {
+        if (
+            addCategoryReq.getName() == null ||
+            addCategoryReq.getRank() == null ||
+            addCategoryReq.getOrder() == null ||
+            addCategoryReq.getParentId() == null
+        ) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_PARA);
+        }
+        Users loggedUser = (Users) session.getAttribute(Constant.SESSION_USER);
+        if (loggedUser == null) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_LOGGED);
+        }
+        boolean isAdmin = userService.checkIsAdmin(loggedUser);
+        if (isAdmin) {
+            
+        } else {
+            return ApiRestResponse.error(ExceptionEnum.NEED_ADMIN);
+        }
+    }
+}
+```
+
+此时还没有添加分类的业务，我们来到 `service` 包下，新建 `CategoryService` 接口和其实现类 `CategoryServiceImpl`
+
+```java
+package com.mall.bootmall.service.impl;
+
+import com.mall.bootmall.model.mapper.CategoriesMapper;
+import com.mall.bootmall.model.pojo.Categories;
+import com.mall.bootmall.model.request.AddCategoryReq;
+import com.mall.bootmall.service.CategoryService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    CategoriesMapper categoriesMapper;
+
+    public void add(AddCategoryReq addCategoryReq) {
+        Categories category = new Categories();
+        BeanUtils.copyProperties(addCategoryReq, category);
+    }
+}
+```
+
+> 这里有个快速 copy 属性的办法是 `BeanUtils.copyProperties` ，这是 spring 提供的工具类，将源对象的属性拷贝到目标对象里面
+
+既然是添加分类，那肯定不允许添加重名的分类，所以这里需要利用 `CategoriesMapper` 去查找是否有同名的分类，此时还没有这个 sql，需要自己去编写，来到 `CategoriesMapper`
+
+```java
+package com.mall.bootmall.model.mapper;
+
+import com.mall.bootmall.model.pojo.Categories;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface CategoriesMapper {
+    int deleteByPrimaryKey(Integer id);
+
+    int insert(Categories record);
+
+    int insertSelective(Categories record);
+
+    Categories selectByPrimaryKey(Integer id);
+
+    int updateByPrimaryKeySelective(Categories record);
+
+    int updateByPrimaryKey(Categories record);
+
+    Categories selectByName(String name);
+}
+```
+
+来到对应的 xml 实现
+
+```xml
+<select id="selectByName" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from categories
+    where name = #{name,jdbcType=INTEGER}
+</select>
+```
+
+回到 `CategoryServiceImpl`，继续实现查询重名分类业务，如果没有重名，则执行新增操作
+
+```java
+package com.mall.bootmall.service.impl;
+
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.mapper.CategoriesMapper;
+import com.mall.bootmall.model.pojo.Categories;
+import com.mall.bootmall.model.request.AddCategoryReq;
+import com.mall.bootmall.service.CategoryService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    CategoriesMapper categoriesMapper;
+
+    @Override
+    public void add(AddCategoryReq addCategoryReq) {
+        Categories category = new Categories();
+        BeanUtils.copyProperties(addCategoryReq, category);
+        Categories dbCategory = categoriesMapper.selectByName(addCategoryReq.getName());
+        if (dbCategory != null) {
+            throw new CustomException(ExceptionEnum.NAME_EXISTED);
+        }
+        int count = categoriesMapper.insertSelective(category);
+        if (count == 0) {
+            throw new CustomException(ExceptionEnum.INSERT_FAILED);
+        }
+    }
+}
+```
+
+回到 `CategoryController` 中调用 `categoryService` 实现添加分类的业务
+
+> 因为这次的传参和以往一个一个的传不一样，这次传的是一个对象，因此需要在参数上增加 `@RequestBody` 注解，表明传递的参数是一个对象，需要从 http 请求的请求体中获取参数
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import com.mall.bootmall.common.Constant;
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.model.request.AddCategoryReq;
+import com.mall.bootmall.service.CategoryService;
+import com.mall.bootmall.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.servlet.http.HttpSession;
+
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+    @Autowired
+    CategoryService categoryService;
+
+    @PostMapping("/admin/category/add")
+    @ResponseBody
+    public ApiRestResponse addCategory(HttpSession session, @RequestBody AddCategoryReq addCategoryReq) throws CustomException {
+        if (
+            addCategoryReq.getName() == null ||
+            addCategoryReq.getRank() == null ||
+            addCategoryReq.getOrder() == null ||
+            addCategoryReq.getParentId() == null
+        ) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_PARA);
+        }
+        Users loggedUser = (Users) session.getAttribute(Constant.SESSION_USER);
+        if (loggedUser == null) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_LOGGED);
+        }
+        boolean isAdmin = userService.checkIsAdmin(loggedUser);
+        if (isAdmin) {
+            categoryService.add(addCategoryReq);
+            return ApiRestResponse.success();
+        } else {
+            return ApiRestResponse.error(ExceptionEnum.NEED_ADMIN);
+        }
+    }
+}
+```
+
+到这里就完成了添加分类的编写
+
+##### 7.2 参数校验
+
+在开发添加分类接口时，我们对请求类 `AddCategoryReq` 的参数进行了校验，这里只有 4 个参数还好，万一参数多了，岂不是很麻烦，我们需要简单的校验方法，恰好 spring 为我们提供了不少方便使用的注解用于参数校验
+
+|       注解        |    作用    |
+| :---------------: | :--------: |
+|     `@Valid`      |  需要验证  |
+|    `@NotNull`     |    非空    |
+|   `@Max(value)`   |   最大值   |
+| `@Size(min, max)` | 字符串长度 |
+
+`@Valid` 注解是加到 controller 函数的参数上的，表面哪些参数需要开启参数校验，直接以这里的 `AddCategoryReq` 参数校验为例
+
+> 这里使用注解时报错：无法解析符号 'Valid'，本来这个注解是 `import javax.validation.Valid;` 里面的，网上查找资料发现和 boot 版本有关，需要单独添加依赖，来到 `pom.xml`
+>
+> ```xml
+> <dependency>
+>     <groupId>org.springframework.boot</groupId>
+>     <artifactId>spring-boot-starter-validation</artifactId>
+> </dependency>
+> ```
+>
+> 重新添加 `@Valid` 注解，成功导入了 `import javax.validation.Valid;`
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+    @Autowired
+    CategoryService categoryService;
+
+    @PostMapping("/admin/category/add")
+    @ResponseBody
+    public ApiRestResponse addCategory(HttpSession session, @Valid @RequestBody AddCategoryReq addCategoryReq) throws CustomException {
+        Users loggedUser = (Users) session.getAttribute(Constant.SESSION_USER);
+        if (loggedUser == null) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_LOGGED);
+        }
+        boolean isAdmin = userService.checkIsAdmin(loggedUser);
+        if (isAdmin) {
+            categoryService.add(addCategoryReq);
+            return ApiRestResponse.success();
+        } else {
+            return ApiRestResponse.error(ExceptionEnum.NEED_ADMIN);
+        }
+    }
+}
+```
+
+我们对 `AddCategoryReq` 开启了参数校验，来到 `AddCategoryReq`，对请求属性进行校验
+
+>这里也能看出另一点单独封装请求类而不是直接使用 pojo 类的好处，可以方便地对参数进行校验，而不是破坏 pojo 类的纯粹，而且不同的请求类可以封装不同的校验方法，比如添加和更新时的校验方法肯定是不一样的，封装不同的请求类就显得更加灵活了
+
+```java
+package com.mall.bootmall.model.request;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+public class AddCategoryReq {
+    @Size(min=2, max=6)
+    @NotNull
+    private String name;
+
+    @Min(3)
+    @NotNull
+    private Integer rank;
+
+    @NotNull
+    private Integer order;
+
+    @NotNull
+    private Integer parentId;
+
+    // getter and setter
+}
+```
+
+重启后端，验证是否校验成功，输入分类名为一个字的分类，控制台报错：
+
+```sh
+default message [个数必须在2和6之间]
+```
+
+返回的接口报错：
+
+```json
+{
+    "code": 20000,
+    "msg": "系统异常",
+    "data": null
+}
+```
+
+说明校验成功了，但是这样对前台来说是不友好的，一旦校验失败，返回统统都是 “系统异常”，我们需要将控制台信息返回给前台，来到我们之前编写的统一异常处理类 `GlobalExceptionHandler`，编写一个新的专门用于处理参数校验异常的方法 `handleParamsNotValidException`
+
+```java
+package com.mall.bootmall.exception;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+    private final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseBody
+    public Object handleParamsNotValidException(MethodArgumentNotValidException ex){
+        log.error("MethodArgumentNotValidException: ", ex);
+        // 处理参数校验异常信息
+        BindingResult bindingResult = ex.getBindingResult();
+        List<String> list = new ArrayList<>();
+        if (bindingResult.hasErrors()) {
+            List<ObjectError> allErrors = bindingResult.getAllErrors();
+            for (ObjectError objectError : allErrors) {
+                String defaultMessage = objectError.getDefaultMessage();
+                list.add(defaultMessage);
+            }
+        }
+        if (list.isEmpty()) {
+            return ApiRestResponse.error(ExceptionEnum.WRONG_PARA);
+        }
+        return ApiRestResponse.error(ExceptionEnum.WRONG_PARA.getCode(), String.join("; ", list));
+    }
+}
+```
+
+然后再去测试，发现可以给出控制台的友好提示了
+
+```json
+{
+    "code": 10011,
+    "msg": "个数必须在2和6之间; 最大不能超过3; 不能为null",
+    "data": null
+}
+```
+
+可是这样的提示还是不够完美，比如 **不能为null**，具体是哪一个参数不能为 null 呢？我们需要自己去编写更加友好的提示，来到请求封装类 `AddCategoryReq`
+
+```java
+package com.mall.bootmall.model.request;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+public class AddCategoryReq {
+    @Size(min=2, max=6)
+    @NotNull(message = "name不能为null")
+    private String name;
+
+    @Max(3)
+    @NotNull(message = "rank不能为null")
+    private Integer rank;
+
+    @NotNull(message = "order不能为null")
+    private Integer order;
+
+    @NotNull(message = "parentId不能为null")
+    private Integer parentId;
+    
+    // getter and setter
+}
+```
+
+这样在没有传递相应参数的时候，就会显示是哪个参数不能为 null 了
+
+但是这样还是很麻烦，虽然消息提示友好了，但是需要在每次添加参数校验时都去 **手动编写** 一次提示消息，有没有更方便的方法呢？有的，肯定有的，我们可以继续改造参数校验异常的方法 `handleParamsNotValidException`，通过获取参数字段名称，自动添加到错误消息上面的方式，去统一处理参数校验异常，这样就不用每次都去手动填写了，而且前台能知道是哪个参数传递出了问题
+
+```java
+package com.mall.bootmall.exception;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+    private final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseBody
+    public Object handleParamsNotValidException(MethodArgumentNotValidException ex){
+        log.error("MethodArgumentNotValidException: ", ex);
+        // 处理参数校验异常信息
+        BindingResult bindingResult = ex.getBindingResult();
+        List<String> list = new ArrayList<>();
+        if (bindingResult.hasErrors()) {
+            List<ObjectError> allErrors = bindingResult.getAllErrors();
+            for (ObjectError objectError : allErrors) {
+                // 获取参数字段名称
+                String fieldName = (objectError instanceof FieldError)
+                    ? ((FieldError) objectError).getField()
+                    : "";
+                String errorMessage = fieldName + objectError.getDefaultMessage();
+                list.add(errorMessage);
+            }
+        }
+        if (list.isEmpty()) {
+            return ApiRestResponse.error(ExceptionEnum.WRONG_PARA);
+        }
+        return ApiRestResponse.error(ExceptionEnum.WRONG_PARA.getCode(), String.join("; ", list));
+    }
+}
+```
+
+然后把之前手动添加的错误提示 message 删掉，现在再次测试，返回的响应如下，显然，提示非常友好
+
+```json
+{
+    "code": 10011,
+    "msg": "name个数必须在2和6之间; parentId不能为null; rank最大不能超过3",
+    "data": null
+}
+```
+
+##### 7.3 swagger 文档
+
+###### 7.3.1 SpringFox
+
+当 controller 中的方法比较多的时候，我们会给这些方法添加注释，说明方法的用途，以及参数和返回值，但是这样添加的注释只有后端人员可以看到，前端是看不到的，有没有办法通过这些注释，自动生成一份 api 文档给前端，解放后端的生产力呢，答案是肯定的，我们可以利用 swagger 生成
+
+首先在 `pom.xml` 中引入 swagger 的依赖
+
+```xml
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-swagger2</artifactId>
+    <version>2.9.2</version>
+</dependency>
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-swagger-ui</artifactId>
+    <version>2.9.2</version>
+</dependency>
+```
+
+在主程序入口类 `BootMallApplication` 上加上 `@EnableSwagger2` 注解，表示开启 swagger 生成文档的功能
+
+```java
+package com.mall.bootmall;
+
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import springfox.documentation.swagger2.annotations.EnableSwagger2;
+
+@SpringBootApplication
+@MapperScan(basePackages = "com.mall.bootmall.model.mapper")
+@EnableSwagger2
+public class BootMallApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(BootMallApplication.class, args);
+    }
+
+}
+```
+
+接下来在项目根目录新建一个 `config` 包，专门用于存放配置文件，新建 `SpringFoxConfig` 配置类
+
+```java
+package com.mall.bootmall.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.context.request.WebRequest;
+import springfox.documentation.builders.ApiInfoBuilder;
+import springfox.documentation.builders.PathSelectors;
+import springfox.documentation.builders.RequestHandlerSelectors;
+import springfox.documentation.service.ApiInfo;
+import springfox.documentation.spi.DocumentationType;
+import springfox.documentation.spring.web.plugins.Docket;
+
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+/**
+ * swagger 配置
+ */
+@Configuration
+public class SpringFoxConfig {
+
+    // http://localhost:8083/swagger-ui.html
+    @Bean
+    public Docket api() {
+        return new Docket(DocumentationType.SWAGGER_2)
+            .apiInfo(apiInfo())
+            .select()
+            // 指定扫描的 controller 包
+            .apis(RequestHandlerSelectors.basePackage("com.mall.bootmall.controller"))
+            .paths(PathSelectors.any())
+            .build();
+    }
+
+    private ApiInfo apiInfo() {
+        return new ApiInfoBuilder()
+            .title("boot商城api文档")
+            .description("boot商城系统接口文档")
+            .termsOfServiceUrl("")
+            .build();
+    }
+}
+```
+
+然后新建 `WebMvcConfig` 配置类，用于配置地址映射
+
+```java
+package com.mall.bootmall.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+/**
+ * swagger 地址映射
+ */
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("swagger-ui.html")
+            .addResourceLocations("classpath:/META-INF/resources/");
+        registry.addResourceHandler("/webjars/**")
+            .addResourceLocations("classpath:/META-INF/resources/webjars/");
+    }
+}
+```
+
+到这里就配置完成了，如果想给 controller 方法生成文档，只需要添加 swagger 的注解 `@ApiOperation` 即可，给整个 controller 生成文档，则添加 `@Api` 注解
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+
+import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+
+@Api(tags = "分类模块")
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+    @Autowired
+    CategoryService categoryService;
+
+    @ApiOperation("添加分类")
+    @PostMapping("/admin/category/add")
+    @ResponseBody
+    public ApiRestResponse addCategory(HttpSession session, @Valid @RequestBody AddCategoryReq addCategoryReq) throws CustomException {
+        Users loggedUser = (Users) session.getAttribute(Constant.SESSION_USER);
+        if (loggedUser == null) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_LOGGED);
+        }
+        boolean isAdmin = userService.checkIsAdmin(loggedUser);
+        if (isAdmin) {
+            categoryService.add(addCategoryReq);
+            return ApiRestResponse.success();
+        } else {
+            return ApiRestResponse.error(ExceptionEnum.NEED_ADMIN);
+        }
+    }
+}
+```
+
+现在就可以访问 [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) 获取生成的 api 文档了
+
+>由于我使用的 spring boot 版本是 2.6.13
+>
+>```xml
+><spring-boot.version>2.6.13</spring-boot.version>
+>```
+>
+>而 swagger 的版本是 2.9.2，存在兼容问题，因此报了空指针错误：
+>
+>```sh
+>Failed to start bean 'documentationPluginsBootstrapper'; nested exception is java.lang.NullPointerException
+>```
+>
+>这是因为 Springfox 假设 [Spring MVC](https://so.csdn.net/so/search?q=Spring MVC&spm=1001.2101.3001.7020) 的路径匹配策略是 ant-path-matcher，而 Spring Boot 2.6 以上版本的默认匹配策略是 path-pattern-matcher，这就造成了上面的报错，所以我们需要手动修正路径匹配策略，打开配置文件 `application.properties` 添加修正配置
+>
+>```properties
+>spring.mvc.pathmatch.matching-strategy=ant_path_matcher
+>```
+>
+>重新启动，报错消失
+
+###### 7.3.2 SpringDoc
+
+SpringFox 虽好，但是其从 2020年7月14号 起就不再更新了，不支持 spring boot 3，而且如上所诉，spring boot 2.6 版本之后还存在兼容性问题，所以业界都在不断的转向另一个库 SpringDoc，新项目一般就使用 SpringDoc，下面将项目的文档生成转成 SpringDoc
+
+首先去除原本的 SpringFox
+
+- 删除 `pom.xml` 依赖
+- 删除主程序入口文件的 swagger 注解
+- 删除配置类
+- 删除 controller 类中的 swagger 注解
+- 删除 `application.properties` 中的修正配置
+
+重新运行项目，发现没有报错，不能访问 swagger 文档了，则去除成功
+
+然后开始集成 SpringDoc，SpringDoc 的集成比 SpringFox 简单，在 `pom.xml` 中引入依赖
+
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-ui</artifactId>
+    <version>1.7.0</version>
+</dependency>
+```
+
+然后恭喜成功集成了 SpringDoc，直接访问 `http://localhost:8080/swagger-ui/index.html` 访问 swagger 文档吧，然后我们发现新版的 SpringDoc 的页面 UI 更好看，然后接口参数也比较智能，没有多余的系统参数显示，非常棒
+
+你也许会问，这也太简单了，不需要配置文件，但是我们说默认可以直接生成使用，只不过也是有缺点的，默认的文档是全英文的，而且由于没有自定义配置，文档会显示所有的 controller，因此，我们还是可以新建配置文件去做一些自定义配置的，就在 config 包下新建 `SpringDocConfig` 配置文件，描述了文档标题和文档描述以及文档版本
+
+```java
+package com.mall.bootmall.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class SpringDocConfig {
+    @Bean
+    public OpenAPI myOpenAPI() {
+        return new OpenAPI()
+            .info(new Info()
+                .title("boot商城api文档")
+                .description("boot商城系统接口文档")
+                .version("v1.0.0")
+            );
+    }
+}
+```
+
+SpringDoc 还可以配置文档分组，比如你有两个种类的 controller，一类是以 `/api` 为前缀，一类以 `/admin` 为前缀，就可以将其配置为两个分组，很多时候我们只有一个分组，所以不需要下面的配置，这里做个记录，修改配置文件
+
+```java
+package com.mall.bootmall.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springdoc.core.GroupedOpenApi;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class SpringDocConfig {
+    @Bean
+    public OpenAPI myOpenAPI() {
+        return new OpenAPI()
+            .info(new Info()
+                .title("boot商城api文档")
+                .description("boot商城系统接口文档")
+                .version("v1.0.0")
+            );
+    }
+
+    @Bean
+    public GroupedOpenApi publicApi() {
+        return GroupedOpenApi.builder()
+            .group("api")
+            .pathsToMatch("/api/**")
+            .build();
+    }
+
+    @Bean
+    public GroupedOpenApi adminApi() {
+        return GroupedOpenApi.builder()
+            .group("admin")
+            .pathsToMatch("/admin/**")
+            .build();
+    }
+}
+```
+
+配置完成后，文档页面的顶部就会出现 **Select a definition** 的分类选择框，提供给用户选择分类 api 了
+
+想要文档看起来更加完善，了解注解是很有必要的，下面是 SpringDoc 的注解分类：
+
+|     注解      |                       作用                        |
+| :-----------: | :-----------------------------------------------: |
+|     @Tag      |  用在 controller 类上，描述此 controller 的信息   |
+|  @Operation   |  用在 controller 的方法上，描述此 api 方法的信息  |
+|  @Parameter   |   用在 controller 的方法的参数上，描述参数信息    |
+|  @Parameters  |                       同上                        |
+|    @Schema    | 用于 Entity，以及 Entity 的属性上，比如 dao、pojo |
+| @ApiResponse  |         用在 controller 的方法的返回值上          |
+| @ApiResponses |                       同上                        |
+|    @Hidden    |           用在各种地方，用于隐藏其 api            |
+
+通过例子来了解如何使用注解，在 controller 上使用：
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+import javax.servlet.http.HttpSession;
+import javax.validation.Valid;
+
+@Tag(name = "分类模块", description = "商品分类模块")
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+    @Autowired
+    CategoryService categoryService;
+
+    @Operation(summary = "添加分类", description = "添加商品分类")
+    @PostMapping("/admin/category/add")
+    @ResponseBody
+    public ApiRestResponse addCategory(HttpSession session, @Valid @RequestBody AddCategoryReq addCategoryReq) throws CustomException {
+        Users loggedUser = (Users) session.getAttribute(Constant.SESSION_USER);
+        if (loggedUser == null) {
+            return ApiRestResponse.error(ExceptionEnum.NEED_LOGGED);
+        }
+        boolean isAdmin = userService.checkIsAdmin(loggedUser);
+        if (isAdmin) {
+            categoryService.add(addCategoryReq);
+            return ApiRestResponse.success();
+        } else {
+            return ApiRestResponse.error(ExceptionEnum.NEED_ADMIN);
+        }
+    }
+}
+```
+
+在请求参数类上使用：
+
+```java
+package com.mall.bootmall.model.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+@Schema(description = "添加分类参数")
+public class AddCategoryReq {
+
+    @Schema(description = "分类名称", example = "水果")
+    @Size(min=2, max=6)
+    @NotNull
+    private String name;
+
+    @Schema(description = "分类等级", example = "1")
+    @Max(3)
+    @NotNull
+    private Integer rank;
+
+    @Schema(description = "分类排序", example = "1")
+    @NotNull
+    private Integer order;
+
+    @Schema(description = "分类父id", example = "1")
+    @NotNull
+    private Integer parentId;
+
+    // getter and setter
+}
+```
+
+目前 swagger 文档生成的 api 文档默认扫描了所有的 controller，可以配置只扫描指定路径下的 controller，打开 `application.properties` 进行配置
+
+```properties
+springdoc.packages-to-scan=com.mall.bootmall.controller
+```
+
+##### 7.4 统一校验用户身份
+
+在之前的编码中，相信你也发现了，只要是需要校验后台接口操作权限，也就是校验用户是不是管理员的时候，我们都需要单独重复去调用封装好的判断管理员身份的函数，虽然可以实现功能，但是未免过于麻烦，假设后台接口有很多，那岂不是得调用很多遍判断函数，而且这样做，后期维护起来也是灾难，需要修改几十处判断的地方，因此对管理员身份可以进行统一校验，减轻工作量，增加可维护性
+
+对于这样的工作，可以使用拦截器实现，新建一个 `filter` 包，再新建一个 `AdminRoleFilter` 拦截过滤类
+
+```java
+package com.mall.bootmall.filter;
+
+import com.mall.bootmall.common.Constant;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.io.PrintWriter;
+
+/**
+ * 管理员角色过滤器
+ */
+public class AdminRoleFilter implements Filter {
+    @Autowired
+    UserService userService;
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        Filter.super.init(filterConfig);
+    }
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        HttpServletResponse response = (HttpServletResponse) servletResponse;
+        // 设置响应编码，防止中文乱码
+        response.setContentType("application/json;charset=utf-8");
+        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        HttpSession session = request.getSession();
+        Users loggedUser = (Users) session.getAttribute(Constant.SESSION_USER);
+        if (loggedUser == null) {
+            // 未登录
+            PrintWriter writer = new HttpServletResponseWrapper((HttpServletResponse) servletResponse).getWriter();
+            writer.write("{\n" +
+                "\"code\": 10007,\n" +
+                "\"msg\": \"用户未登录\",\n" +
+                "\"data\": null\n" +
+                "}");
+            writer.flush();
+            writer.close();
+            return;
+        }
+        boolean isAdmin = userService.checkIsAdmin(loggedUser);
+        if (isAdmin) {
+            // 已登录且是管理员，放行
+            filterChain.doFilter(servletRequest, servletResponse);
+        } else {
+            // 非管理员
+            PrintWriter writer = new HttpServletResponseWrapper((HttpServletResponse) servletResponse).getWriter();
+            writer.write("{\n" +
+                "\"code\": 10009,\n" +
+                "\"msg\": \"无管理员权限\",\n" +
+                "\"data\": null\n" +
+                "}");
+            writer.flush();
+            writer.close();
+        }
+    }
+
+    @Override
+    public void destroy() {
+        Filter.super.destroy();
+    }
+}
+```
+
+有了拦截过滤类，还需要进行配置，使用 `AdminRoleFilter` 去拦截特定的 url
+
+```java
+package com.mall.bootmall.config;
+
+import com.mall.bootmall.filter.AdminRoleFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AdminRoleFilterConfig {
+
+    @Bean
+    public AdminRoleFilter adminRoleFilter() {
+        return new AdminRoleFilter();
+    }
+
+    @Bean(name = "adminRoleFilterConfigBean")
+    public FilterRegistrationBean adminRoleFilterConfig() {
+        FilterRegistrationBean filterRegistrationBean = new FilterRegistrationBean();
+        filterRegistrationBean.setFilter(adminRoleFilter());
+        filterRegistrationBean.addUrlPatterns("/admin/category/*");
+        filterRegistrationBean.addUrlPatterns("/admin/product/*");
+        filterRegistrationBean.addUrlPatterns("/admin/order/*");
+        filterRegistrationBean.setName("adminRoleFilterConfig");
+        return filterRegistrationBean;
+    }
+}
+```
+
+这样就完成了过滤器的配置，新编写一个删除分类的接口进行测试，这里进行简化，不做具体实现，只为测试登录和管理员角色功能，经测试，未登录和非管理员登录均能正常拦截返回相应错误提示
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "分类模块", description = "商品分类模块")
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+    @Autowired
+    CategoryService categoryService;
+
+    @Operation(summary = "删除分类", description = "删除商品分类")
+    @PostMapping("/admin/category/delete")
+    @ResponseBody
+    public ApiRestResponse deleteCategory() {
+        return null;
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
