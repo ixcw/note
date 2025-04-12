@@ -2832,10 +2832,12 @@ public class AddCategoryReq {
 }
 ```
 
-目前 swagger 文档生成的 api 文档默认扫描了所有的 controller，可以配置只扫描指定路径下的 controller，打开 `application.properties` 进行配置
+目前 swagger 文档生成的 api 文档默认扫描了所有的 controller，可以配置只扫描指定路径下的 controller，打开 `application.properties` 进行配置，还能配置文档的 schema 的展开层次，defaultModelsExpandDepth 指定展开 schema，defaultModelExpandDepth 指定展开 schema 的属性
 
 ```properties
 springdoc.packages-to-scan=com.mall.bootmall.controller
+springdoc.swagger-ui.defaultModelsExpandDepth=-1
+springdoc.swagger-ui.defaultModelExpandDepth=10
 ```
 
 ##### 7.4 统一校验用户身份
@@ -2971,11 +2973,1139 @@ public class CategoryController {
 }
 ```
 
+##### 7.5 删除分类
 
+删除分类接口较为简单，只需要注意传入 id 不存在时，不允许删除，这里不考虑父子级删除问题
 
+`CategoryController`：
 
+```java
+package com.mall.bootmall.controller;
 
+import ...;
 
+import javax.validation.Valid;
+
+@Tag(name = "分类模块", description = "商品分类模块")
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+    @Autowired
+    CategoryService categoryService;
+
+    @Operation(summary = "删除分类", description = "删除商品分类")
+    @PostMapping("/admin/category/delete")
+    @ResponseBody
+    public ApiRestResponse deleteCategory(@RequestParam Integer id) {
+        categoryService.delete(id);
+        return ApiRestResponse.success();
+    }
+}
+```
+
+`CategoryServiceImpl`：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    CategoriesMapper categoriesMapper;
+
+    @Override
+    public void delete(Integer id) {
+        Categories dbCategory = categoriesMapper.selectByPrimaryKey(id);
+        if (dbCategory != null) {
+            throw new CustomException(ExceptionEnum.DELETE_FAILED);
+        }
+        int count = categoriesMapper.deleteByPrimaryKey(id);
+        if (count == 0) {
+            throw new CustomException(ExceptionEnum.DELETE_FAILED);
+        }
+    }
+}
+```
+
+##### 7.6 后台查询分类
+
+后台查询分类列表时，和前台的三层结构是不一样的，应该是查出来平铺的结构，不论是几级分类目录，查出来都是属于列表的同一层
+
+###### 7.6.1 VO 对象
+
+在编程和软件开发中，**VO（Value Object，值对象）** 是一种常见的设计模式，主要用于封装数据和简化系统架构，核心作用如下：
+
+1. 封装数据
+
+   将一组相关联的属性打包成一个不可变的独立对象，避免分散的零散数据，比如 `OrderVO` = 订单数据 + 商品详情 + 用户信息
+
+2. 简化传输
+
+   作为数据载体，在不同层（如Controller → Service）之间传递，减少重复参数，提高代码可读性
+
+VO 通常设计为不可变的（final字段 + 无setter），以确保数据一致性
+
+后台查询分类列表时，返回的应该是一个列表，列表元素是 分类VO，新建一个 vo 包，然后新建 `CategoryVO` 类
+
+```java
+package com.mall.bootmall.model.vo;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+public class CategoriesVO {
+    private Integer id;
+
+    private String name;
+
+    private Integer rank;
+
+    private Integer order;
+
+    private Integer parentId;
+
+    private Date createTime;
+
+    private Date updateTime;
+
+    private List<CategoriesVO> childrenCategory = new ArrayList<CategoriesVO>();
+    
+    // getter and setter
+}
+```
+
+这里是直接把 pojo 类复制过来了，新增了一个 list，list 元素就是 `CategoriesVO`
+
+###### 7.6.2 分页查询
+
+这里我们查询出来的分类可能有很多个，形成了一个列表，数量太多的话，就需要分页去查询，减轻服务器负担，对前端来说一次性请求全部数据也不现实，一次请求一部分数据才是合理的，我们可以利用三方依赖轻松实现分页查询功能
+
+首先在 `pom.xml` 中引入 pagehelper 的依赖
+
+```xml
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper-spring-boot-starter</artifactId>
+    <version>1.4.6</version>
+</dependency>
+```
+
+然后就集成成功了，如果需要自定义配置，就打开 `application.properties` 进行配置，比如下面的配置是指定分页数据库为 mysql，开启合理的分页参数
+
+```properties
+pagehelper.helper-dialect = mysql
+pagehelper.reasonable = true
+```
+
+然后就可以使用了，来到 service 层的 `CategoryServiceImpl`，利用 pagehelper 实现分页，首先使用分页页数 pageNum 和 分页大小 pageSize 初始化 pagehelper，指定排序规则，然后使用 mapper 查询出所有的分类数据，最后将所有的分页数据传入 pageInfo 中，生成新的 pageInfo 返回给 controller
+
+> 需要注意，由于之前将分类表的排序字段命名为 order 了，而 order 是 sql 语句的关键字，这里直接写上 order 会报 sql 语法错误，需要手动转义
+
+```java
+package com.mall.bootmall.service.impl;
+
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
+
+import java.util.List;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    CategoriesMapper categoriesMapper;
+
+    @Override
+    public PageInfo getListForAdmin(Integer pageNum, Integer pageSize) {
+        PageHelper.startPage(pageNum, pageSize, "rank, `order`");
+        List<Categories> categoryList = categoriesMapper.selectList();
+        PageInfo pageInfo = new PageInfo(categoryList);
+        return pageInfo;
+    }
+}
+```
+
+controller 层做的事情也很简单，将查询到的 pageInfo 当做成功响应数据中的 data 返回给前台即可
+
+```java
+package com.mall.bootmall.controller;
+
+import com.github.pagehelper.PageInfo;
+
+@Tag(name = "分类模块", description = "商品分类模块")
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+    @Autowired
+    CategoryService categoryService;
+
+    @Operation(summary = "查询分类列表", description = "后台查询商品分类列表")
+    @PostMapping("/admin/category/list")
+    @ResponseBody
+    public ApiRestResponse getCategoryListForAdmin(
+        @Parameter(description = "分页页数") @RequestParam Integer pageNum,
+        @Parameter(description = "分页大小") @RequestParam Integer pageSize
+    ) {
+        PageInfo pageInfo = categoryService.getListForAdmin(pageNum, pageSize);
+        return ApiRestResponse.success(pageInfo);
+    }
+}
+```
+
+经过测试，得到返回响应如下，可以看到 pageInfo 包含了本次分页查询的各种参数，包括总数据条数，分页页码，分页大小等，信息十分友好
+
+```json
+{
+    "code": 200,
+    "msg": "SUCCESS",
+    "data": {
+        "total": 11,
+        "list": [
+            {
+                "id": 1,
+                "name": "鸭货",
+                "rank": 1,
+                "order": 1,
+                "parentId": 0,
+                "createTime": "2025-04-11T16:45:36.000+00:00",
+                "updateTime": "2025-04-11T16:45:36.000+00:00"
+            },
+            {
+                "id": 2,
+                "name": "鸭货2",
+                "rank": 1,
+                "order": 2,
+                "parentId": 0,
+                "createTime": "2025-04-11T16:45:36.000+00:00",
+                "updateTime": "2025-04-12T16:48:27.000+00:00"
+            },
+            {
+                "id": 3,
+                "name": "鸭货3",
+                "rank": 1,
+                "order": 3,
+                "parentId": 0,
+                "createTime": "2025-04-11T16:45:36.000+00:00",
+                "updateTime": "2025-04-12T16:48:31.000+00:00"
+            },
+            {
+                "id": 4,
+                "name": "鸭货4",
+                "rank": 1,
+                "order": 4,
+                "parentId": 0,
+                "createTime": "2025-04-11T16:45:36.000+00:00",
+                "updateTime": "2025-04-12T16:48:27.000+00:00"
+            },
+            {
+                "id": 5,
+                "name": "鸭货5",
+                "rank": 1,
+                "order": 5,
+                "parentId": 0,
+                "createTime": "2025-04-11T16:45:36.000+00:00",
+                "updateTime": "2025-04-12T16:48:27.000+00:00"
+            }
+        ],
+        "pageNum": 1,
+        "pageSize": 5,
+        "size": 5,
+        "startRow": 1,
+        "endRow": 5,
+        "pages": 3,
+        "prePage": 0,
+        "nextPage": 2,
+        "isFirstPage": true,
+        "isLastPage": false,
+        "hasPreviousPage": false,
+        "hasNextPage": true,
+        "navigatePages": 8,
+        "navigatepageNums": [
+            1,
+            2,
+            3
+        ],
+        "navigateFirstPage": 1,
+        "navigateLastPage": 3
+    }
+}
+```
+
+##### 7.7 前台查询分类
+
+前台查询到的分类列表是拥有父子关系的，前台获取分类列表不需要传递分页参数，因为是拼装好的数据结构，返回所有的分类，对于这种父子数据结构需要递归实现，这里就能用到前面定义的 VO 对象了
+
+`CategoryServiceImpl` 业务层实现如下
+
+```java
+package com.mall.bootmall.service.impl;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    CategoriesMapper categoriesMapper;
+
+    @Override
+    public List<CategoriesVO> getListForUser() {
+        ArrayList<CategoriesVO> categoryVOList = new ArrayList<>();
+        recursiveFindCategories(categoryVOList, 0);
+        return categoryVOList;
+    }
+
+    private void recursiveFindCategories(List<CategoriesVO> categoryVOList, Integer parentId) {
+        // 获取所有父id相同的分类
+        List<Categories> categoriesList = categoriesMapper.selectListByParentId(parentId);
+        // 转换为 VO 对象添加到分类列表
+        if (!CollectionUtils.isEmpty(categoriesList)) {
+            for (Categories categories : categoriesList) {
+                CategoriesVO categoriesVO = new CategoriesVO();
+                BeanUtils.copyProperties(categories, categoriesVO);
+                categoryVOList.add(categoriesVO);
+                // 递归查找子分类，添加到子分类列表
+                recursiveFindCategories(categoriesVO.getChildrenCategory(), categoriesVO.getId());
+            }
+        }
+    }
+}
+```
+
+经过测试，获取到的分类列表如下：
+
+```json
+{
+    "code": 200,
+    "msg": "SUCCESS",
+    "data": [
+        {
+            "id": 1,
+            "name": "新鲜水果",
+            "rank": 1,
+            "order": 1,
+            "parentId": 0,
+            "createTime": "2025-04-11T16:45:36.000+00:00",
+            "updateTime": "2025-04-12T19:04:24.000+00:00",
+            "childrenCategory": [
+                {
+                    "id": 2,
+                    "name": "苹果",
+                    "rank": 2,
+                    "order": 2,
+                    "parentId": 1,
+                    "createTime": "2025-04-11T16:45:36.000+00:00",
+                    "updateTime": "2025-04-12T19:05:12.000+00:00",
+                    "childrenCategory": [
+                        {
+                            "id": 4,
+                            "name": "红富士苹果",
+                            "rank": 3,
+                            "order": 4,
+                            "parentId": 2,
+                            "createTime": "2025-04-11T16:45:36.000+00:00",
+                            "updateTime": "2025-04-12T19:05:42.000+00:00",
+                            "childrenCategory": []
+                        },
+                        {
+                            "id": 5,
+                            "name": "红星苹果",
+                            "rank": 3,
+                            "order": 5,
+                            "parentId": 2,
+                            "createTime": "2025-04-11T16:45:36.000+00:00",
+                            "updateTime": "2025-04-12T19:06:43.000+00:00",
+                            "childrenCategory": []
+                        }
+                    ]
+                },
+                {
+                    "id": 3,
+                    "name": "梨子",
+                    "rank": 2,
+                    "order": 3,
+                    "parentId": 1,
+                    "createTime": "2025-04-11T16:45:36.000+00:00",
+                    "updateTime": "2025-04-12T19:05:15.000+00:00",
+                    "childrenCategory": [
+                        {
+                            "id": 6,
+                            "name": "鸭梨",
+                            "rank": 3,
+                            "order": 6,
+                            "parentId": 3,
+                            "createTime": "2025-04-11T16:45:36.000+00:00",
+                            "updateTime": "2025-04-12T19:07:26.000+00:00",
+                            "childrenCategory": []
+                        },
+                        {
+                            "id": 7,
+                            "name": "秋月梨",
+                            "rank": 3,
+                            "order": 7,
+                            "parentId": 3,
+                            "createTime": "2025-04-11T16:45:36.000+00:00",
+                            "updateTime": "2025-04-12T19:07:45.000+00:00",
+                            "childrenCategory": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 8,
+            "name": "蔬菜",
+            "rank": 1,
+            "order": 8,
+            "parentId": 0,
+            "createTime": "2025-04-11T16:45:36.000+00:00",
+            "updateTime": "2025-04-12T19:08:28.000+00:00",
+            "childrenCategory": [
+                {
+                    "id": 9,
+                    "name": "白菜",
+                    "rank": 2,
+                    "order": 9,
+                    "parentId": 8,
+                    "createTime": "2025-04-11T16:45:36.000+00:00",
+                    "updateTime": "2025-04-12T19:08:50.000+00:00",
+                    "childrenCategory": []
+                },
+                {
+                    "id": 10,
+                    "name": "蒜叶",
+                    "rank": 2,
+                    "order": 10,
+                    "parentId": 8,
+                    "createTime": "2025-04-11T16:45:36.000+00:00",
+                    "updateTime": "2025-04-12T19:09:11.000+00:00",
+                    "childrenCategory": []
+                },
+                {
+                    "id": 11,
+                    "name": "茄子",
+                    "rank": 2,
+                    "order": 11,
+                    "parentId": 8,
+                    "createTime": "2025-04-11T16:45:36.000+00:00",
+                    "updateTime": "2025-04-12T19:09:28.000+00:00",
+                    "childrenCategory": []
+                }
+            ]
+        }
+    ]
+}
+```
+
+##### 7.8 redis 缓存
+
+对于像分类目录这样，不会经常改动而且查询略微复杂的数据，我们可以将其缓存在 redis 中，以提高查询速度，第一次查询后就会把数据缓存在 redis 中，后面缓存存在时，直接返回缓存中的查询结果，速度非常快
+
+首先在 `pom.xml` 中引入 redis 相关的依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-cache</artifactId>
+</dependency>
+```
+
+然后在 `application.properties` 中配置 redis 
+
+```properties
+spring.redis.host=localhost
+spring.redis.port=6379
+spring.redis.password=123456
+```
+
+在 config 包下编写配置类 `CachingConfig` 
+
+```java
+package com.mall.bootmall.config;
+
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+
+import java.time.Duration;
+
+@Configuration
+@EnableCaching
+public class CachingConfig {
+
+    @Bean
+    public RedisCacheManager redisCacheManager(RedisConnectionFactory redisConnectionFactory) {
+        RedisCacheWriter redisCacheWriter = RedisCacheWriter.lockingRedisCacheWriter(redisConnectionFactory);
+        RedisCacheConfiguration redisCacheConfiguration = RedisCacheConfiguration.defaultCacheConfig();
+        // 配置 redis 缓存的超时时间
+        redisCacheConfiguration = redisCacheConfiguration.entryTtl(Duration.ofSeconds(180));
+        return new RedisCacheManager(redisCacheWriter, redisCacheConfiguration);
+    }
+}
+```
+
+在主程序入口类上开启 `@EnableCaching` 注解，开启缓存功能
+
+```java
+package com.mall.bootmall;
+
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
+
+@SpringBootApplication
+@MapperScan(basePackages = "com.mall.bootmall.model.mapper")
+@EnableCaching
+public class BootMallApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(BootMallApplication.class, args);
+    }
+
+}
+```
+
+给希望做缓存的方法加上缓存注解 `@Cacheable`，value 是 key 值
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    CategoriesMapper categoriesMapper;
+
+    @Override
+    @Cacheable(value = "getListForUser")
+    public List<CategoriesVO> getListForUser() {
+        ArrayList<CategoriesVO> categoryVOList = new ArrayList<>();
+        recursiveFindCategories(categoryVOList, 0);
+        return categoryVOList;
+    }
+
+    private void recursiveFindCategories(List<CategoriesVO> categoryVOList, Integer parentId) {
+        // 获取所有父id相同的分类
+        List<Categories> categoriesList = categoriesMapper.selectListByParentId(parentId);
+        // 转换为 VO 对象添加到分类列表
+        if (!CollectionUtils.isEmpty(categoriesList)) {
+            for (Categories categories : categoriesList) {
+                CategoriesVO categoriesVO = new CategoriesVO();
+                BeanUtils.copyProperties(categories, categoriesVO);
+                categoryVOList.add(categoriesVO);
+                // 递归查找子分类，添加到子分类列表
+                recursiveFindCategories(categoriesVO.getChildrenCategory(), categoriesVO.getId());
+            }
+        }
+    }
+}
+```
+
+此时去测试，报错如下
+
+```sh
+Cannot serialize; nested exception is java.io.NotSerializableException: com.mall.bootmall.model.vo.CategoriesVO
+```
+
+报错显示不能序列化 `CategoriesVO`，我们去让其实现 `Serializable` 接口
+
+```java
+package com.mall.bootmall.model.vo;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+public class CategoriesVO implements Serializable {
+    private Integer id;
+
+    private String name;
+
+    private Integer rank;
+
+    private Integer order;
+
+    private Integer parentId;
+
+    private Date createTime;
+
+    private Date updateTime;
+
+    private List<CategoriesVO> childrenCategory = new ArrayList<CategoriesVO>();
+
+    // getter and setter
+}
+```
+
+再次去测试，成功，打开 another redis 软件刷新数据库，发现多了一条 `getListForUser` 的缓存数据
+
+#### 8 商品模块
+
+##### 8.1 添加商品 & 图片上传
+
+在 controller 包下新建 `ProductController` 类，然后对于添加商品，和添加分类一样，也需要一个请求类，复制 pojo 类到 request 包中，重命名为 `AddGoodsReq`，去除 id、time 相关的属性，做好 swagger 的注释，参数校验等工作
+
+```java
+package com.mall.bootmall.model.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+@Schema(description = "添加商品参数")
+public class AddGoodsReq {
+
+    @Schema(description = "商品名称", example = "苹果")
+    @Size(min=2, max=6)
+    @NotNull
+    private String name;
+
+    @Schema(description = "商品图片", example = "")
+    @NotNull
+    private String image;
+
+    @Schema(description = "商品详情", example = "好吃的红苹果")
+    private String detail;
+
+    @Schema(description = "商品分类id", example = "1")
+    private Integer categoryId;
+
+    @Schema(description = "商品价格", example = "1")
+    @NotNull
+    @Min(1)
+    private Integer price;
+
+    @Schema(description = "商品库存", example = "1")
+    @NotNull
+    @Min(1)
+    @Max(10000)
+    private Integer stock;
+
+    @Schema(description = "商品状态", example = "1")
+    @NotNull
+    private Integer status;
+    
+    // getter and setter
+}
+```
+
+`GoodsController`：
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import com.mall.bootmall.model.request.AddGoodsReq;
+import com.mall.bootmall.service.GoodsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+import javax.validation.Valid;
+
+@Tag(name = "商品模块", description = "商品模块")
+@Controller
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "添加商品", description = "添加商品")
+    @PostMapping("admin/goods/add")
+    public ApiRestResponse addGoods(@Valid @RequestBody AddGoodsReq addGoodsReq) {
+        goodsService.add(addGoodsReq);
+        return ApiRestResponse.success();
+    }
+}
+```
+
+添加商品和添加分类的逻辑差不多，通过名称查找重名商品，判断是否重名，然后执行添加
+
+`GoodsServiceImpl`：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.mapper.GoodsMapper;
+import com.mall.bootmall.model.pojo.Goods;
+import com.mall.bootmall.model.request.AddGoodsReq;
+import com.mall.bootmall.service.GoodsService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Override
+    public void add(AddGoodsReq addGoodsReq) {
+        Goods goods = new Goods();
+        BeanUtils.copyProperties(addGoodsReq, goods);
+        Goods dbGoods = goodsMapper.selectByName(addGoodsReq.getName());
+        if (dbGoods != null) {
+            throw new CustomException(ExceptionEnum.NAME_EXISTED);
+        }
+        int count = goodsMapper.insertSelective(goods);
+        if (count != 1) {
+            throw new CustomException(ExceptionEnum.INSERT_FAILED);
+        }
+    }
+}
+```
+
+到这里，看似完成了添加商品的接口，但是还有一个重要功能没有完成，那就是商品图片应该传什么参数呢，图片是不能直接存储在 mysql 里面的，我们只能将图片地址传给数据库保存，要获取图片地址，就要先将图片上传到后端，下面，我们一起来实现图片上传功能
+
+实现图片上传功能前，先来介绍一下 uuid，我们上传的图片的名称可能是重复的，这是不允许的，而且如果图片名称有规律，也有利于别人爬取我们的网站图片，所以我们利用 uuid 生成不规则的图片文件名，排除了重名风险，也降低了被爬取的风险
+
+在 `GoodsController` 中实现上传接口
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import com.mall.bootmall.common.Constant;
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.request.AddGoodsReq;
+import com.mall.bootmall.service.GoodsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.UUID;
+
+@Tag(name = "商品模块", description = "商品模块")
+@RestController
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "文件上传", description = "图片上传")
+    @PostMapping("file/upload")
+    public ApiRestResponse upload(HttpServletRequest httpServletRequest, @Valid @RequestParam("file") MultipartFile file) throws IOException {
+        // 获取文件名 以及 文件后缀名
+        String originalFilename = file.getOriginalFilename();
+        String suffixName = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+        // 生成 uuid 随机文件名字
+        UUID uuid = UUID.randomUUID();
+        String newFileName = uuid.toString() + "." + suffixName;
+        // 创建文件夹
+        File fileDirectory = new File(Constant.UPLOAD_FILE_PATH);
+        // 创建目标文件
+        File targetFile = new File(Constant.UPLOAD_FILE_PATH + newFileName);
+        if (!fileDirectory.exists()) {
+            if (!fileDirectory.mkdirs()) {
+                throw new CustomException(ExceptionEnum.MKDIR_FAILED);
+            }
+        }
+        // 将上传的文件传输给目标文件
+        file.transferTo(targetFile);
+        try {
+            return ApiRestResponse.success(getHOST(new URI(httpServletRequest.getRequestURL() + "")) + "/images/" + newFileName);
+        } catch (URISyntaxException e) {
+            throw new CustomException(ExceptionEnum.UPLOAD_FAILED);
+        }
+    }
+
+    private URI getHOST(URI uri) {
+        URI effectiveUri;
+        try {
+            effectiveUri = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), null, null,null);
+        } catch (URISyntaxException e) {
+            effectiveUri = null;
+        }
+        return effectiveUri;
+    }
+}
+```
+
+文件上传的路径一般是配置成常量，来到 common 包的 `Constant` 类，配置文件上传路径常量 `UPLOAD_FILE_PATH`
+
+```java
+package com.mall.bootmall.common;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
+public class Constant {
+    public static final String SESSION_USER = "session_user";
+    public static final String SALT = "dHaVAAVj;oYD]";
+
+    public static String UPLOAD_FILE_PATH;
+
+    @Value("${upload.file.path}")
+    public void setUploadFilePath(String uploadFilePath) {
+        UPLOAD_FILE_PATH = uploadFilePath;
+    }
+}
+
+```
+
+这里用了配置注解的方式，由于变量是静态变量，因此配置注解加到了 setter 上面
+
+> 注意这里的 setter 函数不能是静态方法
+
+然后打开 `application.properties` 进行配置，这里指定了绝对路径，D 盘下的 File 文件夹
+
+> 注意文件夹最后要加 /
+
+```properties
+upload.file.path=D:/File/
+```
+
+接下来就可以进行文件上传测试了，我们发现成功上传了文件到 D 盘的 File 文件夹下，并且返回了图片地址
+
+```json
+{
+    "code": 200,
+    "msg": "SUCCESS",
+    "data": "http://127.0.0.1:8080/images/c920781a-c30d-4b14-b2a1-fe7271466e23.jpg"
+}
+```
+
+但是当我们去访问图片地址时，却得到了 404 的返回，这是怎么回事呢？原来是我们还没有配置 **自定义静态资源目录**，还记得之前配置 SpringFox 的时候配置过静态资源目录吗，这里是差不多的，由于之前换成了 SpringDoc，所以现在得重新在 config 包下新建 `WebMvcConfig` 配置类，配置访问路径为 `/images/**` 的文件的静态目录文件为文件的上传目录
+
+```java
+package com.mall.bootmall.config;
+
+import com.mall.bootmall.common.Constant;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+/**
+ * 配置地址映射
+ */
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("file:" + Constant.UPLOAD_FILE_PATH);
+    }
+}
+```
+
+重新访问图片地址，就能访问到图片了
+
+但是这里还是存在一个问题，那就是图片的上传路径是电脑上的绝对路径，这里是 D 盘的 File 文件夹，那如果项目移植到别的电脑，要是没有 D 盘，岂不是就玩不成了，因此这里得想办法把文件的上传路径做成相对于项目目录的相对路径，这里选择在项目根目录下新建 upload 文件夹当成上传文件的目录
+
+> 这里不建议使用项目的 `resources` 目录，因为 `resources` 目录下的文件通常是只读的（特别是在打包为JAR后），上传的文件应该存放在项目可写的目录中，而不是类路径下
+
+首先把上传目录配置改为相对目录，这是相对于项目根目录而言的
+
+```properties
+upload.file.path=./upload/
+```
+
+然后改写上传文件的接口，改为获取相对路径的绝对路径
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+
+@Tag(name = "商品模块", description = "商品模块")
+@RestController
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "文件上传", description = "图片上传")
+    @PostMapping("admin/file/upload")
+    public ApiRestResponse upload(HttpServletRequest httpServletRequest, @Valid @RequestParam("file") MultipartFile file) throws IOException {
+        // 获取文件名 以及 文件后缀名
+        String originalFilename = file.getOriginalFilename();
+        String suffixName = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+        // 生成 uuid 随机文件名字
+        UUID uuid = UUID.randomUUID();
+        String newFileName = uuid.toString() + "." + suffixName;
+        // 获取绝对路径，创建文件夹
+        String projectRoot = System.getProperty("user.dir");
+        Path uploadPath = Paths.get(projectRoot, Constant.UPLOAD_FILE_PATH).toAbsolutePath().normalize();
+        File fileDirectory = new File(uploadPath.toString());
+        // 创建目标文件
+        File targetFile = new File(uploadPath.toString() + "/" + newFileName);
+        if (!fileDirectory.exists()) {
+            if (!fileDirectory.mkdirs()) {
+                throw new CustomException(ExceptionEnum.MKDIR_FAILED);
+            }
+        }
+        // 将上传的文件传输给目标文件
+        file.transferTo(targetFile);
+        try {
+            return ApiRestResponse.success(getHOST(new URI(httpServletRequest.getRequestURL() + "")) + "/images/" + newFileName);
+        } catch (URISyntaxException e) {
+            throw new CustomException(ExceptionEnum.UPLOAD_FAILED);
+        }
+    }
+
+    private URI getHOST(URI uri) {
+        URI effectiveUri;
+        try {
+            effectiveUri = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), null, null,null);
+        } catch (URISyntaxException e) {
+            effectiveUri = null;
+        }
+        return effectiveUri;
+    }
+}
+```
+
+最后修改 `WebMvcConfig` 静态资源映射配置文件，一样的方法，获取绝对路径
+
+```java
+package com.mall.bootmall.config;
+
+import com.mall.bootmall.common.Constant;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+/**
+ * 配置地址映射
+ */
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String projectRoot = System.getProperty("user.dir");
+        Path uploadPath = Paths.get(projectRoot, Constant.UPLOAD_FILE_PATH).toAbsolutePath().normalize();
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("file:" + uploadPath.toString() + "/");
+    }
+}
+```
+
+事实上，对于数据库中存储的图片地址，更推荐存储为相对路径，因此可以去掉 getHOST 函数，前端在获取图片链接时，可以自行拼装完整的图片地址
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "商品模块", description = "商品模块")
+@RestController
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "文件上传", description = "图片上传")
+    @PostMapping("admin/file/upload")
+    public ApiRestResponse upload(HttpServletRequest httpServletRequest, @Valid @RequestParam("file") MultipartFile file) throws IOException {
+        // 获取文件名 以及 文件后缀名
+        String originalFilename = file.getOriginalFilename();
+        String suffixName = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+        // 生成 uuid 随机文件名字
+        UUID uuid = UUID.randomUUID();
+        String newFileName = uuid.toString() + "." + suffixName;
+        // 获取绝对路径，创建文件夹
+        String projectRoot = System.getProperty("user.dir");
+        Path uploadPath = Paths.get(projectRoot, Constant.UPLOAD_FILE_PATH).toAbsolutePath().normalize();
+        File fileDirectory = new File(uploadPath.toString());
+        // 创建目标文件
+        File targetFile = new File(uploadPath.toString() + "/" + newFileName);
+        if (!fileDirectory.exists()) {
+            if (!fileDirectory.mkdirs()) {
+                throw new CustomException(ExceptionEnum.MKDIR_FAILED);
+            }
+        }
+        // 将上传的文件传输给目标文件
+        file.transferTo(targetFile);
+        return ApiRestResponse.success( "/images/" + newFileName);
+    }
+}
+```
+
+至此，图片上传接口完成
+
+##### 8.2 更新商品 & 删除商品
+
+`GoodsController`：
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "商品模块", description = "商品模块")
+@RestController
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "更新商品", description = "更新商品")
+    @PostMapping("admin/goods/update")
+    public ApiRestResponse updateGoods(@Valid @RequestBody UpdateGoodsReq updateGoodsReq) {
+        goodsService.update(updateGoodsReq);
+        return ApiRestResponse.success();
+    }
+
+    @Operation(summary = "删除商品", description = "删除商品")
+    @PostMapping("admin/goods/delete")
+    public ApiRestResponse deleteGoods(@Parameter(description = "商品id") @Valid @RequestParam Integer id) {
+        goodsService.delete(id);
+        return ApiRestResponse.success();
+    }
+}
+```
+
+`UpdateGoodsReq`：
+
+```java
+package com.mall.bootmall.model.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+@Schema(description = "更新商品参数")
+public class UpdateGoodsReq {
+
+    @Schema(description = "商品id", example = "1")
+    @NotNull
+    private Integer id;
+
+    @Schema(description = "商品名称", example = "苹果")
+    @Size(min=2, max=6)
+    @NotNull
+    private String name;
+
+    @Schema(description = "商品图片", example = "")
+    @NotNull
+    private String image;
+
+    @Schema(description = "商品详情", example = "好吃的红苹果")
+    private String detail;
+
+    @Schema(description = "商品分类id", example = "1")
+    @NotNull
+    private Integer categoryId;
+
+    @Schema(description = "商品价格", example = "1")
+    @NotNull
+    @Min(1)
+    private Integer price;
+
+    @Schema(description = "商品库存", example = "1")
+    @NotNull
+    @Min(1)
+    @Max(10000)
+    private Integer stock;
+
+    @Schema(description = "商品状态", example = "1")
+    @NotNull
+    private Integer status;
+    
+    // getter and setter
+}
+```
+
+`GoodsServiceImpl`：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Override
+    public void update(UpdateGoodsReq updateGoodsReq) {
+        Goods goods = new Goods();
+        BeanUtils.copyProperties(updateGoodsReq, goods);
+        Goods dbGoods = goodsMapper.selectByName(updateGoodsReq.getName());
+        if (dbGoods != null && !dbGoods.getId().equals(goods.getId())) {
+            throw new CustomException(ExceptionEnum.UPDATE_FAILED);
+        }
+        int count = goodsMapper.updateByPrimaryKeySelective(goods);
+        if (count != 1) {
+            throw new CustomException(ExceptionEnum.UPDATE_FAILED);
+        }
+    }
+
+    @Override
+    public void delete(Integer id) {
+        Goods dbGoods = goodsMapper.selectByPrimaryKey(id);
+        if (dbGoods == null) {
+            throw new CustomException(ExceptionEnum.DELETE_FAILED);
+        }
+        int count = goodsMapper.deleteByPrimaryKey(id);
+        if (count != 1) {
+            throw new CustomException(ExceptionEnum.DELETE_FAILED);
+        }
+    }
+}
+```
+
+##### 8.3 上下架商品
 
 
 
