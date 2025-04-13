@@ -81,3 +81,44 @@
 4. 在webapp下新建`index.html`，运行，即可在浏览器访问
 
 >项目在pom.xml添加了jar包后，打包运行项目时如果报找不到类的错误，是因为jar包没有发布到lib目录，需要设置项目结构，在Artifacts中将jar包添加到lib目录发布就可以了，在pom中配置了scope为test和provided的jar包不会发布到这里，如果以后添加了新的jar包，记得同时修改这里添加jar包发布
+
+#### 11 生成 apifox 文档
+
+1. 在 apifox 软件中点击设置，打开 API 访问令牌，新建一个令牌，获取 token，期限可以选择无限期，以方便使用，比如生成了如下令牌：
+
+   ```sh
+   APS-jO6Kk3dAUmATLook0eooxaCPR1p4b3ai
+   ```
+
+2. 在 idea 中安装 Apifox Helper 插件，然后打开设置，打开一级目录下的 Apifox Helper 设置，选择上传到 Apifox，将上诉令牌填入 Api 访问令牌，点击测试令牌，显示成功，确定设置
+
+3. 设置代码模块与 Apifox 项目的对应关系，点击添加，选择代码模块，一般就是当前项目，然后下方会显示上传至，会出现 Apifox 上存在的项目，选中其中一个项目，确认设置
+
+4. 可以在 idea 左侧的项目文件目录上右键具体的 controller 包选择 Upload to Apifox，也可以在 idea 右侧选择 Apifox 的图标，然后选中接口目录，右键选择上传到 Apifox，等待命令行输出上传结果，即可上次成功，打开 Apifox 软件，即可看见刚刚上传的接口文档
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
