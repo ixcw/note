@@ -3030,7 +3030,7 @@ public class CategoryServiceImpl implements CategoryService {
 }
 ```
 
-##### 7.6 后台查询分类
+##### 7.6 后台分类列表
 
 后台查询分类列表时，和前台的三层结构是不一样的，应该是查出来平铺的结构，不论是几级分类目录，查出来都是属于列表的同一层
 
@@ -3101,9 +3101,17 @@ pagehelper.helper-dialect = mysql
 pagehelper.reasonable = true
 ```
 
-然后就可以使用了，来到 service 层的 `CategoryServiceImpl`，利用 pagehelper 实现分页，首先使用分页页数 pageNum 和 分页大小 pageSize 初始化 pagehelper，指定排序规则，然后使用 mapper 查询出所有的分类数据，最后将所有的分页数据传入 pageInfo 中，生成新的 pageInfo 返回给 controller
+然后就可以使用了，来到 service 层的 `CategoryServiceImpl`，利用 pagehelper 实现分页
+
+首先使用分页页数 pageNum 和 分页大小 pageSize 初始化 pagehelper，指定排序规则
+
+然后使用 mapper 执行设定好的 **分页查询** 查出指定分页的分类数据
+
+最后将分页数据传入 pageInfo 中，生成新的 pageInfo 返回给 controller
 
 > 需要注意，由于之前将分类表的排序字段命名为 order 了，而 order 是 sql 语句的关键字，这里直接写上 order 会报 sql 语法错误，需要手动转义
+
+service 层：
 
 ```java
 package com.mall.bootmall.service.impl;
@@ -3127,6 +3135,22 @@ public class CategoryServiceImpl implements CategoryService {
         return pageInfo;
     }
 }
+```
+
+xml 实现：
+
+> 看到 xml 的实现你也许会感到疑惑，这里的 sql 语句不是查询所有的分类数据吗，而且直接查询所有的数据，在数据量大的时候是会导致性能问题的，为什么这里写的是查询所有的数据呢
+>
+> 其实原因是这样的，虽然这里看似是查询所有数据，但实际执行的是分页查询
+>
+> 这是因为 PageHelper 通过 MyBatis 拦截器机制在运行时动态修改了 sql 语句，在执行 sql 前进行拦截，将原始的 sql 改写为分页查询，先查数据总数，再查分页数据
+
+```xml
+<select id="selectList" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from categories
+</select>
 ```
 
 controller 层做的事情也很简单，将查询到的 pageInfo 当做成功响应数据中的 data 返回给前台即可
@@ -3236,7 +3260,7 @@ public class CategoryController {
 }
 ```
 
-##### 7.7 前台查询分类
+##### 7.7 前台分类列表
 
 前台查询到的分类列表是拥有父子关系的，前台获取分类列表不需要传递分页参数，因为是拼装好的数据结构，返回所有的分类，对于这种父子数据结构需要递归实现，这里就能用到前面定义的 VO 对象了
 
@@ -3564,7 +3588,42 @@ public class CategoriesVO implements Serializable {
 
 ##### 8.1 添加商品 & 图片上传
 
-在 controller 包下新建 `ProductController` 类，然后对于添加商品，和添加分类一样，也需要一个请求类，复制 pojo 类到 request 包中，重命名为 `AddGoodsReq`，去除 id、time 相关的属性，做好 swagger 的注释，参数校验等工作
+###### 8.1.1 添加商品
+
+在 controller 包下新建 `GoodsController` 类
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import com.mall.bootmall.model.request.AddGoodsReq;
+import com.mall.bootmall.service.GoodsService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+import javax.validation.Valid;
+
+@Tag(name = "商品模块", description = "商品模块")
+@Controller
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "添加商品", description = "添加商品")
+    @PostMapping("admin/goods/add")
+    public ApiRestResponse addGoods(@Valid @RequestBody AddGoodsReq addGoodsReq) {
+        goodsService.add(addGoodsReq);
+        return ApiRestResponse.success();
+    }
+}
+```
+
+然后对于添加商品，和添加分类一样，也需要一个请求类，复制 pojo 类到 request 包中，重命名为 `AddGoodsReq`，去除 id、time 相关的属性，做好 swagger 的注释，参数校验等工作
 
 ```java
 package com.mall.bootmall.model.request;
@@ -3613,39 +3672,6 @@ public class AddGoodsReq {
 }
 ```
 
-`GoodsController`：
-
-```java
-package com.mall.bootmall.controller;
-
-import com.mall.bootmall.common.ApiRestResponse;
-import com.mall.bootmall.model.request.AddGoodsReq;
-import com.mall.bootmall.service.GoodsService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-
-import javax.validation.Valid;
-
-@Tag(name = "商品模块", description = "商品模块")
-@Controller
-public class GoodsController {
-
-    @Autowired
-    GoodsService goodsService;
-
-    @Operation(summary = "添加商品", description = "添加商品")
-    @PostMapping("admin/goods/add")
-    public ApiRestResponse addGoods(@Valid @RequestBody AddGoodsReq addGoodsReq) {
-        goodsService.add(addGoodsReq);
-        return ApiRestResponse.success();
-    }
-}
-```
-
 添加商品和添加分类的逻辑差不多，通过名称查找重名商品，判断是否重名，然后执行添加
 
 `GoodsServiceImpl`：
@@ -3686,6 +3712,8 @@ public class GoodsServiceImpl implements GoodsService {
 ```
 
 到这里，看似完成了添加商品的接口，但是还有一个重要功能没有完成，那就是商品图片应该传什么参数呢，图片是不能直接存储在 mysql 里面的，我们只能将图片地址传给数据库保存，要获取图片地址，就要先将图片上传到后端，下面，我们一起来实现图片上传功能
+
+###### 8.1.2 图片上传
 
 实现图片上传功能前，先来介绍一下 uuid，我们上传的图片的名称可能是重复的，这是不允许的，而且如果图片名称有规律，也有利于别人爬取我们的网站图片，所以我们利用 uuid 生成不规则的图片文件名，排除了重名风险，也降低了被爬取的风险
 
@@ -3864,7 +3892,7 @@ public class GoodsController {
     @Autowired
     GoodsService goodsService;
 
-    @Operation(summary = "文件上传", description = "图片上传")
+    @Operation(summary = "文件上传", description = "文件上传")
     @PostMapping("admin/file/upload")
     public ApiRestResponse upload(HttpServletRequest httpServletRequest, @Valid @RequestParam("file") MultipartFile file) throws IOException {
         // 获取文件名 以及 文件后缀名
@@ -3950,7 +3978,7 @@ public class GoodsController {
 
     @Operation(summary = "文件上传", description = "图片上传")
     @PostMapping("admin/file/upload")
-    public ApiRestResponse upload(HttpServletRequest httpServletRequest, @Valid @RequestParam("file") MultipartFile file) throws IOException {
+    public ApiRestResponse upload(@Valid @RequestParam("file") MultipartFile file) throws IOException {
         // 获取文件名 以及 文件后缀名
         String originalFilename = file.getOriginalFilename();
         String suffixName = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
@@ -3976,6 +4004,171 @@ public class GoodsController {
 ```
 
 至此，图片上传接口完成
+
+###### 8.1.3 提取文件上传模块
+
+文件上传功能，事实上不止商品模块可以使用，其他所有需要文件上传或者图片上传的模块都能使用这个功能，因此这里将文件上传功能单独抽取出来做成一个模块，并且区分文件上传和图片上传两种上传接口
+
+在 controller 包下新建 `FileController` 控制类，将文件上传接口和图片上传接口提取出来进行实现
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import com.mall.bootmall.common.Constant;
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.validation.Valid;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+
+@Tag(name = "文件模块", description = "文件模块")
+@RestController
+public class FileController {
+    @Operation(summary = "文件上传", description = "文件上传")
+    @PostMapping("admin/file/upload")
+    public ApiRestResponse uploadFile(@Parameter(description = "上传文件") @Valid @RequestParam("file") MultipartFile file) {
+        // 获取文件名 以及 文件后缀名
+        String originalFilename = file.getOriginalFilename();
+        // 获取绝对路径，创建文件夹
+        String projectRoot = System.getProperty("user.dir");
+        Path uploadPath = Paths.get(projectRoot, Constant.UPLOAD_FILE_PATH).toAbsolutePath().normalize();
+        File fileDirectory = new File(uploadPath.toString());
+        // 创建目标文件
+        File targetFile = new File(uploadPath.toString() + "/" + originalFilename);
+        if (!fileDirectory.exists()) {
+            if (!fileDirectory.mkdirs()) {
+                throw new CustomException(ExceptionEnum.MKDIR_FAILED);
+            }
+        }
+        // 将上传的文件传输给目标文件
+        try {
+            file.transferTo(targetFile);
+        } catch (IOException e) {
+            throw new CustomException(ExceptionEnum.FILE_UPLOAD_FAILED);
+        }
+        return ApiRestResponse.success( "/files/" + originalFilename);
+    }
+
+    @Operation(summary = "图片上传", description = "图片上传")
+    @PostMapping("admin/image/upload")
+    public ApiRestResponse uploadImage(@Parameter(description = "上传图片") @Valid @RequestParam("file") MultipartFile file) {
+        // 获取文件名 以及 文件后缀名
+        String originalFilename = file.getOriginalFilename();
+        String suffixName = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+        // 只允许上传图片
+        if (!Constant.ALLOWED_IMAGE_EXTENSIONS.contains(suffixName)) {
+            throw new CustomException(ExceptionEnum.ONLY_IMAGE_ALLOWED);
+        }
+        // 生成 uuid 随机文件名字
+        UUID uuid = UUID.randomUUID();
+        String newFileName = uuid.toString() + "." + suffixName;
+        // 获取绝对路径，创建文件夹
+        String projectRoot = System.getProperty("user.dir");
+        Path uploadPath = Paths.get(projectRoot, Constant.UPLOAD_IMAGE_PATH).toAbsolutePath().normalize();
+        File fileDirectory = new File(uploadPath.toString());
+        // 创建目标文件
+        File targetFile = new File(uploadPath.toString() + "/" + newFileName);
+        if (!fileDirectory.exists()) {
+            if (!fileDirectory.mkdirs()) {
+                throw new CustomException(ExceptionEnum.MKDIR_FAILED);
+            }
+        }
+        // 将上传的文件传输给目标文件
+        try {
+            file.transferTo(targetFile);
+        } catch (IOException e) {
+            throw new CustomException(ExceptionEnum.IMAGE_UPLOAD_FAILED);
+        }
+        return ApiRestResponse.success( "/images/" + newFileName);
+    }
+}
+```
+
+这里对图片上传格式进行了校验，图片格式定义成了常量，并且文件上传路径和图片上传路径也进行了配置注入：
+
+```java
+package com.mall.bootmall.common;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Component
+public class Constant {
+    public static final String SESSION_USER = "session_user";
+    public static final String SALT = "dHaVAAVj;oYD]";
+
+    public static String UPLOAD_FILE_PATH;
+    public static String UPLOAD_IMAGE_PATH;
+
+    public static final List<String> ALLOWED_IMAGE_EXTENSIONS = Arrays.asList(
+        "jpg", "jpeg", "png", "gif", "bmp", "webp"
+    );
+
+    @Value("${upload.file.path}")
+    public void setUploadFilePath(String uploadFilePath) {
+        UPLOAD_FILE_PATH = uploadFilePath;
+    }
+
+    @Value("${upload.image.path}")
+    public void setUploadImagePath(String uploadImagePath) {
+        UPLOAD_IMAGE_PATH = uploadImagePath;
+    }
+}
+```
+
+路径配置：
+
+```properties
+upload.file.path=./upload/files/
+upload.image.path=./upload/images/
+```
+
+自定义静态资源映射：
+
+```java
+package com.mall.bootmall.config;
+
+import com.mall.bootmall.common.Constant;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+/**
+ * 配置地址映射
+ */
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String projectRoot = System.getProperty("user.dir");
+        Path uploadFilePath = Paths.get(projectRoot, Constant.UPLOAD_FILE_PATH).toAbsolutePath().normalize();
+        Path uploadImagePath = Paths.get(projectRoot, Constant.UPLOAD_IMAGE_PATH).toAbsolutePath().normalize();
+        registry.addResourceHandler("/files/**")
+                .addResourceLocations("file:" + uploadFilePath.toString() + "/");
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("file:" + uploadImagePath.toString() + "/");
+    }
+}
+```
 
 ##### 8.2 更新商品 & 删除商品
 
@@ -4106,15 +4299,598 @@ public class GoodsServiceImpl implements GoodsService {
 
 ##### 8.3 上下架商品
 
+商品可以设置上下架，而不是简单的直接删除商品，以后想上架商品的时候可以重新上架，批量上下架功能的实现的关键在于 sql 语句的编写
 
+controller 层：
 
+```java
+package com.mall.bootmall.controller;
 
+import ...;
 
+@Tag(name = "商品模块", description = "商品模块")
+@RestController
+public class GoodsController {
 
+    @Autowired
+    GoodsService goodsService;
 
+    @Operation(summary = "批量上下架商品", description = "批量上下架商品")
+    @PostMapping("admin/goods/batchUpdateStatus")
+    public ApiRestResponse deleteGoods(
+        @Parameter(description = "批量上下架商品ids数组") @Valid @RequestParam Integer[] ids,
+        @Parameter(description = "商品状态，1-上架，0-下架") @Valid @RequestParam Integer status
+    ) {
+        goodsService.batchUpdateStatus(ids, status);
+        return ApiRestResponse.success();
+    }
+}
+```
 
+service 层：
 
+```java
+package com.mall.bootmall.service.impl;
 
+import ...;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Override
+    public void batchUpdateStatus(Integer[] ids, Integer status) {
+        int count = goodsMapper.batchUpdateStatus(ids, status);
+        if (count == 0) {
+            throw new CustomException(ExceptionEnum.UPDATE_FAILED);
+        }
+    }
+}
+```
+
+mapper 接口：
+
+```java
+package com.mall.bootmall.model.mapper;
+
+import com.mall.bootmall.model.pojo.Goods;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface GoodsMapper {
+    int batchUpdateStatus(@Param("ids") Integer[] ids, @Param("status") Integer status);
+}
+```
+
+mapper xml 的实现如下，经过约束查询范围，实现范围批量更新商品的 status 状态
+
+```xml
+<update id="batchUpdateStatus">
+    update goods
+    set `status` = #{status,jdbcType=INTEGER}
+    where id in
+    <foreach collection="ids" open="(" close=")" item="id" separator=",">
+        #{id}
+    </foreach>
+</update>
+```
+
+##### 8.4 商品详情
+
+商品详情查询接口非常简单，传入商品 id 查询返回结果即可，查询接口做成 get 请求，且无需登录
+
+controller 层：
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "商品模块", description = "商品模块")
+@RestController
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "商品详情", description = "商品详情")
+    @GetMapping("goods/detail")
+    public ApiRestResponse goodsDetail(@Parameter(description = "商品id") @Valid @RequestParam Integer id) {
+        Goods goods = goodsService.goodsDetail(id);
+        return ApiRestResponse.success(goods);
+    }
+}
+```
+
+service 层：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Override
+    public Goods goodsDetail(Integer id) {
+        return goodsMapper.selectByPrimaryKey(id);
+    }
+}
+```
+
+##### 8.5 后台商品列表
+
+后台查询的商品列表和后台查询分类列表是类似的，利用 pagehelper 可以轻松实现分页查询
+
+controller 层：
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "商品模块", description = "商品模块")
+@RestController
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "后台查询商品列表", description = "后台查询商品列表")
+    @PostMapping("/admin/goods/list")
+    @ResponseBody
+    public ApiRestResponse getGoodsListForAdmin(
+            @Parameter(description = "分页页数") @RequestParam Integer pageNum,
+            @Parameter(description = "分页大小") @RequestParam Integer pageSize
+    ) {
+        PageInfo pageInfo = goodsService.getListForAdmin(pageNum, pageSize);
+        return ApiRestResponse.success(pageInfo);
+    }
+}
+```
+
+service 层：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Override
+    public PageInfo getListForAdmin(Integer pageNum, Integer pageSize) {
+        PageHelper.startPage(pageNum, pageSize);
+        List<Goods> goodsList = goodsMapper.selectList();
+        PageInfo pageInfo = new PageInfo(goodsList);
+        return pageInfo;
+    }
+}
+```
+
+xml 实现：
+
+```xml
+<select id="selectList" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from goods
+    order by update_time desc
+</select>
+```
+
+##### 8.6 前台商品列表
+
+前台商品列表需要的功能是比后台商品列表多的，前台需要实现搜索商品、价格排序、商品分类查询等功能
+
+由于传递的查询参数比较多，可以新建一个查询请求类 `GoodsListReq`
+
+```java
+package com.mall.bootmall.model.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import javax.validation.constraints.Size;
+
+@Schema(description = "商品列表参数")
+public class GoodsListReq {
+
+    @Schema(description = "商品名称关键字", example = "苹果")
+    @Size(min=1, max=6)
+    private String keyword;
+
+    @Schema(description = "商品分类id", example = "1")
+    private Integer categoryId;
+
+    @Schema(description = "商品排序", example = "1")
+    private String orderBy;
+
+    @Schema(description = "分页页数", example = "1")
+    private Integer pageNum = 1;
+
+    @Schema(description = "分页大小", example = "10")
+    private Integer pageSize = 10;
+
+    public @Size(min = 1, max = 6) String getKeyword() {
+        return keyword;
+    }
+    
+    // getter and setter
+}
+```
+
+这里还有一个问题需要考虑，假设查询商品分类时，传递的商品分类 id 是一个一级目录的 id，那么是不是需要将这个一级目录下的二级以及三级目录的商品也给一起查出来，才会比较合理呢
+
+答案是肯定的，要实现这种查询效果，我们就不能直接使用查询请求类 `GoodsListReq` 了，可以再新建一个专门用于查询的类，这样各个类的作用职责会更加单一，也更加方便后期的维护拓展
+
+在 model 包下新建 query 包，再新建查询类 `GoodsListQuery`，`categoryIds` 用于存放构建的分类 id
+
+```java
+package com.mall.bootmall.model.query;
+
+import java.util.List;
+
+public class GoodsListQuery {
+
+    private String keyword;
+
+    private List<Integer> categoryIds;
+
+    // getter and setter
+}
+```
+
+在 controller 层使用 `GoodsListReq` 作为参数编写控制层方法，重点在于 service 层的实现
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "商品模块", description = "商品模块")
+@RestController
+public class GoodsController {
+
+    @Autowired
+    GoodsService goodsService;
+
+    @Operation(summary = "前台查询商品列表", description = "前台查询商品列表")
+    @GetMapping("/goods/list")
+    @ResponseBody
+    public ApiRestResponse getGoodsListForUser(GoodsListReq goodsListReq) {
+        PageInfo pageInfo = goodsService.getListForUser(goodsListReq);
+        return ApiRestResponse.success(pageInfo);
+    }
+}
+```
+
+###### 8.6.1 搜索查询
+
+对于搜索查询功能，可以获取关键字，给关键字添加上 `%` 实现 sql 的模糊查询，将构建好的查询字符串赋值给查询对象 `goodsListQuery`
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+import org.apache.commons.lang3.StringUtils;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Override
+    public PageInfo getListForUser(GoodsListReq goodsListReq) {
+        GoodsListQuery goodsListQuery = new GoodsListQuery();
+        // 搜索查询
+        if (!StringUtils.isBlank(goodsListReq.getKeyword())) {
+            String keyword = new StringBuilder().append("%").append(goodsListReq.getKeyword()).append("%").toString();
+            goodsListQuery.setKeyword(keyword);
+        }
+        // ...
+    }
+}
+```
+
+###### 8.6.2 分类查询
+
+对于分类查询，则略微复杂，还记得之前写的前台查询分类列表的功能吗，那个功能的 service 实现，正好可以查出所有的分类列表，这里我们可以复用这个功能，实现获取指定 id 下的所有子 id 的功能，不过之前这个功能传递的是固定的 id 为 0，可以先改造成灵活传参的形式
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    CategoriesMapper categoriesMapper;
+
+    @Override
+    @Cacheable(value = "getListForUser")
+    public List<CategoriesVO> getListForUser(Integer parentId) {
+        ArrayList<CategoriesVO> categoryVOList = new ArrayList<>();
+        recursiveFindCategories(categoryVOList, parentId);
+        return categoryVOList;
+    }
+
+    private void recursiveFindCategories(List<CategoriesVO> categoryVOList, Integer parentId) {
+        // 获取所有父id相同的分类
+        List<Categories> categoriesList = categoriesMapper.selectListByParentId(parentId);
+        // 转换为 VO 对象添加到分类列表
+        if (!CollectionUtils.isEmpty(categoriesList)) {
+            for (Categories categories : categoriesList) {
+                CategoriesVO categoriesVO = new CategoriesVO();
+                BeanUtils.copyProperties(categories, categoriesVO);
+                categoryVOList.add(categoriesVO);
+                // 递归查找子分类，添加到子分类列表
+                recursiveFindCategories(categoriesVO.getChildrenCategory(), categoriesVO.getId());
+            }
+        }
+    }
+}
+```
+
+然后同步修改 `CategoryController`，这里还是直接传 0
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "分类模块", description = "商品分类模块")
+@Controller
+public class CategoryController {
+    @Autowired
+    UserService userService;
+    @Autowired
+    CategoryService categoryService;
+
+    @Operation(summary = "前台查询分类列表", description = "前台查询商品分类列表")
+    @PostMapping("/category/list")
+    @ResponseBody
+    public ApiRestResponse getCategoryListForUser() {
+        List<CategoriesVO> categoriesVOList = categoryService.getListForUser(0);
+        return ApiRestResponse.success(categoriesVOList);
+    }
+}
+```
+
+在商品服务类 `GoodsServiceImpl` 中注入 `CategoryService`，使用查询分类列表的方法，获取以 **当前传递的分类 id 为根节点** 的分类目录，这里先添加查询的分类根目录 id，再递归查找所有的分类子 id，添加到 id 数组中，最后将构建好的分类 id 数组赋值给查询对象 `goodsListQuery`
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Autowired
+    CategoryService categoryService;
+
+    @Override
+    public PageInfo getListForUser(GoodsListReq goodsListReq) {
+        GoodsListQuery goodsListQuery = new GoodsListQuery();
+        // 搜索查询
+        if (!StringUtils.isBlank(goodsListReq.getKeyword())) {
+            String keyword = new StringBuilder().append("%").append(goodsListReq.getKeyword()).append("%").toString();
+            goodsListQuery.setKeyword(keyword);
+        }
+        // 分类查询，查出某分类下所有的商品
+        if (goodsListReq.getCategoryId() != null) {
+            // 获取分类 id 数组
+            List<CategoriesVO> categoriesVOList = categoryService.getListForUser(goodsListReq.getCategoryId());
+            ArrayList<Integer> categoryIdList = new ArrayList<>();
+            categoryIdList.add(goodsListReq.getCategoryId());
+            getCategoryIdList(categoriesVOList, categoryIdList);
+            goodsListQuery.setCategoryIds(categoryIdList);
+        }
+        // ...
+    }
+
+    private void getCategoryIdList(List<CategoriesVO> categoriesVOList, ArrayList<Integer> categoryIdList) {
+        for (CategoriesVO categoriesVO : categoriesVOList) {
+            if (categoriesVO != null) {
+                categoryIdList.add(categoriesVO.getId());
+                getCategoryIdList(categoriesVO.getChildrenCategory(), categoryIdList);
+            }
+        }
+    }
+}
+```
+
+###### 8.6.3 排序查询
+
+对于排序查询，第一感觉可能是前端传什么字段，就用什么字段来排序，但是这样是不安全的，不应该信任前端的传值，因此这里可以对排序字段做限制，可以到 `Constant` 类中定义允许的排序字段
+
+```java
+package com.mall.bootmall.common;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+
+@Component
+public class Constant {
+    
+    public interface GoodsListOrderBy {
+        Set<String> PRICE_ASC_DESC = Collections.unmodifiableSet(
+            new HashSet<>(Arrays.asList("price asc", "price desc"))
+        ) ;
+    }
+}
+```
+
+然后判断前端传递的排序字段，是否包含在排序字段常量中，包含则执行排序，否则不进行排序
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Autowired
+    CategoryService categoryService;
+
+    @Override
+    public PageInfo getListForUser(GoodsListReq goodsListReq) {
+        GoodsListQuery goodsListQuery = new GoodsListQuery();
+        // 搜索查询
+        if (!StringUtils.isBlank(goodsListReq.getKeyword())) {
+            String keyword = new StringBuilder().append("%").append(goodsListReq.getKeyword()).append("%").toString();
+            goodsListQuery.setKeyword(keyword);
+        }
+        // 分类查询，查出某分类下所有的商品
+        if (goodsListReq.getCategoryId() != null) {
+            // 获取分类 id 数组
+            List<CategoriesVO> categoriesVOList = categoryService.getListForUser(goodsListReq.getCategoryId());
+            ArrayList<Integer> categoryIdList = new ArrayList<>();
+            categoryIdList.add(goodsListReq.getCategoryId());
+            getCategoryIdList(categoriesVOList, categoryIdList);
+            goodsListQuery.setCategoryIds(categoryIdList);
+        }
+        // 排序查询
+        String orderBy = goodsListReq.getOrderBy();
+        if (Constant.GoodsListOrderBy.PRICE_ASC_DESC.contains(orderBy)) {
+            PageHelper.startPage(goodsListReq.getPageNum(), goodsListReq.getPageSize(), orderBy);
+        } else {
+            PageHelper.startPage(goodsListReq.getPageNum(), goodsListReq.getPageSize());
+        }
+    }
+
+    private void getCategoryIdList(List<CategoriesVO> categoriesVOList, ArrayList<Integer> categoryIdList) {
+        for (CategoriesVO categoriesVO : categoriesVOList) {
+            if (categoriesVO != null) {
+                categoryIdList.add(categoriesVO.getId());
+                getCategoryIdList(categoriesVO.getChildrenCategory(), categoryIdList);
+            }
+        }
+    }
+}
+```
+
+至此，查询类已构建完毕，接下来编写 mapper 实现数据库查询，首先在 mapper 接口中定义查找方法，将我们辛苦构建的查询对象当做查询参数
+
+```java
+package com.mall.bootmall.model.mapper;
+
+import com.mall.bootmall.model.pojo.Goods;
+import com.mall.bootmall.model.query.GoodsListQuery;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface GoodsMapper {
+    List<Goods> selectListForUser(@Param("query") GoodsListQuery goodsListQuery);
+}
+```
+
+然后去 xml 中实现查询，这里注意前台只查询已上架的商品
+
+```xml
+<select id="selectListForUser" parameterType="com.mall.bootmall.model.query.GoodsListQuery" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from goods
+    <where>
+        <if test="query.keyword != null">
+            and `name` like #{query.keyword,jdbcType=VARCHAR}
+        </if>
+        <if test="query.categoryIds != null">
+            and category_id in
+            <foreach collection="query.categoryIds" open="(" close=")" item="id" separator=",">
+                #{id}
+            </foreach>
+        </if>
+        and `status` = 1
+    </where>
+    order by update_time desc
+</select>
+```
+
+最后，我们就能调用 mapper 方法实现查询返回商品列表了
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class GoodsServiceImpl implements GoodsService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    @Autowired
+    CategoryService categoryService;
+
+    @Override
+    public PageInfo getListForUser(GoodsListReq goodsListReq) {
+        GoodsListQuery goodsListQuery = new GoodsListQuery();
+        // 搜索查询
+        if (!StringUtils.isBlank(goodsListReq.getKeyword())) {
+            String keyword = new StringBuilder().append("%").append(goodsListReq.getKeyword()).append("%").toString();
+            goodsListQuery.setKeyword(keyword);
+        }
+        // 分类查询，查出某分类下所有的商品
+        if (goodsListReq.getCategoryId() != null) {
+            // 获取分类 id 数组
+            List<CategoriesVO> categoriesVOList = categoryService.getListForUser(goodsListReq.getCategoryId());
+            ArrayList<Integer> categoryIdList = new ArrayList<>();
+            categoryIdList.add(goodsListReq.getCategoryId());
+            getCategoryIdList(categoriesVOList, categoryIdList);
+            goodsListQuery.setCategoryIds(categoryIdList);
+        }
+        // 排序查询
+        String orderBy = goodsListReq.getOrderBy();
+        if (Constant.GoodsListOrderBy.PRICE_ASC_DESC.contains(orderBy)) {
+            PageHelper.startPage(goodsListReq.getPageNum(), goodsListReq.getPageSize(), orderBy);
+        } else {
+            PageHelper.startPage(goodsListReq.getPageNum(), goodsListReq.getPageSize());
+        }
+        List<Goods> goodsList = goodsMapper.selectListForUser(goodsListQuery);
+        return new PageInfo(goodsList);
+    }
+
+    private void getCategoryIdList(List<CategoriesVO> categoriesVOList, ArrayList<Integer> categoryIdList) {
+        for (CategoriesVO categoriesVO : categoriesVOList) {
+            if (categoriesVO != null) {
+                categoryIdList.add(categoriesVO.getId());
+                getCategoryIdList(categoriesVO.getChildrenCategory(), categoryIdList);
+            }
+        }
+    }
+}
+```
+
+经过测试，可以正常进行搜索、分类、排序查询
+
+#### 9 购物车模块
 
 
 
