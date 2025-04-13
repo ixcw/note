@@ -2,21 +2,21 @@
 
 ##### 1.1 优点
 
-目前新的 java 项目基本都是采用 spring boot 去开发，这已经成为了 java 开发领域的一个事实标准，为什么会造成这种现象呢？当然是因为 spring boot 拥有很多优点
+目前新的 java 项目基本都是采用 spring boot 去开发，这已经成为了 java 开发领域的一个事实标准，为什么会造成这种现象呢？当然是因为 spring boot 拥有诸多的优点
 
 1. 简化项目配置
 
-   在以往使用 spring 开发时，虽然 spring 是个很好的框架，但是却需要编写大量的配置文件，而且每个 spring 项目编写的配置文件还都差不多，这就导致了大量的重复性工作，降低了开发效率
+   在以往用 spring 开发时，虽然 spring 是个很好的框架，但是却需要编写大量的配置文件，其实每个 spring 项目编写的配置文件都是差不多的，这就导致了大量的重复性工作，降低了开发效率
 
-   spring boot 就是致力于解决这个问题，提高项目的开发效率，spring boot 是提倡约定大于配置的，只要按照 spring boot 的约定去做，对于一些约定俗成的重复配置就可以不用去单独配置了，spring boot 将大家常用的一些配置，比如端口、数据库、超时时间等等进行了默认配置，一般而言是没有必要去修改的，有这个需要再去修改，没有需要就直接使用默认的，省去了配置，很方便
+   spring boot 就是致力于解决这个重复编写配置的问题，提高项目的开发效率，spring boot 是提倡约定大于配置的，只要按照 spring boot 的约定去做，对于一些约定俗成的重复配置就可以不用去单独配置了，spring boot 将大家的一些常用配置，比如端口、数据库、超时时间等等进行了默认配置，一般而言是没有必要去修改的，实在有这个需要再去修改，没有需要就直接使用默认的，省去了配置，很方便
 
 2. 起步式依赖
 
-   安装依赖时，只需要指明需要的某个依赖，这个依赖所需要的其他的依赖列表，我们不需要关心，spring boot 会自动为我们下载安装
+   安装依赖时，只需要指明需要的某个依赖，这个依赖所需要的其他的依赖以及对应的依赖版本，我们不需要关心，spring boot 会自动为我们下载安装合适的依赖版本
 
 3. 独立的 spring 项目
 
-   在以往开发项目时，我们需要使用 tomcat 做容器，然后把项目打包成 war 包，然后把 war 包放到 tomcat 容器中去运行，但是如果使用 spring boot，spring boot 已经内嵌了一个 tomcat，可以直接运行项目，不再需要我们去单独启动 tomcat 和做环境配置，这给运行部署项目带来了莫大的便利
+   在以往开发项目时，我们需要单独使用 tomcat 做容器，然后把项目打包成 war 包，最后把 war 包放到 tomcat 容器中去运行，但是如果使用 spring boot，spring boot 会内嵌一个 tomcat，可以直接运行项目，不再需要我们去单独启动 tomcat 和做环境配置，这给项目的运行部署带来了莫大的便利
 
 4. 监控能力强
 
@@ -40,7 +40,7 @@ spring boot 项目的新建可以通过 spring 官网，也可以通过 idea，�
 
 > 使用 idea 2024 创建时发现只能选 java 17，原因是 spring boot 3.0 发布时，宣布 java 17将成为主流版本，默认不支持 8 了，可以把服务器 url 从 `start.spring.io` 改为阿里的 `start.aliyun.com`
 
-点击下一步，选择 spring boot 版本为 2.4.2，勾选依赖项，找到 web  =>  spring web，然后点击创建，就成功创建了 spring boot 项目，项目会自动下载加载 maven 依赖，项目目录如下：
+点击下一步，选择 spring boot 版本为 2.6.13，勾选依赖项，找到 web  =>  spring web，然后点击创建，就成功创建了 spring boot 项目，项目会自动下载加载 maven 依赖，项目目录如下：
 
 ```text
 │  pom.xml
@@ -65,15 +65,13 @@ spring boot 项目的新建可以通过 spring 官网，也可以通过 idea，�
 
 先来复习一下 web 开发的三层结构，一般分为三层 Controller、Service、DAO
 
-- Controller：对外提供接口，负责处理路由
-- Service：处理业务逻辑
-- DAO：与数据库交互
+- Controller：负责对外提供接口，处理路由，参数校验
+- Service：处理具体的业务逻辑
+- DAO：直接和数据库交互
 
-首先建立 Controller，在 java 目录下的包 `com.example.startboot` 下新建类 `ParaController`
+首先建立 Controller，在 java 目录下的包 `com.example.startboot` 下新建包 controller 再新建 controller 类 `ParaController`
 
 ```java
-// src\main\java\com\example\startboot\controller\ParaController.java
-
 package com.example.startboot.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -172,7 +170,7 @@ public class ParaController {
 
 我们还需要建立一个 pojo 对象去接收 json 形式的参数
 
-> 什么是 pojo 呢，pojo 就是 Plain Old Java Object 的缩写，普通 Java 对象，是指一个简单的 Java 类，这是与框架无关的普通类，只有私有的属性、公有的 Getter/Setter 和基本的构造方法，pojo 类不写业务逻辑，只负责数据描述和存储
+> 什么是 pojo 呢，pojo 就是 Plain Old Java Object 的缩写，普通 Java 对象，是指一个简单的 Java 类，这是与框架无关的普通类，只有私有的属性、公有的 Getter/Setter 和基本的构造方法，pojo 类不写业务逻辑，只负责对数据进行描述和存储
 >
 > 同一个 pojo 可以在不同场景使用：
 >
@@ -245,7 +243,7 @@ reveived body param: Student{id=666, name='好学生'}
 
 #### 3 配置文件
 
-虽然 spring boot 配置很少，但是仍然是有配置的，在 spring boot 中有两种配置文件，一种是 properties 后缀的配置文件，另一种是 yml 后缀的配置文件，主要区别在于书写风格上
+虽然 spring boot 配置很少，但是仍然是有配置的，在 spring boot 中有两种配置文件，一种是 properties 后缀的配置文件，另一种是 yml 后缀的配置文件，它们的主要区别在于书写风格上，作用是一模一样的
 
 properties：
 
@@ -268,7 +266,7 @@ spring.application.name=first-spring-boot  # 配置项目名称
 server.servlet.context-path=/first  # 配置统一路由 url 前缀
 ```
 
-有时候我们有些参数不想写死在代码里，而是希望写在配置文件中，方便后续的维护修改，这时可以利用自定义配置实现
+有时候我们有些参数不想写死在代码里，而是希望写在配置文件中，以方便后续的修改维护，这时可以利用自定义配置实现
 
 我们先实现写死的情况，新建一个 `PropertiesController`
 
@@ -361,7 +359,8 @@ public class PropertiesController {
 }
 ```
 
-如上，如果和普通成员变量一样进行注解，age 的打印将会是 null，下面编写 setter 函数，将注解移动到 setter 函数上
+如上，如果和普通成员变量一样进行注解，age 的打印将会是 null
+下面编写 setter 函数，将注解移动到 setter 函数上，需要注意 setter 函数不能是静态函数
 
 ```java
 package com.example.startboot.controller;
@@ -394,7 +393,7 @@ public class PropertiesController {
 }
 ```
 
-这时就能成功打印 age 了
+这样就能成功打印 age 了
 
 #### 4 业务开发
 
@@ -514,7 +513,7 @@ public class StudentController {
 
 这时再访问 `http://localhost:8080/student?id=1` 就能得到返回结果 `Student{id=1, name='张三'}`
 
-> `@Autowired` 是 Spring 框架的核心注解，用于 **自动依赖注入（DI, Dependency Injection）**。它的主要功能是让 Spring 容器自动将合适的 Bean 注入到目标位置（如字段、构造方法、Setter 方法等），无需手动通过 `new` 创建对象。
+> `@Autowired` 是 Spring 框架的核心注解，用于 **依赖注入（DI, Dependency Injection）**。它的主要功能是让 Spring 容器自动将合适的 Bean 注入到目标位置（如字段、构造方法、Setter 方法等），无需手动通过 `new` 去创建对象
 
 #### 5 电商项目初始化
 
