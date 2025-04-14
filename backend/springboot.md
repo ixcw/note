@@ -4892,6 +4892,757 @@ public class GoodsServiceImpl implements GoodsService {
 
 #### 9 购物车模块
 
+购物车在电商网站中不是必须的，比如拼多多就没有购物车，但是传统的电商都是有购物车的，比如淘宝、京东
+
+##### 9.1 统一校验用户身份
+
+对于购物车的各项操作，肯定得用户登录之后才能操作，购物车操作众多，如果每个接口都去单独验证用户身份，就太麻烦了。回想之前的商品分类模块中，就做过统一校验用户身份去校验是否是管理员身份，这里可以做类似的用户过滤器，统一校验用户身份，复制 `AdminRoleFilter` 重命名为 `UserRoleFilter`，用户过滤器不需要校验管理员身份，只需要校验是否登录，然后将用户信息保存到静态属性中，以方便后续获取
+
+```java
+package com.mall.bootmall.filter;
+
+import com.mall.bootmall.common.Constant;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.io.PrintWriter;
+
+/**
+ * 用户过滤器
+ */
+public class UserRoleFilter implements Filter {
+
+    private static Users currentUser;
+
+    @Autowired
+    UserService userService;
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        Filter.super.init(filterConfig);
+    }
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        HttpServletResponse response = (HttpServletResponse) servletResponse;
+        // 设置响应编码，防止中文乱码
+        response.setContentType("application/json;charset=utf-8");
+        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        HttpSession session = request.getSession();
+        currentUser = (Users) session.getAttribute(Constant.SESSION_USER);
+        if (currentUser == null) {
+            // 未登录
+            PrintWriter writer = new HttpServletResponseWrapper((HttpServletResponse) servletResponse).getWriter();
+            writer.write("{\n" +
+                "\"code\": 10007,\n" +
+                "\"msg\": \"用户未登录\",\n" +
+                "\"data\": null\n" +
+                "}");
+            writer.flush();
+            writer.close();
+            return;
+        }
+        filterChain.doFilter(servletRequest, servletResponse);
+    }
+
+    @Override
+    public void destroy() {
+        Filter.super.destroy();
+    }
+}
+```
+
+然后编写配置类 `UserRoleFilterConfig` 配置过滤器，这里主要针对购物车和订单模块进行过滤校验
+
+```java
+package com.mall.bootmall.config;
+
+import com.mall.bootmall.filter.UserRoleFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class UserRoleFilterConfig {
+
+    @Bean
+    public UserRoleFilter userRoleFilter() {
+        return new UserRoleFilter();
+    }
+
+    @Bean(name = "userRoleFilterConfigBean")
+    public FilterRegistrationBean userRoleFilterConfig() {
+        FilterRegistrationBean filterRegistrationBean = new FilterRegistrationBean();
+        filterRegistrationBean.setFilter(userRoleFilter());
+        filterRegistrationBean.addUrlPatterns("/cart/*");
+        filterRegistrationBean.addUrlPatterns("/order/*");
+        filterRegistrationBean.setName("userRoleFilterConfig");
+        return filterRegistrationBean;
+    }
+}
+```
+
+##### 9.2 统一添加路由路径
+
+在购物车模块中，每个购物车接口，按照我们的预计，都会添加 `/cart` 这样的请求路由路径，如果每个接口都单独添加，也是很麻烦的，这里可以利用 `@RequestMapping` 注解将统一的路由路径添加到 Controller 类上，这样Controller 类下的每个接口都会自动添加上该路由路径
+
+```java
+package com.mall.bootmall.controller;
+
+import com.mall.bootmall.common.ApiRestResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@Tag(name = "购物车模块", description = "商品购物车模块")
+@RestController
+@RequestMapping("/cart")
+public class CartController {
+
+    @Operation(summary = "添加商品", description = "添加商品进购物车")
+    @PostMapping("/add")
+    public ApiRestResponse add(Integer goodsId, Integer count) {
+        return ApiRestResponse.success();
+    }
+}
+```
+
+##### 9.3 添加购物车
+
+首先我们来实现添加商品进购物车的功能，添加功能返回一个购物车信息列表
+
+###### 9.3.1 VO对象
+
+> 这里我们可以思考一下，列表中包含的是什么呢？你可能会说，当然是购物车信息啊，对，但是一般而言，购物车中的购物车列表信息，是不止只包含有购物车信息的，还包含了别的信息比如商品信息、商品单价、商品总价、用户信息等等，而我们目前系统中没有这样的对象可以提供，考虑到这个对象是直接提供给前端进行展示的，像这种情况就非常适合新建一个 VO 对象去做信息展示
+
+在 `model.vo` 包下新建一个 `CartVO` VO 对象
+
+```java
+package com.mall.bootmall.model.vo;
+
+import java.io.Serializable;
+
+public class CartVO implements Serializable {
+    private Integer id;
+
+    private Integer usersId;
+
+    private Integer goodsId;
+
+    private String goodsName;
+
+    private String goodsImage;
+
+    private Integer quantity;
+
+    private Integer price;
+
+    private Integer totalPrice;
+
+    private Integer selected;
+
+    // getter and setter
+}
+```
+
+然后在 `CartServiceImpl` 中引用 VO 对象，首先判断商品是否存在和上下架状态，
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+import java.util.List;
+
+@Service
+public class CartServiceImpl implements CartService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    public List<CartVO> add(Integer userId, Integer goodsId, Integer count) {
+        validGoods(goodsId, count);
+    }
+
+    private void validGoods(Integer goodsId, Integer count) {
+        Goods dbGoods = goodsMapper.selectByPrimaryKey(goodsId);
+        // 商品不存在或未上架
+        if (dbGoods == null || dbGoods.getStatus() != 1) {
+            throw new CustomException(ExceptionEnum.GOODS_STATUS_UNUSUAL);
+        }
+    }
+}
+```
+
+###### 9.3.2 魔法数字
+
+类似于魔法字符串，商品上下架状态是 0 和 1，如果直接在代码中判断 0 和 1，功能上是能实现的，但是这样做代码不够直观，也不便于维护，这样的数字叫做魔法数字，假设还有别的字段被定义成了 0 和 1 （是非常常用的方式），那么后期维护时，直接搜索 0 和 1 是难以匹配正确的搜索结果的，导致难以维护，因此我们可以定义常量去维护上下架状态
+
+```java
+package com.mall.bootmall.common;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+
+@Component
+public class Constant {
+    public interface GoodsStatus {
+        int NOT_SALE = 0;
+        int SALE = 1;
+    }
+}
+```
+
+重新改写 `CartServiceImpl`：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+import java.util.List;
+
+@Service
+public class CartServiceImpl implements CartService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    public List<CartVO> add(Integer userId, Integer goodsId, Integer count) {
+        validGoods(goodsId, count);
+    }
+
+    private void validGoods(Integer goodsId, Integer count) {
+        Goods dbGoods = goodsMapper.selectByPrimaryKey(goodsId);
+        // 商品不存在或未上架
+        if (dbGoods == null || dbGoods.getStatus() != Constant.GoodsStatus.SALE) {
+            throw new CustomException(ExceptionEnum.GOODS_STATUS_UNUSUAL);
+        }
+    }
+}
+```
+
+接下来判断商品库存是否有剩余
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class CartServiceImpl implements CartService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+
+    public List<CartVO> add(Integer userId, Integer goodsId, Integer count) {
+        validGoods(goodsId, count);
+    }
+
+    /**
+     * 校验商品状态
+     * @param goodsId 商品id
+     * @param count 商品数量
+     */
+    private void validGoods(Integer goodsId, Integer count) {
+        Goods dbGoods = goodsMapper.selectByPrimaryKey(goodsId);
+        // 商品不存在或未上架
+        if (dbGoods == null || dbGoods.getStatus() != Constant.GoodsStatus.SALE) {
+            throw new CustomException(ExceptionEnum.GOODS_STATUS_UNUSUAL);
+        }
+        // 判断库存
+        if (count > dbGoods.getStock()) {
+            throw new CustomException(ExceptionEnum.GOODS_STOCK_NOT_ENOUGH);
+        }
+    }
+}
+```
+
+###### 9.3.3 商品存在与否
+
+添加商品进购物车前需要判断一下商品是否已经存在于购物车中了，如果已经存在，则只需要添加商品的数量，如果不存在，则改为新增商品
+
+首先需要查出购物车记录，根据 用户id 和 商品id 可以唯一确定一条购物车记录，来到 `CartsMapper` 编写相应的查找方法
+
+```java
+package com.mall.bootmall.model.mapper;
+
+import com.mall.bootmall.model.pojo.Carts;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface CartsMapper {
+    Carts selectByUserIdAndGoodsId(@Param("userId") Integer userId, @Param("goodsId") Integer goodsId);
+}
+```
+
+xml 实现
+
+```xml
+<select id="selectByUserIdAndGoodsId" parameterType="map" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from carts
+    where users_id = #{userId,jdbcType=INTEGER}
+    and goods_id = #{goodsId,jdbcType=INTEGER}
+</select>
+```
+
+然后在 `CartServiceImpl` 调用 mapper 方法实现查询
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+@Service
+public class CartServiceImpl implements CartService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+    @Autowired
+    CartsMapper cartsMapper;
+
+    @Override
+    public List<CartVO> add(Integer userId, Integer goodsId, Integer count) {
+        validGoods(goodsId, count);
+        Carts dbCart = cartsMapper.selectByUserIdAndGoodsId(userId, goodsId);
+        if (dbCart == null) {
+            // 新增
+            Carts cart = new Carts();
+            cart.setUsersId(userId);
+            cart.setGoodsId(goodsId);
+            cart.setQuantity(count);
+            cart.setSelected(Constant.CartsSelected.SELECTED);
+            cartsMapper.insertSelective(cart);
+        } else {
+            // 增加数量
+            count = count + dbCart.getQuantity();
+            Carts cart = new Carts();
+            cart.setId(dbCart.getId());
+            cart.setUsersId(dbCart.getUsersId());
+            cart.setGoodsId(dbCart.getGoodsId());
+            cart.setQuantity(count);
+            cart.setSelected(Constant.CartsSelected.SELECTED);
+            cartsMapper.updateByPrimaryKeySelective(cart);
+        }
+        return null;
+    }
+
+    /**
+     * 校验商品状态
+     * @param goodsId 商品id
+     * @param count 商品数量
+     */
+    private void validGoods(Integer goodsId, Integer count) {
+        Goods dbGoods = goodsMapper.selectByPrimaryKey(goodsId);
+        // 商品不存在或未上架
+        if (dbGoods == null || dbGoods.getStatus() != Constant.GoodsStatus.SALE) {
+            throw new CustomException(ExceptionEnum.GOODS_STATUS_UNUSUAL);
+        }
+        // 判断库存
+        if (count > dbGoods.getStock()) {
+            throw new CustomException(ExceptionEnum.GOODS_STOCK_NOT_ENOUGH);
+        }
+    }
+}
+```
+
+##### 9.4 购物车记录列表
+
+一般而言购物车列表记录不会很多，即使有几十条购物车记录，一次性返回也不影响性能，因此这里不做分页查询
+
+还记得之前建立的 `CartVO` 对象吗，这个对象需要购物车和商品两个表的信息联合起来组成，所以这里编写 sql 语句时需要用到多表联查，在 mapper 中传入 用户id
+
+```java
+package com.mall.bootmall.model.mapper;
+
+import com.mall.bootmall.model.pojo.Carts;
+import com.mall.bootmall.model.vo.CartVO;
+import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface CartsMapper {
+    List<CartVO> selectList(@Param("userId") Integer userId);
+}
+```
+
+xml 实现：
+
+> 需要注意，这里 VO 的对应属性应该改为 type，即 `resultType`
+
+```xml
+<select id="selectList" parameterType="java.lang.Integer" resultType="com.mall.bootmall.model.vo.CartVO">
+    select
+    c.id as id,
+    g.id as goodsId,
+    c.users_id as userId,
+    c.quantity as quantity,
+    c.selected as selected,
+    g.price as price,
+    g.name as goodsName,
+    g.image as goodsImage
+    from carts c
+    left join goods g on g.id = c.goods_id
+    where c.users_id = #{userId,jdbcType=INTEGER}
+    and g.status = 1
+</select>
+```
+
+在 `CartServiceImpl` 中实现返回购物车列表方法，写完之后也可以给添加购物车方法进行复用
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class CartServiceImpl implements CartService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+    @Autowired
+    CartsMapper cartsMapper;
+
+    @Override
+    public List<CartVO> list(Integer userId) {
+        List<CartVO> cartVOList = cartsMapper.selectList(userId);
+        for (CartVO cartVO : cartVOList) {
+            cartVO.setTotalPrice(cartVO.getPrice() * cartVO.getQuantity());
+        }
+        return cartVOList;
+    }
+
+    @Override
+    public List<CartVO> add(Integer userId, Integer goodsId, Integer count) {
+        validGoods(goodsId, count);
+        Carts dbCart = cartsMapper.selectByUserIdAndGoodsId(userId, goodsId);
+        if (dbCart == null) {
+            // 新增
+            Carts cart = new Carts();
+            cart.setUsersId(userId);
+            cart.setGoodsId(goodsId);
+            cart.setQuantity(count);
+            cart.setSelected(Constant.CartsSelected.SELECTED);
+            cartsMapper.insertSelective(cart);
+        } else {
+            // 增加数量
+            count = count + dbCart.getQuantity();
+            Carts cart = new Carts();
+            cart.setId(dbCart.getId());
+            cart.setUsersId(dbCart.getUsersId());
+            cart.setGoodsId(dbCart.getGoodsId());
+            cart.setQuantity(count);
+            cart.setSelected(Constant.CartsSelected.SELECTED);
+            cartsMapper.updateByPrimaryKeySelective(cart);
+        }
+        return this.list(userId);
+    }
+
+    /**
+     * 校验商品状态
+     * @param goodsId 商品id
+     * @param count 商品数量
+     */
+    private void validGoods(Integer goodsId, Integer count) {
+        Goods dbGoods = goodsMapper.selectByPrimaryKey(goodsId);
+        // 商品不存在或未上架
+        if (dbGoods == null || dbGoods.getStatus() != Constant.GoodsStatus.SALE) {
+            throw new CustomException(ExceptionEnum.GOODS_STATUS_UNUSUAL);
+        }
+        // 判断库存
+        if (count > dbGoods.getStock()) {
+            throw new CustomException(ExceptionEnum.GOODS_STOCK_NOT_ENOUGH);
+        }
+    }
+}
+```
+
+在 Controller 中实现查询列表接口
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "购物车模块", description = "商品购物车模块")
+@RestController
+@RequestMapping("/cart")
+public class CartController {
+
+    @Autowired
+    CartService cartService;
+
+    @Operation(summary = "购物车列表", description = "查询购物车列表")
+    @GetMapping("/list")
+    public ApiRestResponse list() {
+        // 内部获取用户id，不允许前端传递
+        List<CartVO> cartVOList = cartService.list(UserRoleFilter.currentUser.getId());
+        return ApiRestResponse.success(cartVOList);
+    }
+
+    @Operation(summary = "添加购物车", description = "添加商品进购物车")
+    @PostMapping("/add")
+    public ApiRestResponse add(
+        @Parameter(description = "商品id") @RequestParam Integer goodsId,
+        @Parameter(description = "商品数量") @RequestParam Integer count
+    ) {
+        List<CartVO> cartVOList = cartService.add(UserRoleFilter.currentUser.getId(), goodsId, count);
+        return ApiRestResponse.success(cartVOList);
+    }
+}
+```
+
+##### 9.5 更新 & 删除购物车
+
+更新和删除购物车功能，相对简单
+
+controller 层：
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "购物车模块", description = "商品购物车模块")
+@RestController
+@RequestMapping("/cart")
+public class CartController {
+
+    @Autowired
+    CartService cartService;
+
+    @Operation(summary = "更新购物车", description = "更新购物车中的商品")
+    @PostMapping("/update")
+    public ApiRestResponse update(
+        @Parameter(description = "商品id") @RequestParam Integer goodsId,
+        @Parameter(description = "商品数量") @RequestParam Integer count
+    ) {
+        List<CartVO> cartVOList = cartService.update(UserRoleFilter.currentUser.getId(), goodsId, count);
+        return ApiRestResponse.success(cartVOList);
+    }
+
+    @Operation(summary = "删除购物车", description = "删除购物车中的商品")
+    @PostMapping("/delete")
+    public ApiRestResponse delete(@Parameter(description = "商品id") @RequestParam Integer goodsId) {
+        List<CartVO> cartVOList = cartService.delete(UserRoleFilter.currentUser.getId(), goodsId);
+        return ApiRestResponse.success(cartVOList);
+    }
+}
+```
+
+service 层：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class CartServiceImpl implements CartService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+    @Autowired
+    CartsMapper cartsMapper;
+
+    @Override
+    public List<CartVO> list(Integer userId) {
+        List<CartVO> cartVOList = cartsMapper.selectList(userId);
+        for (CartVO cartVO : cartVOList) {
+            cartVO.setTotalPrice(cartVO.getPrice() * cartVO.getQuantity());
+        }
+        return cartVOList;
+    }
+
+    @Override
+    public List<CartVO> update(Integer userId, Integer goodsId, Integer count) {
+        validGoods(goodsId, count);
+        Carts dbCart = cartsMapper.selectByUserIdAndGoodsId(userId, goodsId);
+        if (dbCart == null) {
+            // 购物车记录不存在
+            throw new CustomException(ExceptionEnum.UPDATE_FAILED);
+        } else {
+            // 更新数量
+            Carts cart = new Carts();
+            cart.setId(dbCart.getId());
+            cart.setUsersId(dbCart.getUsersId());
+            cart.setGoodsId(dbCart.getGoodsId());
+            cart.setQuantity(count);
+            cart.setSelected(Constant.CartsSelected.SELECTED);
+            cartsMapper.updateByPrimaryKeySelective(cart);
+        }
+        return this.list(userId);
+    }
+
+    @Override
+    public List<CartVO> delete(Integer userId, Integer goodsId) {
+        Carts dbCart = cartsMapper.selectByUserIdAndGoodsId(userId, goodsId);
+        if (dbCart == null) {
+            // 购物车记录不存在
+            throw new CustomException(ExceptionEnum.DELETE_FAILED);
+        } else {
+            // 删除购物车
+            cartsMapper.deleteByPrimaryKey(dbCart.getId());
+        }
+        return this.list(userId);
+    }
+
+    /**
+     * 校验商品状态
+     * @param goodsId 商品id
+     * @param count 商品数量
+     */
+    private void validGoods(Integer goodsId, Integer count) {
+        Goods dbGoods = goodsMapper.selectByPrimaryKey(goodsId);
+        // 商品不存在或未上架
+        if (dbGoods == null || dbGoods.getStatus() != Constant.GoodsStatus.SALE) {
+            throw new CustomException(ExceptionEnum.GOODS_STATUS_UNUSUAL);
+        }
+        // 判断库存
+        if (count > dbGoods.getStock()) {
+            throw new CustomException(ExceptionEnum.GOODS_STOCK_NOT_ENOUGH);
+        }
+    }
+}
+```
+
+9.6 选中购物车
+
+选中购物车分为全选和单选，不管全选还是单选，选择的这个动作是固定的，可以封装为一个函数作为复用
+
+controller 层：
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "购物车模块", description = "商品购物车模块")
+@RestController
+@RequestMapping("/cart")
+public class CartController {
+
+    @Autowired
+    CartService cartService;
+
+    @Operation(summary = "选中购物车", description = "选中购物车中的商品")
+    @PostMapping("/select")
+    public ApiRestResponse select(
+        @Parameter(description = "商品id") @RequestParam Integer goodsId,
+        @Parameter(description = "是否选中") @RequestParam Integer selected
+    ) {
+        List<CartVO> cartVOList = cartService.selectOrNot(UserRoleFilter.currentUser.getId(), goodsId, selected);
+        return ApiRestResponse.success(cartVOList);
+    }
+
+    @Operation(summary = "全选购物车", description = "全选购物车中的商品")
+    @PostMapping("/selectAll")
+    public ApiRestResponse selectAll(@Parameter(description = "是否选中") @RequestParam Integer selected) {
+        List<CartVO> cartVOList = cartService.selectAllOrNot(UserRoleFilter.currentUser.getId(), selected);
+        return ApiRestResponse.success(cartVOList);
+    }
+}
+```
+
+service 层：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class CartServiceImpl implements CartService {
+
+    @Autowired
+    GoodsMapper goodsMapper;
+    @Autowired
+    CartsMapper cartsMapper;
+
+    @Override
+    public List<CartVO> list(Integer userId) {
+        List<CartVO> cartVOList = cartsMapper.selectList(userId);
+        for (CartVO cartVO : cartVOList) {
+            cartVO.setTotalPrice(cartVO.getPrice() * cartVO.getQuantity());
+        }
+        return cartVOList;
+    }
+
+    @Override
+    public List<CartVO> selectOrNot(Integer userId, Integer goodsId, Integer selected) {
+        Carts dbCart = cartsMapper.selectByUserIdAndGoodsId(userId, goodsId);
+        if (dbCart == null) {
+            throw new CustomException(ExceptionEnum.UPDATE_FAILED);
+        } else {
+            cartsMapper.selectOrNot(userId, goodsId, selected);
+        }
+        return this.list(userId);
+    }
+
+    @Override
+    public List<CartVO> selectAllOrNot(Integer userId, Integer selected) {
+        cartsMapper.selectOrNot(userId, null, selected);
+        return this.list(userId);
+    }
+}
+```
+
+xml 实现：
+
+```xml
+<update id="selectOrNot" parameterType="map">
+    update carts
+    set selected = #{selected}
+    where users_id = #{userId}
+    <if test="goodsId != null">
+        and goods_id = #{goodsId}
+    </if>
+</update>
+```
+
+#### 10 订单模块
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
