@@ -5617,7 +5617,103 @@ xml 实现：
 
 #### 10 订单模块
 
+订单模块难的是业务流程，以及需要多表关联，首先我们来理清订单模块的流程：
 
+```mermaid
+flowchart TD
+    A[用户登录] --> B[浏览商品]
+    B --> C[加入购物车]
+    C --> D[产生订单]
+    D --> E[扫码支付]
+    D --> F[取消订单]
+    E --> G[后台发货]
+    G --> H[前台收货]
+    H --> I[订单完结]
+    F --> I
+```
+
+可以发现，用户登录、浏览商品、加入购物车等流程步骤我们在前面已经做完了，现在需要做后面的流程，首先我们来做产生订单的流程
+
+##### 10.1 产生订单
+
+首先新建 `OrderController`
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "订单模块", description = "商品订单模块")
+@RestController
+@RequestMapping("/order")
+public class OrderController {
+    @Operation(summary = "创建订单", description = "创建商品订单")
+    @PostMapping("/create")
+    public ApiRestResponse create() {
+        return ApiRestResponse.success();
+    }
+}
+```
+
+由于创建订单需要的参数有很多，因此可以创建一个创建订单请求类，新建 `CreateOrderReq` 类，这里只需要传入收货人信息和默认的邮费和支付方式，别的信息可以通过别的途径获取
+
+```java
+package com.mall.bootmall.model.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import javax.validation.constraints.NotNull;
+
+@Schema(description = "创建订单参数")
+public class CreateOrderReq {
+
+    @Schema(description = "收货人姓名")
+    @NotNull
+    private String receiverName;
+
+    @Schema(description = "收货人手机号")
+    @NotNull
+    private String receiverPhone;
+
+    @Schema(description = "收货人地址")
+    @NotNull
+    private String receiverAddress;
+
+    @Schema(description = "邮费")
+    private Integer postage = 0;
+
+    @Schema(description = "支付方式")
+    private Integer paymentType = 1;
+
+    // getter and setter
+}
+```
+
+在 controller 中使用这个请求类
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "订单模块", description = "商品订单模块")
+@RestController
+@RequestMapping("/order")
+public class OrderController {
+    @Operation(summary = "创建订单", description = "创建商品订单")
+    @PostMapping("/create")
+    public ApiRestResponse create(@Valid @RequestBody CreateOrderReq createOrderReq) {
+        return ApiRestResponse.success();
+    }
+}
+```
+
+接下来进行 service 实现，创建 `OrderServiceImpl`，创建订单前，需要进行各种条件判断，只有符合条件，才能创建订单，具体步骤如代码中的注释
+
+> 因为商品可能会被修改，这里记录当时的信息
+
+```java
+```
 
 
 
