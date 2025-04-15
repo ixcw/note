@@ -5634,9 +5634,9 @@ flowchart TD
 
 可以发现，用户登录、浏览商品、加入购物车等流程步骤我们在前面已经做完了，现在需要做后面的流程，首先我们来做产生订单的流程
 
-##### 10.1 产生订单
+##### 10.1 创建订单
 
-首先新建 `OrderController`
+创建订单接口算是最复杂的一个接口，不过不经一番寒彻骨，怎得梅花扑鼻香，首先我们来新建 `OrderController`
 
 ```java
 package com.mall.bootmall.controller;
@@ -5710,16 +5710,426 @@ public class OrderController {
 
 接下来进行 service 实现，创建 `OrderServiceImpl`，创建订单前，需要进行各种条件判断，只有符合条件，才能创建订单，具体步骤如代码中的注释
 
-> 因为商品可能会被修改，这里记录当时的信息
+> 因为商品可能会被修改，所以需要记录当时的信息，记录商品快照
 
 ```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class OrderServiceImpl implements OrderService {
+
+    @Autowired
+    CartService cartService;
+    @Autowired
+    GoodsMapper goodsMapper;
+    @Autowired
+    CartsMapper cartsMapper;
+    @Autowired
+    OrdersMapper ordersMapper;
+    @Autowired
+    OrderItemsMapper orderItemsMapper;
+
+    /**
+     * 创建订单
+     * @param createOrderReq 创建订单请求
+     * @return 订单号
+     */
+    @Override
+    public String create(CreateOrderReq createOrderReq) {
+        // 1 获取用户id，查找购物车中对应的已勾选的商品
+        Integer currentUserId = UserRoleFilter.currentUser.getId();
+        List<CartVO> cartVOList = cartService.list(currentUserId);
+        List<CartVO> selectedCartVOList = cartVOList.stream()
+                .filter(item -> item.getSelected().equals(Constant.CartsSelected.SELECTED))
+                .collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(selectedCartVOList)) {
+            throw new CustomException(ExceptionEnum.CART_NOT_SELECTED);
+        }
+        // 2 判断商品合理性，包括是否存在、上下架状态、库存
+        validGoods(selectedCartVOList);
+        // 3 创建订单项
+        List<OrderItems> orderItemsList = cartVOListToOrderItemsList(selectedCartVOList);
+        // 4 扣减商品库存
+        for (OrderItems orderItem : orderItemsList) {
+            Goods dbOrderItemGoods = goodsMapper.selectByPrimaryKey(orderItem.getGoodsId());
+            int remainingStock = dbOrderItemGoods.getStock() - orderItem.getQuantity();
+            if (remainingStock < 0) {
+                throw new CustomException(ExceptionEnum.GOODS_STOCK_NOT_ENOUGH);
+            }
+            dbOrderItemGoods.setStock(remainingStock);
+            goodsMapper.updateByPrimaryKeySelective(dbOrderItemGoods);
+        }
+        // 5 从购物车中删除已勾选商品
+        clearCart(selectedCartVOList);
+        // 6 生成订单号，创建订单
+        Orders order = new Orders();
+        String orderNo = OrderNoFactory.getOrderNo();
+        order.setOrderNo(orderNo);
+        order.setUsersId(currentUserId);
+        order.setTotalPrice(getTotalPrice(orderItemsList));
+        order.setReceiverName(createOrderReq.getReceiverName());
+        order.setReceiverPhone(createOrderReq.getReceiverPhone());
+        order.setReceiverAddress(createOrderReq.getReceiverAddress());
+        order.setOrderStatus(Constant.OrderStatusEnum.UNPAID.getCode());
+        order.setPostage(0);
+        order.setPaymentType(1);
+        ordersMapper.insertSelective(order);
+        // 7 保存订单项
+        for (OrderItems orderItem : orderItemsList) {
+            orderItem.setOrderNo(orderNo);
+            orderItemsMapper.insertSelective(orderItem);
+        }
+        return orderNo;
+    }
+
+    /**
+     * 购物车信息转为订单项
+     * @param cartVOList 购物车信息
+     * @return 订单项
+     */
+    private List<OrderItems> cartVOListToOrderItemsList(List<CartVO> cartVOList) {
+        ArrayList<OrderItems> orderItemList = new ArrayList<>();
+        for (CartVO cartVO : cartVOList) {
+            OrderItems orderItem = new OrderItems();
+            orderItem.setGoodsId(cartVO.getGoodsId());
+            // 记录订单项快照
+            orderItem.setGoodsName(cartVO.getGoodsName());
+            orderItem.setGoodsImage(cartVO.getGoodsImage());
+            orderItem.setUnitPrice(cartVO.getPrice());
+            orderItem.setQuantity(cartVO.getQuantity());
+            orderItem.setTotalPrice(cartVO.getTotalPrice());
+            orderItemList.add(orderItem);
+        }
+        return orderItemList;
+    }
+
+    /**
+     * 获取订单总价
+     * @param orderItemsList 订单项列表
+     * @return 订单总价
+     */
+    private int getTotalPrice(List<OrderItems> orderItemsList) {
+        int totalPrice = 0;
+        for (OrderItems orderItems : orderItemsList) {
+            totalPrice += orderItems.getTotalPrice();
+        }
+        return totalPrice;
+    }
+
+    /**
+     * 清空购物车
+     * @param cartVOList 购物车列表
+     */
+    private void clearCart(List<CartVO> cartVOList) {
+        for (CartVO cartVO : cartVOList) {
+            cartsMapper.deleteByPrimaryKey(cartVO.getId());
+        }
+    }
+
+    /**
+     * 校验商品状态
+     * @param cartVOList 购物车列表
+     */
+    private void validGoods(List<CartVO> cartVOList) {
+        for (CartVO cartVO : cartVOList) {
+            Goods dbGoods = goodsMapper.selectByPrimaryKey(cartVO.getId());
+            // 商品不存在或未上架
+            if (dbGoods == null || dbGoods.getStatus() != Constant.GoodsStatus.SALE) {
+                throw new CustomException(ExceptionEnum.GOODS_STATUS_UNUSUAL);
+            }
+            // 判断库存
+            if (cartVO.getQuantity() > dbGoods.getStock()) {
+                throw new CustomException(ExceptionEnum.GOODS_STOCK_NOT_ENOUGH);
+            }
+        }
+    }
+}
 ```
 
+封装的订单状态枚举：
 
+```java
+package com.mall.bootmall.common;
 
+@Component
+public class Constant {
+    public enum OrderStatusEnum {
+        cancelled(0, "用户已取消"),
+        UNPAID(10, "未付款"),
+        PAID(20, "已付款"),
+        SHIPPED(30, "已发货"),
+        DONE(40, "订单完成");
 
+        private int code;
+        private String value;
 
+        OrderStatusEnum(int code, String value) {
+            this.code = code;
+            this.value = value;
+        }
 
+        public static OrderStatusEnum getByCode(int code) {
+            for (OrderStatusEnum orderStatusEnum : OrderStatusEnum.values()) {
+                if (orderStatusEnum.getCode() == code) {
+                    return orderStatusEnum;
+                }
+            }
+            throw new CustomException(ExceptionEnum.NO_ENUM);
+        }
+
+        public int getCode() {
+            return code;
+        }
+
+        public void setCode(int code) {
+            this.code = code;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(String value) {
+            this.value = value;
+        }
+    }
+}
+```
+
+产生订单号的工厂类，时间加随机数的方式：
+
+```java
+package com.mall.bootmall.util;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Random;
+
+public class OrderNoFactory {
+    private static String getDateTime() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+        return dateFormat.format(new Date());
+    }
+
+    private static int getRandomNum() {
+        Random random = new Random();
+        return (int) (random.nextDouble() * 90000) + 10000;
+    }
+
+    public static String getOrderNo() {
+        return "NO" + getDateTime() + getRandomNum();
+    }
+}
+```
+
+##### 10.2 数据库事务
+
+从创建订单的流程中可以看出，流程是比较长的，万一中间出错了，但是数据库中此时已经更新了一些数据，但是由于创建订单的过程中断了，所以这些数据也没有用了，变成了数据库中的脏数据，为了防止这种情况的发生，我们需要利用数据库的事务能力，只有全部操作都成功时，才能判定成功，否则回滚所有操作
+
+在 spring boot 中开启数据库事务也很简单，加上 `@Transactional` 注解即可
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class OrderServiceImpl implements OrderService {
+    /**
+     * 创建订单
+     * @param createOrderReq 创建订单请求
+     * @return 订单号
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public String create(CreateOrderReq createOrderReq) {
+        // ...
+        return orderNo;
+    }
+}
+```
+
+这样假如执行过程中间报错抛出异常了，不管是自定义异常还是系统异常，那么对于之前已经执行的数据库操作会统统回滚，相当于没有发生过
+
+##### 10.3 订单详情
+
+订单详情需要整合的信息也有点多，同时因为是直接给前台展示用的，因此我们新建一个 `orderVO` 对象
+
+```java
+package com.mall.bootmall.model.vo;
+
+import java.util.Date;
+import java.util.List;
+
+public class OrderVO {
+
+    private Integer usersId;
+
+    private String orderNo;
+
+    private Integer orderStatus;
+
+    private String orderStatusName;
+
+    private Integer totalPrice;
+
+    private String receiverName;
+
+    private String receiverPhone;
+
+    private String receiverAddress;
+
+    private Integer postage;
+
+    private Integer paymentType;
+
+    private Date deliveryTime;
+
+    private Date payTime;
+
+    private Date endTime;
+
+    private Date createTime;
+
+    private Date updateTime;
+
+    private List<OrderItemVO> orderItemVOList;
+
+    // getter and setter
+}
+```
+
+继续新建 `OrderItemVO`
+
+```java
+package com.mall.bootmall.model.vo;
+
+import java.util.Date;
+
+public class OrderItemVO {
+
+    private String orderNo;
+
+    private Integer goodsId;
+
+    private String goodsName;
+
+    private String goodsImage;
+
+    private Integer unitPrice;
+
+    private Integer quantity;
+
+    private Integer totalPrice;
+
+    // getter and setter
+}
+```
+
+controller 层：
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "订单模块", description = "商品订单模块")
+@RestController
+@RequestMapping("/order")
+public class OrderController {
+
+    @Autowired
+    OrderService orderService;
+
+    @Operation(summary = "订单详情", description = "查看订单详情")
+    @GetMapping("/detail")
+    public ApiRestResponse detail(@Parameter(description = "订单号") @RequestParam String orderNo) {
+        OrderVO orderVO = orderService.detail(orderNo);
+        return ApiRestResponse.success(orderVO);
+    }
+}
+```
+
+service 层：
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class OrderServiceImpl implements OrderService {
+
+    @Autowired
+    CartService cartService;
+    @Autowired
+    GoodsMapper goodsMapper;
+    @Autowired
+    CartsMapper cartsMapper;
+    @Autowired
+    OrdersMapper ordersMapper;
+    @Autowired
+    OrderItemsMapper orderItemsMapper;
+
+    @Override
+    public OrderVO detail(String orderNo) {
+        Orders order = ordersMapper.selectByOrderNo(orderNo);
+        if (order == null) {
+            throw new CustomException(ExceptionEnum.NO_ORDER);
+        }
+        Integer currentUserId = UserRoleFilter.currentUser.getId();
+        if (!order.getUsersId().equals(currentUserId)) {
+            throw new CustomException(ExceptionEnum.NOT_YOUR_ORDER);
+        }
+        return getOrderVO(order);
+    }
+
+    private OrderVO getOrderVO(Orders order) {
+        OrderVO orderVO = new OrderVO();
+        BeanUtils.copyProperties(order, orderVO);
+        List<OrderItems> orderItemList = orderItemsMapper.selectByOrderNo(order.getOrderNo());
+        ArrayList<OrderItemVO> orderItemVOList = new ArrayList<>();
+        for (OrderItems orderItem : orderItemList) {
+            OrderItemVO orderItemVO = new OrderItemVO();
+            BeanUtils.copyProperties(orderItem, orderItemVO);
+            orderItemVOList.add(orderItemVO);
+        }
+        orderVO.setOrderItemVOList(orderItemVOList);
+        orderVO.setOrderStatusName(Constant.OrderStatusEnum.getByCode(orderVO.getOrderStatus()).getValue());
+        return orderVO;
+    }
+}
+```
+
+然后数据库查询 xml 实现了两个，都是通过订单号去查询
+
+查订单：
+
+```xml
+<select id="selectByOrderNo" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from orders
+    where order_no = #{orderNo,jdbcType=VARCHAR}
+</select>
+```
+
+查订单项：
+
+```java
+<select id="selectByOrderNo" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from order_items
+    where order_no = #{orderNo,jdbcType=VARCHAR}
+</select>
+```
+
+##### 10.4 取消订单
 
 
 
