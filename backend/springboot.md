@@ -6131,11 +6131,401 @@ public class OrderServiceImpl implements OrderService {
 
 ##### 10.4 取消订单
 
+取消订单需要传入订单号，首先校验订单是否存在，然后校验订单是否属于当前用户，订单状态是否处于未付款状态，只有未付款可以取消，订单取消后，应该设置完成时间，应该取消订单后，订单就完结了
 
+```java
+package com.mall.bootmall.service.impl;
 
+import ...;
 
+@Service
+public class OrderServiceImpl implements OrderService {
+    @Override
+    public void cancel(String orderNo) {
+        Orders order = ordersMapper.selectByOrderNo(orderNo);
+        if (order == null) {
+            throw new CustomException(ExceptionEnum.NO_ORDER);
+        }
+        Integer currentUserId = UserRoleFilter.currentUser.getId();
+        if (!order.getUsersId().equals(currentUserId)) {
+            throw new CustomException(ExceptionEnum.NOT_YOUR_ORDER);
+        }
+        if (order.getOrderStatus().equals(Constant.OrderStatusEnum.UNPAID.getCode())) {
+            order.setOrderStatus(Constant.OrderStatusEnum.CANCELLED.getCode());
+            order.setEndTime(new Date());
+            ordersMapper.updateByPrimaryKeySelective(order);
+        } else {
+            throw new CustomException(ExceptionEnum.WRONG_ORDER_STATUS);
+        }
+    }
+}
+```
 
+##### 10.5 支付二维码
 
+我们可以利用订单号生成一个支付二维码，首先引入生成二维码的依赖
+
+```xml
+<dependency>
+    <groupId>com.google.zxing</groupId>
+    <artifactId>javase</artifactId>
+    <version>3.3.0</version>
+</dependency>
+```
+
+controller 层：调用 service 获得生成的 qrcode 访问地址，返回给前台
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "订单模块", description = "商品订单模块")
+@RestController
+@RequestMapping("/order")
+public class OrderController {
+
+    @Autowired
+    OrderService orderService;
+
+    @Operation(summary = "支付二维码", description = "订单支付二维码")
+    @PostMapping("/qrcode")
+    public ApiRestResponse qrcode(@Parameter(description = "订单号") @RequestParam String orderNo) {
+        String qrcodeAddress = orderService.qrcode(orderNo);
+        return ApiRestResponse.success(qrcodeAddress);
+    }
+}
+```
+
+在 util 包下编写生成 qrcode 的方法类 `QRCodeGenerator`
+
+```java
+package com.mall.bootmall.util;
+
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.mall.bootmall.common.Constant;
+
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+public class QRCodeGenerator {
+    public static String generateQRCode(String text, int width, int height, String fileName) throws WriterException, IOException {
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        BitMatrix bitMatrix = qrCodeWriter.encode(text, BarcodeFormat.QR_CODE, width, height);
+        String projectRoot = System.getProperty("user.dir");
+        Path generatePath = Paths.get(projectRoot, Constant.QRCODE_GENERATE_PATH).toAbsolutePath().normalize();
+        String filePath = generatePath.toString() + "/" + fileName + ".png";
+        Path path = FileSystems.getDefault().getPath(filePath);
+        MatrixToImageWriter.writeToPath(bitMatrix, "PNG", path);
+        return fileName + ".png";
+    }
+}
+```
+
+和之前定义文件上传路径一样，定义 qrcode 生成路径
+
+> 再次注意，静态类型的属性，使用 `@Value` 注解 setter 方法时，方法 **不能是静态方法**
+
+```java
+package com.mall.bootmall.common;
+
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+
+@Component
+public class Constant {
+    public static String QRCODE_GENERATE_PATH;
+
+    @Value("${qrcode.generate.path}")
+    public void setQrcodeGeneratePath(String qrcodeGeneratePath) {
+        QRCODE_GENERATE_PATH = qrcodeGeneratePath;
+    }
+}
+```
+
+service 中调用 qrcode 生成方法，生成 qrcode 访问地址
+
+```java
+package com.mall.bootmall.service.impl;
+
+import ...;
+
+@Service
+public class OrderServiceImpl implements OrderService {
+    @Value("${qrcode.generate.ip}")
+    String ip;
+
+    @Override
+    public String qrcode(String orderNo) {
+        ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        HttpServletRequest request = requestAttributes.getRequest();
+        String payUrl = "http://" + ip + ":" + request.getLocalPort() + "/pay?orderNo=" + orderNo;
+        String qrCode = null;
+        try {
+            qrCode = QRCodeGenerator.generateQRCode(payUrl, 350, 350, orderNo);
+        } catch (WriterException | IOException e) {
+            throw new RuntimeException(e);
+        }
+        String qrCodeAddress = "http://" + ip + ":" + request.getLocalPort() + "/qrcode/" + qrCode;
+        return qrCodeAddress;
+    }
+}
+```
+
+最后配置自定义静态资源访问
+
+```java
+package com.mall.bootmall.config;
+
+import com.mall.bootmall.common.Constant;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+/**
+ * 配置地址映射
+ */
+@Configuration
+public class WebMvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String projectRoot = System.getProperty("user.dir");
+        Path uploadFilePath = Paths.get(projectRoot, Constant.UPLOAD_FILE_PATH).toAbsolutePath().normalize();
+        Path uploadImagePath = Paths.get(projectRoot, Constant.UPLOAD_IMAGE_PATH).toAbsolutePath().normalize();
+        Path qrcodeGeneratePath = Paths.get(projectRoot, Constant.QRCODE_GENERATE_PATH).toAbsolutePath().normalize();
+        registry.addResourceHandler("/files/**")
+                .addResourceLocations("file:" + uploadFilePath.toString() + "/");
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("file:" + uploadImagePath.toString() + "/");
+        registry.addResourceHandler("/qrcode/**")
+                .addResourceLocations("file:" + qrcodeGeneratePath.toString() + "/");
+    }
+}
+```
+
+传入订单号，即可生成 qrcode 二维码图片，并返回 qrcode 访问地址
+
+```json
+{
+    "code": 200,
+    "msg": "SUCCESS",
+    "data": "http://127.0.0.1:8080/qrcode/NO2025041614002567427.png"
+}
+```
+
+##### 10.6 订单列表
+
+订单列表也分前后台，区别是前台订单列表只查询当前用户的订单，而后台是查询出平台所有的订单
+
+controller：
+
+```java
+@Operation(summary = "前台订单列表", description = "前台订单列表")
+@GetMapping("/order/list")
+public ApiRestResponse listForUser(
+    @Parameter(description = "分页页数") @RequestParam Integer pageNum,
+    @Parameter(description = "分页大小") @RequestParam Integer pageSize
+) {
+    PageInfo pageInfo = orderService.listForUser(pageNum, pageSize);
+    return ApiRestResponse.success(pageInfo);
+}
+
+@Operation(summary = "后台订单列表", description = "后台订单列表")
+@GetMapping("/admin/order/list")
+public ApiRestResponse adminList(
+    @Parameter(description = "分页页数") @RequestParam Integer pageNum,
+    @Parameter(description = "分页大小") @RequestParam Integer pageSize
+) {
+    PageInfo pageInfo = orderService.listForAdmin(pageNum, pageSize);
+    return ApiRestResponse.success(pageInfo);
+}
+```
+
+service：
+
+```java
+@Override
+public PageInfo listForUser(Integer pageNum, Integer pageSize) {
+    Integer currentUserId = UserRoleFilter.currentUser.getId();
+    PageHelper.startPage(pageNum, pageSize);
+    List<Orders> orderList = ordersMapper.listForUser(currentUserId);
+    List<OrderVO> orderVOList = orderListToOrderVOList(orderList);
+    // 传入 orderList 是为了确保分页元数据正确
+    PageInfo pageInfo = new PageInfo<>(orderList);
+    pageInfo.setList(orderVOList);
+    return pageInfo;
+}
+
+@Override
+public PageInfo listForAdmin(Integer pageNum, Integer pageSize) {
+    PageHelper.startPage(pageNum, pageSize);
+    List<Orders> orderList = ordersMapper.listForAdmin();
+    List<OrderVO> orderVOList = orderListToOrderVOList(orderList);
+    PageInfo pageInfo = new PageInfo<>(orderList);
+    pageInfo.setList(orderVOList);
+    return pageInfo;
+}
+
+private List<OrderVO> orderListToOrderVOList(List<Orders> orderList) {
+    ArrayList<OrderVO> orderVOList = new ArrayList<>();
+    for (Orders order : orderList) {
+        OrderVO orderVO = getOrderVO(order);
+        orderVOList.add(orderVO);
+    }
+    return orderVOList;
+}
+```
+
+xml：
+
+```xml
+<select id="listForUser" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from orders
+    where users_id = #{userId,jdbcType=INTEGER}
+    order by create_time desc
+</select>
+<select id="listForAdmin" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from orders
+    order by create_time desc
+</select>
+```
+
+##### 10.7 订单支付
+
+我们在之前生成了支付二维码图片，二维码图片其实保存的就是我们提前定义好的支付链接，扫码其实就是访问这个支付链接，这里我们做成模拟支付，当我们访问支付链接时，就认为用户支付成功了，更改订单的状态，当然，在支付之前，需要校验订单是否存在、订单状态等
+
+controller：
+
+```java
+@Operation(summary = "扫码支付", description = "扫描二维码支付")
+@GetMapping("/pay")
+public ApiRestResponse pay(@Parameter(description = "订单号") @RequestParam String orderNo) {
+    orderService.pay(orderNo);
+    return ApiRestResponse.success();
+}
+```
+
+service：
+
+```java
+@Override
+public void pay(String orderNo) {
+    Orders order = ordersMapper.selectByOrderNo(orderNo);
+    if (order == null) {
+        throw new CustomException(ExceptionEnum.NO_ORDER);
+    }
+    if (order.getOrderStatus().equals(Constant.OrderStatusEnum.UNPAID.getCode())) {
+        order.setOrderStatus(Constant.OrderStatusEnum.PAID.getCode());
+        order.setPayTime(new Date());
+        ordersMapper.updateByPrimaryKeySelective(order);
+    } else {
+        throw new CustomException(ExceptionEnum.WRONG_ORDER_STATUS);
+    }
+}
+```
+
+##### 10.8 订单管理
+
+###### 10.8.1 后台发货
+
+只有订单是已付款的状态，后台才能发货
+
+controller：
+
+```java
+@Operation(summary = "后台发货", description = "后台订单发货")
+@PostMapping("/admin/order/shipped")
+public ApiRestResponse shipped(@Parameter(description = "订单号") @RequestParam String orderNo) {
+    orderService.shipped(orderNo);
+    return ApiRestResponse.success();
+}
+```
+
+service：
+
+```java
+@Override
+public void shipped(String orderNo) {
+    Orders order = ordersMapper.selectByOrderNo(orderNo);
+    if (order == null) {
+        throw new CustomException(ExceptionEnum.NO_ORDER);
+    }
+    if (order.getOrderStatus().equals(Constant.OrderStatusEnum.PAID.getCode())) {
+        order.setOrderStatus(Constant.OrderStatusEnum.SHIPPED.getCode());
+        order.setDeliveryTime(new Date());
+        ordersMapper.updateByPrimaryKeySelective(order);
+    } else {
+        throw new CustomException(ExceptionEnum.WRONG_ORDER_STATUS);
+    }
+}
+```
+
+###### 10.8.2 订单完结
+
+这里区分前台和后台，区别在于前台只能完结自己的订单，后台可以完结任意的订单
+
+controller：
+
+```java
+@Operation(summary = "订单完结", description = "订单完结")
+@PostMapping("/order/done")
+public ApiRestResponse done(@Parameter(description = "订单号") @RequestParam String orderNo) {
+    orderService.done(orderNo);
+    return ApiRestResponse.success();
+}
+```
+
+service：
+
+```java
+@Override
+public void done(String orderNo) {
+    Orders order = ordersMapper.selectByOrderNo(orderNo);
+    if (order == null) {
+        throw new CustomException(ExceptionEnum.NO_ORDER);
+    }
+    Users currentUser = UserRoleFilter.currentUser;
+    if (
+        !userService.checkIsAdmin(currentUser) &&
+        !order.getUsersId().equals(currentUser.getId())
+    ) {
+        throw new CustomException(ExceptionEnum.NOT_YOUR_ORDER);
+    }
+    if (order.getOrderStatus().equals(Constant.OrderStatusEnum.SHIPPED.getCode())) {
+        order.setOrderStatus(Constant.OrderStatusEnum.DONE.getCode());
+        order.setEndTime(new Date());
+        ordersMapper.updateByPrimaryKeySelective(order);
+    } else {
+        throw new CustomException(ExceptionEnum.WRONG_ORDER_STATUS);
+    }
+}
+```
+
+#### 11 Session 升级 JWT
+
+在升级前我们需要了解为什么需要升级，JWT 是一种更新的登录状态保持方式
+
+http 请求是独立无状态的，因此需要每次请求都携带认证信息
+
+##### 11.1 Cookie 和 Session
 
 
 
