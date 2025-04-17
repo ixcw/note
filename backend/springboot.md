@@ -6527,21 +6527,414 @@ http 请求是独立无状态的，因此需要每次请求都携带认证信息
 
 ##### 11.1 Cookie 和 Session
 
+用户发送账号密码登录之后，后端会将用户信息保存在 session 中，然后告知前端保存 cookie，cookie 中记录下 session id，后续每次发送请求，都携带这个 cookie，后端通过 cookie 拿到 session id，获取保存的用户信息，从而实现登录状态的保持
 
+session 可以保存在 redis，也可以保存到内存，还可以保存到数据库，保存位置不影响 session 的功能
 
+session 保存用户登录状态主要有以下缺点：
 
+1. 安全方面有被劫持 cookie 的风险
+2. 不容易拓展，用户量增大时，假如采用分布式服务器集群，则 session 在服务器间的同步成为问题
+3. 同样的，用户量增大时，session 如何存储成为问题
 
+##### 11.2 Token 和 JWT
 
+JWT 是 json web tokens 的缩写，是新一代的用户登录验证的方式，主要由 3 个部分组成
 
+- header：声明加密方式、加密算法等
+- payload：携带用户信息
+- signature：签名，校验 token 是否被更改
 
+> token 采用的加密算法都是公开的，可以加解密出需要的用户信息，你也许会想，那我修改用户信息，再加密，不就可以欺骗服务器了，我们说，要是能的话，token 也不会成为新一代的验证方式了，假如修改再加密，签名就会检测出有修改，从而校验不通过，token 也就失效了
 
+用户发送账号密码登录之后，后端会使用用户信息加一些算法生成 token，然后将 token 通过登录接口的响应返回给前端进行保存，后续每次发送请求，都携带这个 token，后端拿到 token 后进行校验解密，获取保存的用户信息，从而实现登录状态的保持
 
+可以发现，jwt 和 session 最大的区别就是，用户信息的保存地点不同，session 是保存在服务端，而 jwt 是保存在客户端，而这个最大的区别，恰好解决了 session 的不容易保存和拓展的问题，而且，cookie 是在浏览器中使用的，而 token 没有这个限制，在 app 中也可以使用，因此，jwt 的验证方式渐渐地流行起来
 
+但是我们说，token 也是有缺点的，主要缺点如下：
 
+1. 由于算法公开，可以方便地解密，所以不适合保存用户的敏感信息到 token 里面
+2. 无法临时废止 token，一旦拿到 token，就等于拿到了用户身份，虽然可以设置有效时间，但是有效多久较难评估
+3. token 的网络开销相比只需要传递一个 session id 的 cookie 来说是更高的
 
+##### 11.3 升级成 JWT
 
+对于 token 的生成，我们不必亲自编写算法，早已有三方机构帮我们开发好了由于生成 token 的工具依赖，我们直接使用就行，首先引入相关依赖
 
+```xml
+<dependency>
+    <groupId>com.auth0</groupId>
+    <artifactId>java-jwt</artifactId>
+    <version>3.14.0</version>
+</dependency>
+```
 
+然后在 util 包下新建 `TokenUtils` 工具类
+
+```java
+package com.mall.bootmall.util;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.TokenExpiredException;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.mall.bootmall.common.Constant;
+import com.mall.bootmall.exception.CustomException;
+import com.mall.bootmall.exception.ExceptionEnum;
+import com.mall.bootmall.model.pojo.Users;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
+
+/**
+ * Token 工具类
+ */
+public class TokenUtils {
+
+    /**
+     * 生成 token
+     * @param user 用户实体类
+     * @return token
+     */
+    public static String generateToken(Users user) {
+        Algorithm algorithm = Algorithm.HMAC256(Constant.JWT_KEY);
+        return JWT.create()
+            .withClaim(Constant.USER_ID, user.getId())
+            .withClaim(Constant.USER_NAME, user.getName())
+            .withClaim(Constant.USER_ROLE, user.getRole())
+            .withExpiresAt(new Date(System.currentTimeMillis() + Constant.EXPIRE_TIME))
+            .sign(algorithm);
+    }
+
+    /**
+     * 获取真实 token
+     * @param request HttpServletRequest
+     * @return token
+     */
+    public static String getToken(HttpServletRequest request) {
+        String token = null;
+        String authToken = request.getHeader("Authorization");
+        if (authToken != null && authToken.startsWith("Bearer ")) {
+            token = authToken.substring(7);
+        }
+        return token;
+    }
+
+    /**
+     * 验证 token
+     * @param token token
+     * @return 用户实体类
+     */
+    public static Users verifyToken(String token) {
+        Algorithm algorithm = Algorithm.HMAC256(Constant.JWT_KEY);
+        JWTVerifier jwtVerifier = JWT.require(algorithm).build();
+        try {
+            DecodedJWT jwt = jwtVerifier.verify(token);
+            Users user = new Users();
+            user.setId(jwt.getClaim(Constant.USER_ID).asInt());
+            user.setName(jwt.getClaim(Constant.USER_NAME).asString());
+            user.setRole(jwt.getClaim(Constant.USER_ROLE).asInt());
+            return user;
+        } catch (TokenExpiredException e) {
+            throw new CustomException(ExceptionEnum.TOKEN_EXPIRED);
+        } catch (JWTDecodeException e) {
+            throw new CustomException(ExceptionEnum.TOKEN_WRONG);
+        }
+    }
+}
+```
+
+接下来改造登录方法，使用用户信息生成 token 字符串返回给前端
+
+```java
+package com.mall.bootmall.controller;
+
+import ...;
+
+@Tag(name = "用户模块")
+@Controller
+public class UserController {
+
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @Operation(summary = "登录", description = "用户登录")
+    @PostMapping("/login")
+    @ResponseBody
+    public ApiRestResponse<Object> login(
+        @Parameter(description = "用户名") @RequestParam("userName") String userName,
+        @Parameter(description = "用户密码") @RequestParam("password") String password
+    ) {
+        verifyUserParam(userName, password);
+        Users user = userService.login(userName, password);
+        user.setPassword(null);
+        String token = TokenUtils.generateToken(user);
+        return ApiRestResponse.success(token);
+    }
+
+    @Operation(summary = "管理员登录", description = "管理员登录")
+    @PostMapping("/admin/login")
+    @ResponseBody
+    public ApiRestResponse<Object> adminLogin(
+        @Parameter(description = "用户名") @RequestParam("userName") String userName,
+        @Parameter(description = "用户密码") @RequestParam("password") String password
+    ) {
+        verifyUserParam(userName, password);
+        Users user = userService.login(userName, password);
+        if (userService.checkIsAdmin(user)) {
+            user.setPassword(null);
+            String token = TokenUtils.generateToken(user);
+            return ApiRestResponse.success(token);
+        } else {
+            return ApiRestResponse.error(ExceptionEnum.NEED_ADMIN);
+        }
+    }
+
+    /**
+     * 验证用户参数
+     * @param userName 用户名
+     * @param password 密码
+     */
+    private void verifyUserParam(String userName, String password) {
+        if (!StringUtils.hasText(userName)) {
+            throw new CustomException(ExceptionEnum.NEED_USER_NAME);
+        }
+        if (!StringUtils.hasText(password)) {
+            throw new CustomException(ExceptionEnum.NEED_PASSWORD);
+        }
+        if (password.length() < 6) {
+            throw new CustomException(ExceptionEnum.PASSWORD_TOO_SHORT);
+        }
+    }
+}
+```
+
+有了 token，接下来需要改造管理员角色过滤器
+
+```java
+package com.mall.bootmall.filter;
+
+import com.mall.bootmall.common.Constant;
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.service.UserService;
+import com.mall.bootmall.util.TokenUtils;
+
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.io.PrintWriter;
+
+/**
+ * 管理员角色过滤器
+ */
+public class AdminRoleFilter implements Filter {
+
+    private final UserService userService;
+
+    public AdminRoleFilter(UserService userService) {
+        this.userService = userService;
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        Filter.super.init(filterConfig);
+    }
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        // 设置响应编码，防止中文乱码
+        HttpServletResponse response = (HttpServletResponse) servletResponse;
+        response.setContentType("application/json;charset=utf-8");
+        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        String token = TokenUtils.getToken(request);
+        Users currentUser = TokenUtils.verifyToken(token);
+        if (token == null) {
+            // 未登录
+            PrintWriter writer = new HttpServletResponseWrapper((HttpServletResponse) servletResponse).getWriter();
+            writer.write("{\n" +
+                "\"code\": 10007,\n" +
+                "\"msg\": \"用户未登录\",\n" +
+                "\"data\": null\n" +
+                "}");
+            writer.flush();
+            writer.close();
+            return;
+        }
+        boolean isAdmin = userService.checkIsAdmin(currentUser);
+        if (isAdmin) {
+            // 已登录且是管理员，放行
+            filterChain.doFilter(servletRequest, servletResponse);
+        } else {
+            // 非管理员
+            PrintWriter writer = new HttpServletResponseWrapper((HttpServletResponse) servletResponse).getWriter();
+            writer.write("{\n" +
+                "\"code\": 10009,\n" +
+                "\"msg\": \"无管理员权限\",\n" +
+                "\"data\": null\n" +
+                "}");
+            writer.flush();
+            writer.close();
+        }
+    }
+
+    @Override
+    public void destroy() {
+        Filter.super.destroy();
+    }
+}
+```
+
+同步修改管理员过滤器的配置类，主要是引入 `UserService`
+
+```java
+package com.mall.bootmall.config;
+
+import com.mall.bootmall.filter.AdminRoleFilter;
+import com.mall.bootmall.service.UserService;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AdminRoleFilterConfig {
+
+    private final UserService userService;
+
+    public AdminRoleFilterConfig(UserService userService) {
+        this.userService = userService;
+    }
+
+    @Bean
+    public AdminRoleFilter adminRoleFilter() {
+        return new AdminRoleFilter(userService);
+    }
+
+    @Bean(name = "adminRoleFilterConfigBean")
+    public FilterRegistrationBean adminRoleFilterConfig() {
+        FilterRegistrationBean filterRegistrationBean = new FilterRegistrationBean();
+        filterRegistrationBean.setFilter(adminRoleFilter());
+        filterRegistrationBean.addUrlPatterns("/admin/category/*");
+        filterRegistrationBean.addUrlPatterns("/admin/goods/*");
+        filterRegistrationBean.addUrlPatterns("/admin/file/*");
+        filterRegistrationBean.addUrlPatterns("/admin/order/*");
+        filterRegistrationBean.setName("adminRoleFilterConfig");
+        return filterRegistrationBean;
+    }
+}
+```
+
+然后改造用户过滤器，校验 token 成功后，将校验出的用户信息保存到 `currentUser`，以方便后续用到了用户过滤器的接口获取用户信息，这里使用了 `ThreadLocal`，以确保线程安全
+
+```java
+package com.mall.bootmall.filter;
+
+import com.mall.bootmall.model.pojo.Users;
+import com.mall.bootmall.util.TokenUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+import java.io.IOException;
+import java.io.PrintWriter;
+
+/**
+ * 用户过滤器
+ */
+public class UserRoleFilter implements Filter {
+
+    public static final ThreadLocal<Users> currentUser = new ThreadLocal<>();
+
+    public static Users getCurrentUser() {
+        return currentUser.get();
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        Filter.super.init(filterConfig);
+    }
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        // 设置响应编码，防止中文乱码
+        HttpServletResponse response = (HttpServletResponse) servletResponse;
+        response.setContentType("application/json;charset=utf-8");
+        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        try {
+            String token = TokenUtils.getToken(request);
+            if (token == null) {
+                // 未登录
+                PrintWriter writer = new HttpServletResponseWrapper((HttpServletResponse) servletResponse).getWriter();
+                writer.write("{\n" +
+                    "\"code\": 10007,\n" +
+                    "\"msg\": \"用户未登录\",\n" +
+                    "\"data\": null\n" +
+                    "}");
+                writer.flush();
+                writer.close();
+                return;
+            }
+            Users user = TokenUtils.verifyToken(token);
+            currentUser.set(user);
+            filterChain.doFilter(servletRequest, servletResponse);
+        } finally {
+            currentUser.remove();
+        }
+    }
+
+    @Override
+    public void destroy() {
+        Filter.super.destroy();
+    }
+}
+```
+
+后续如果用户过滤器过滤的接口需要获取用户信息，可以直接通过如下代码获取：
+
+```java
+Users currentUser = UserRoleFilter.getCurrentUser();
+```
+
+修改之前通过 session 获取用户信息的地方，全局搜索，进行替换，替换成新的获取方式
+
+最后是改造退出登录接口，由于采用的是 token 登录，后端不能主动使 token 失效，只能等待有效时间失效，因此这里采用简单的方式，退出登录由前端控制，后端不需要维护退出登录接口，可以直接将退出登录接口删除
+
+#### 12 跨域配置
+
+前后端分离的开发模式中，容易发生跨域问题，这个问题，前后端都能解决，我们来看看后端是如何解决的，新建一个跨域配置类 `CorsConfig`
+
+```java
+package com.mall.bootmall.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOriginPatterns("*")
+                .allowCredentials(true)
+                .maxAge(3600)
+                .allowedHeaders("*")
+                .allowedMethods("*");
+    }
+}
+```
+
+这将会配置所有类型的请求都允许跨域，仅开发阶段使用，生产阶段不要使用
 
 
 
