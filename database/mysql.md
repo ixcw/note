@@ -4,7 +4,7 @@
 
 数据库就是用来组织管理存储数据的仓库，是专门对数据进行管理的软件
 
-##### 1.1 安装
+##### 1.1 mysql 安装
 
 1. 下载社区版解压并且添加 bin 目录到系统 path 环境变量
 
@@ -96,7 +96,39 @@
     SHOW VARIABLES LIKE '%autocommit%';
     ```
 
-##### 1.2 用户及权限
+##### 1.2 mysql 简易免安装
+
+mysql 也可以免安装使用，可以方便地在不同的机器上移植
+
+1. 首先在 mysql 官网下载免安装版本的 [zip archive](https://downloads.mysql.com/archives/community/)
+
+2. 解压 archive 到喜欢的地方
+
+3. 打开解压目录的 bin 目录，调用命令行执行如下命令初始化 mysql
+
+   ```sh
+   mysqld --initialize-insecure --console
+   ```
+
+4. 继续执行命令运行 mysql
+
+   ```sh
+   mysqld --console
+   ```
+
+5. 登录到 mysql
+
+   ```sh
+   mysql -u root
+   ```
+
+6. 修改 root 用户密码
+
+   ```sh
+   alter user 'root'@'localhost' identified by '123456'
+   ```
+
+##### 1.3 用户及权限
 
 > **规范：** 命令用大写字母，数据库名、表名等用小写字母
 > **注意：** 在命令行里的mysql命令敲错不能回滚修改，只能`\c`清空当前输入
@@ -182,7 +214,7 @@ UPDATE USER SET HOST='%' WHERE USER='xxx'; --修改xxx用户的连接方式为�
    mysql -u root -p newpassword
    ```
 
-##### 1.3 Workbench
+##### 1.4 Workbench
 
 - 快捷键
 
@@ -201,13 +233,13 @@ UPDATE USER SET HOST='%' WHERE USER='xxx'; --修改xxx用户的连接方式为�
 
 ###### 2.1.1 登录
 
-`mysql -u user_name -p password` ，登录mysql
-
-`mysql  -h 127.0.0.1 -u user_name -p password` ，登录本地的mysql
+```mysql
+mysql -u user_name -p password  -- 登录mysql
+mysql  -h 127.0.0.1 -u user_name -p password  -- 登录本地的mysql
+\q -- 退出登录
+```
 
 ###### 2.1.2 管理
-
-
 
 DDL(Data Definition Language 数据定义语言)
 
@@ -843,14 +875,6 @@ phpstudy 是一款安装启动 MySQL 数据库的图形化软件，数据库的�
 ```sh
 net stop mysql
 sc delete mysql
-```
-
-win + r 输入 regedit 打开注册表，删除以下值
-
-```txt
-HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\Eventlog\Application\MySQL
-HKEY_LOCAL_MACHINE\SYSTEM\ControlSet002\Services\Eventlog\Application\MySQL
-HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Eventlog\Application\MySQL
 ```
 
 然后重新安装 phpstudy 里的数据库，重新启动即可
