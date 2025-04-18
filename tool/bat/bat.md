@@ -19,7 +19,11 @@ set /p message=please input commit message:
 
 #### 3 打印信息
 
-使用`echo`向命令行打印信息
+使用`echo`向命令行打印信息，使用如下命令输出空行
+
+```sh
+echo(
+```
 
 #### 4 暂停脚本
 
