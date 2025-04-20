@@ -6,68 +6,90 @@
 
 #### 2 Redis安装
 
-- Linux
+##### 2.1 Linux
 
-  提前安装好gcc编译器，然后执行下面的命令
+提前安装好gcc编译器，然后执行下面的命令
 
-  ```sh
-  wget https://download.redis.io/releases/redis-6.2.1.tar.gz
-  tar xzf redis-6.2.1.tar.gz
-  cd redis-6.2.1
-  make
-  ```
-  之后可以在redis安装目录下用命令启动
-  
-  ```sh
-  ./src/redis-server redis.conf
-  ```
-  
-- Windows
+```sh
+wget https://download.redis.io/releases/redis-6.2.1.tar.gz
+tar xzf redis-6.2.1.tar.gz
+cd redis-6.2.1
+make
+```
+之后可以在redis安装目录下用命令启动
 
-  安装方式1：
+```sh
+./src/redis-server redis.conf
+```
 
-  redis本身不支持windows，但是微软为其提供了支持，只是已经很久没有更新了，可用来学习，生产环境用linux版本的redis
+##### 2.2 Windows
 
-  可以到github下载：https://github.com/MicrosoftArchive/redis/releases，下载好后解压，双击`redis-server.exe`就可以运行了，如果想加载指定配置文件，可以在redis目录下用命令行启动
-  
-  ```cmd
-  redis-server redis.windows.conf
-  ```
-  
-  安装方式2：
-  
-  到另一个仓库下载：https://github.com/tporadowski/redis/releases
-  
-  安装后到安装目录找到 `redis.windows-service.conf` 文件，查找 `requirepass foobared` ，在其后添加 `requirepass 123456` 设置密码
-  
-  按下快捷键 ctrl + alt + del 打开进程管理，找到 redis 服务，重新启动
-  
-  在安装目录下执行命令测试
-  
-  ```sh
-  redis-cli
-  ```
-  
-  如果出现 `127.0.0.1:6379>` 的命令符提示，则安装成功
-  
-  继续测试密码设置
-  
-  ```sh
-  auth 123456
-  ```
-  
-  输出 OK 则为成功
-  
-  设置一个 key-value 值
-  
-  ```sh
-  set key1 hello
-  get key1
-  ```
-  
-  输出 hello 则为成功
-  
-  此时可以安装 Another redis desktop manager 通过图形界面与 redis 进行交互
+###### 2.2.1 微软安装包
+
+redis 本身不支持 windows，但是微软为其提供了支持，只是已经很久没有更新了，可用来学习，生产环境用linux版本的redis
+
+可以到 github 下载：https://github.com/MicrosoftArchive/redis/releases
+
+下载好后解压，双击`redis-server.exe`就可以运行了
+
+如果想加载指定配置文件，可以在redis目录下用命令行启动
+
+```cmd
+redis-server redis.windows.conf
+```
+
+###### 2.2.2 开源仓库
+
+另一个开源仓库：https://github.com/tporadowski/redis/releases
+
+安装后到安装目录找到 `redis.windows.conf` 文件，查找 `requirepass foobared`  在其后设置密码
+
+```conf
+################################## SECURITY ###################################
+
+# Require clients to issue AUTH <PASSWORD> before processing any other
+# commands.  This might be useful in environments in which you do not trust
+# others with access to the host running redis-server.
+#
+# This should stay commented out for backward compatibility and because most
+# people do not need auth (e.g. they run their own servers).
+#
+# Warning: since Redis is pretty fast an outside user can try up to
+# 150k passwords per second against a good box. This means that you should
+# use a very strong password otherwise it will be very easy to break.
+#
+# requirepass foobared
+
+requirepass 123456
+```
+
+在安装目录下执行命令指定配置文件启动 redis，后续可以编写成 bat 脚本文件方便启动
+
+```sh
+redis-server redis.windows.conf
+```
+
+直接点击 `redis-cli.exe` 运行，或者在安装目录下执行命令启动 redis 命令行工具
+
+```sh
+redis-cli
+```
+
+如果出现 `127.0.0.1:6379>` 的命令符提示，则安装成功，继续测试密码设置，输出 OK 则为成功
+
+```sh
+127.0.0.1:6379> auth 123456
+OK
+```
+
+设置一个 key-value 值，然后获取值，成功输出 hello redis 则为成功
+
+```sh
+set key "hello redis"
+get key
+```
+
+然后可以安装 Another redis desktop manager 通过图形界面与 redis 进行交互了
 
 #### 3 守护进程
 

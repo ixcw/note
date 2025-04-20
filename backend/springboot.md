@@ -6936,7 +6936,34 @@ public class CorsConfig implements WebMvcConfigurer {
 
 这将会配置所有类型的请求都允许跨域，仅开发阶段使用，生产阶段不要使用
 
+#### 13 自动热重载
 
+项目每次修改过后，都需要重新启动，这样是比较费时的，可以使用 **Spring Boot DevTools**，这是官方提供的开发期工具
+
+1. 添加依赖，无需指定版本，会自动匹配 boot 的版本
+
+   ```xml
+   <dependency>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-devtools</artifactId>
+       <scope>runtime</scope>
+       <optional>true</optional>
+   </dependency>
+   ```
+
+2. 确认 idea 已开启自动编译
+
+   打开 `设置`，点击 `构建、执行、部署`，点击 `编译器`，勾选 `自动构建项目`，然后应用、确定
+
+3. 配置 `application.properties`，指定哪些路径需要热重载
+
+   ```properties
+   spring.devtools.restart.enabled=true
+   spring.devtools.restart.additional-paths=src/main/java
+   spring.devtools.restart.exclude=static/**,public/**
+   ```
+
+> 热重载不一定会生效，如果不生效还是得手动重启，只是方便了大部分场景的调试
 
 
 
