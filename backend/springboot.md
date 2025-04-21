@@ -6965,13 +6965,13 @@ public class CorsConfig implements WebMvcConfigurer {
 
 > 热重载不一定会生效，如果不生效还是得手动重启，只是方便了大部分场景的调试
 
+#### 14 响应 404
 
+controller 方法正常执行，service 也能正常执行删除数据，但是最终响应了 404，经排查发现，是类注解没有加 `RestController` 或者 controller 方法上没有加 `@ResponseBody`，导致无法正确序列化返回值，使得 spring 框架认为没有返回响应体，最终响应了 404，解决办法就是添加正确的注解
 
+#### 15 修改校验注解
 
-
-
-
-
+修改校验注解时，记得将 getter 和 setter 上的校验注解一并改了，不然不会生效
 
 
 
