@@ -5256,7 +5256,58 @@ s.forEach(val => console.log(val))
 // c
 ```
 
-##### 18.9 Promise
+##### 18.9 Map
+
+**`Map`** 对象保存键值对，并且能够记住键的原始插入顺序。任何值（对象或者[原始值](https://developer.mozilla.org/zh-CN/docs/Glossary/Primitive)）都可以作为键或值，基本使用如下：
+
+```js
+const map = new Map();
+
+map.set("a", 1);
+map.set("b", 2);
+map.set("c", 3);
+
+console.log(map.get("a"));  // 1
+
+map.set("a", 97);
+
+console.log(map.get("a"));  // 97
+
+console.log(map.size);  // 3
+
+map.delete("b");
+
+console.log(map.size);  // 2
+```
+
+`Map` 中的一个键**只能出现一次**；它在 `Map` 的集合中是独一无二的
+
+`Map` 对象按键值对迭代——一个 [`for...of`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Statements/for...of) 循环在每次迭代后会返回一个形式为 `[key, value]` 的数组
+
+比如对上面的 map 进行遍历输出
+
+```js
+for (let v of map) {
+  console.log(v);  // Array ["a", 97] Array ["c", 3]
+}
+```
+
+map 的构造函数可以接收一个键值对数组，创建一个 map 对象，这是很常见和方便的创建 map 的做法
+
+```js
+const data = [
+  { id: 1, name: "james" },
+  { id: 2, name: "jack" },
+];
+
+const map = new Map(data.map(item => [item.id, item.name]));
+
+console.log(map.get(1)); // "james"
+```
+
+Map 的查找效率很高，时间复杂度为 O(1)
+
+##### 18.10 Promise
 
 Promise 是es6 引进的 api，专门用于处理 js 中的异步编程的问题
 我们先看看下面的例子，Ajax 接口返回的是一个字符串 helloworld，我们期望打印的是 helloworld
@@ -5522,7 +5573,7 @@ Promise 对象方法可以直接通过 Promise 调用
    })
    ```
 
-##### 18.10 Class
+##### 18.11 Class
 参见本文 [14 面向对象](#)
 
 #### 19 ES7

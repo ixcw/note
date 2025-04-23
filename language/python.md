@@ -20,20 +20,22 @@ pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 #### 2 python 版本切换
 
-##### 2.1 安装版本管理软件
-
-[参考文章](https://blog.csdn.net/tqlisno1/article/details/108908775)
+##### 2.1 Anaconda
 
 使用 [Anaconda](https://www.anaconda.com/) 管理 python 环境
+
+> [参考文章](https://blog.csdn.net/tqlisno1/article/details/108908775)
 
 Anaconda 成为科学计算的事实标准，核心在于它解决了科学计算中的三大痛点：
 ✅ **复杂依赖管理**（Python + 非 Python）
 ✅ **性能优化**（MKL/CUDA 集成）
 ✅ **复现性**（跨平台环境隔离）
 
-这里使用的 Anaconda 版本为 2.6.3，pycharm 版本为 2024.1.1
+> 这里使用的 Anaconda 版本为 2.6.3，pycharm 版本为 2024.1.1
 
-安装完后，使用 Anaconda Navigator 图形化管理软件进行 python 的环境管理
+###### 2.1.1 Anaconda Navigator
+
+使用图形化软件管理 python 环境
 
 1. 首先添加源，加速包的下载速度，点击 channels，添加如下的清华源
 
@@ -48,14 +50,22 @@ Anaconda 成为科学计算的事实标准，核心在于它解决了科学计�
 
 这样就完成了 python 环境的创建
 
-也可以使用 conda 命令完成创建
+###### 2.1.2 命令行创建
 
 ```sh
 conda create -n myenv python=3.8  # myenv 为环境名，3.8 为 Python 版本
 conda activate myenv
 ```
 
-安装包
+可以在安装时查看详细输出日志
+
+```sh
+conda create -n myenv python=3.8 -v
+```
+
+###### 2.1.3 使用 conda 安装依赖
+
+虽然 conda 可以安装 txt 格式的 `requirements.txt` 依赖文件
 
 ```sh
 conda install --file requirements.txt
@@ -83,7 +93,7 @@ dependencies:
 conda env create -f environment.yml
 ```
 
-如果 yml 文件中未指定环境名，则需通过 `-n <env_name>` 手动命名
+如果  `environment.yml` 文件中未指定环境名，则需通过 `-n <env_name>` 手动命名
 
 ```sh
 conda env create -f env.yml -n my_env
@@ -100,6 +110,14 @@ conda env export > environment.yml  # 导出当前环境中的依赖到 environm
 
 ```sh
 conda env update -f environment.yml --prune
+```
+
+###### 2.1.4 conda 清理缓存
+
+如果安装出现问题，可以尝试清理缓存
+
+```sh
+conda clean --all
 ```
 
 ##### 2.2 切换使用 python 版本
