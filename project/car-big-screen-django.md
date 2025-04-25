@@ -924,6 +924,10 @@ urlpatterns = [
 
 5. 运行 `manage.py` 文件，启动 python 后端
 
+   ```sh
+   python manage.py runserver
+   ```
+
 6. 前端项目安装依赖
 
    ```sh
