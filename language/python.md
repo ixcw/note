@@ -479,6 +479,54 @@ if __name__ == '__main__':
                await asyncio.sleep(1)
    ```
 
+##### 5.2 配置文件
+
+有些变量可以做成配置，方便在不同的配置之间切换，避免同一个配置，复制粘贴在多个代码文件中导致难以维护的问题
+
+1. 安装 `python-dotenv` 依赖
+
+   ```sh
+   pip install python-dotenv
+   ```
+
+2. 在项目根目录创建 `.env` 文件
+
+   ```env
+   # .env
+   LLM_API_KEY=your_api_key_here
+   LLM_API_BASE=https://your-custom-api-url.com
+   ```
+
+3. 在主应用的 `settings.py` 中引用 `.env` 文件
+
+   ```python
+   from dotenv import load_dotenv
+   
+   # Load .env file
+   load_dotenv()
+   ```
+
+4. 或者直接定义在 `settings.py` 中
+
+   ```python
+   LLM_API_KEY = "sk-4d7e03cf4d7e444e8eda39522d8056fc"
+   LLM_API_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+   ```
+
+5.  代码中使用
+
+   ```python
+   import django
+   from django.conf import settings
+   
+   os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mywebsite.settings")
+   django.setup()
+   
+   def call_llm_api():
+       api_key = settings.LLM_API_KEY
+       base_url = settings.LLM_API_BASE
+       # 调用大模型 API...
+   ```
 
 #### 6 语法
 
