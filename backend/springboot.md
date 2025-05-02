@@ -662,7 +662,7 @@ CREATE TABLE `order_items` (
   "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
 <generatorConfiguration>
   <!-- 数据库驱动配置 -->
-  <classPathEntry location="D:\Develop\apache-maven-3.2.5\local-repository\mysql\mysql-connector-java\8.0.27\mysql-connector-java-8.0.27.jar"/>
+  <classPathEntry location="D:\runtime-env\apache-maven-3.2.5\local-repository\mysql\mysql-connector-java\8.0.27\mysql-connector-java-8.0.27.jar"/>
   <context id="MysqlTables" targetRuntime="MyBatis3">
     <property name="autoDelimitKeywords" value="true"/>
     <!-- 可以使用``包括字段名，避免字段名与sql保留字冲突报错 -->
@@ -750,15 +750,23 @@ CREATE TABLE `order_items` (
 </generatorConfiguration>
 ```
 
-使用 maven 重新加载依赖，然后打开 maven 的插件选项，找到 `mybatis-generator`，继续点开菜单，双击 `mybatis-generator:generate`，如果终端打印 `BUILD SUCCESS`，则 pojo 和 mapper 类生成成功，resources 目录下也成功生成了对应的 xml 文件，用于存放 sql 语句
+使用 maven 重新加载依赖
 
->DAO 和 Mapper：
+打开 maven 的插件选项，找到 `mybatis-generator`，继续点开菜单，双击 `mybatis-generator:generate`
+
+如果终端打印 `BUILD SUCCESS`
+
+则 pojo 和 mapper 类生成成功，resources 目录下也成功生成了对应的 xml 文件，用于存放 sql 语句
+
+>关于 DAO 和 Mapper
 >
->- **DAO 和 Mapper 本质相同**，都是用来操作数据库的接口
->- **DAO 是通用术语，Mapper 是 MyBatis 的特定叫法**
->- **现代 MyBatis 项目推荐用 `Mapper`**，更贴合框架设计
+>在某些项目中可能找不到 mapper，而是叫做 dao (Data Access Object)，关于它们的区别如下：
 >
->DAO 是标准名称，Mapper 是 MyBatis 的实现方式
+>- **DAO 和 Mapper 本质上相同**，都是用来描述操作数据库的接口，这是一种设计模式，用于将底层的数据访问操作与业务逻辑分离开来，更容易维护
+>- **DAO 是通用术语，是普遍的叫法，而 Mapper 是 MyBatis 的特定叫法**
+>- **现代 MyBatis 项目推荐用 `Mapper` 进行命名**，这样更贴合框架设计
+>
+>总结：DAO 是标准名称，Mapper 是 MyBatis 的实现方式
 >
 >就像「手机」和「iPhone」的关系 —— iPhone 也是手机，但 iPhone 特指苹果的实现
 
@@ -2742,6 +2750,39 @@ public class SpringDocConfig {
 ```
 
 配置完成后，文档页面的顶部就会出现 **Select a definition** 的分类选择框，提供给用户选择分类 api 了
+
+可以给文档加上 Authorize 按钮，添加 token 认证，以方便直接在文档上进行测试
+
+```java
+package com.boot.bootspring.config;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class SpringDocConfig {
+    @Bean
+    public OpenAPI myOpenAPI() {
+        return new OpenAPI()
+            .info(new Info()
+                .title("bootspring api 文档")
+                .description("bootspring 系统接口文档")
+                .version("v1.0.0")
+            )
+            .components(new Components()
+                .addSecuritySchemes("Bearer Token", new SecurityScheme()
+                    .type(SecurityScheme.Type.HTTP)
+                    .scheme("bearer")
+                    .bearerFormat("JWT")))
+            .addSecurityItem(new SecurityRequirement().addList("Bearer Token"));
+    }
+}
+```
 
 想要文档看起来更加完善，了解注解是很有必要的，下面是 SpringDoc 的注解分类：
 
