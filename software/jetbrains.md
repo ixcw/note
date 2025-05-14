@@ -1,6 +1,14 @@
 1 下载软件
 
-迅雷云盘，或官网下载2024.1.1版本软件（webstorm为2024.1.2），破解补丁已多存一份到 [ysepan](http://ys-d.ysepan.com/615464652/218468928/i4I3K1H863JO5LVGSLwh0c/jetbrains.7z?lx=xz)
+迅雷云盘，或官网下载2024.1.1版本软件（webstorm为2024.1.2）
+
+破解补丁已多存一份到 [ysepan](http://ys-d.ysepan.com/615464652/218468928/i4I3K1H863JO5LVGSLwh0c/jetbrains.7z?lx=xz)
+
+破解补丁更新：
+
+[JetBrains 全家桶激活（可激活2025）](https://ixcw.lanzouy.com/iBof72w84veh)
+
+[JetBrains 全家桶激活（一键激活2021-2024）](https://ixcw.lanzouy.com/iAS502w84vha)
 
 #### 2 安装软件
 
