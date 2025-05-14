@@ -34,20 +34,31 @@ node -v
 
 ##### 2.2 nvm
 
-node有具体的版本，然而不同的项目依赖的node版本可能是不一样的，这就导致只安装单一个版本的node并不能兼容所有的项目，于是就有人就开发了nvm这款工具用来管理node版本
+不同的项目依赖的 node 版本可能是不一样的，这就导致在电脑上仅安装单一版本的 node 并不能满足所有项目的需要，于是就有人就开发了 nvm 这款工具专门用来管理 node 版本
 
-1. 安装nvm
+1. 安装 nvm
 
-   可以到github上下载[nvm](https://github.com/coreybutler/nvm-windows/releases)，安装完成后打开终端输入命令验证安装
+   可以到 github 上下载 [nvm](https://github.com/coreybutler/nvm-windows/releases)，安装完成后打开终端输入命令验证安装
 
    ```powershell
    nvm
    ```
 
-2. 使用nvm切换node版本
+2. 配置镜像
+
+   nvm 默认从国外下载，有时速度很慢，甚至会下载失败，因此配置国内淘宝镜像下载，提高下载速度
+
+   打开 nvm 的安装目录，编辑 `settings.txt`，添加下载 node 和 npm 的镜像地址
+
+   ```txt
+   node_mirror: https://npmmirror.com/mirrors/node/
+   npm_mirror: https://npmmirror.com/mirrors/npm/
+   ```
+
+3. 使用 nvm 切换 node 版本
 
    ```bash
-   # 查看当前安装的node版本
+   # 查看当前安装的node版本，可简写为 nvm ls
    nvm list
    # 列出可安装的 node 版本
    nvm list available
