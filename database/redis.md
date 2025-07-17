@@ -1,14 +1,16 @@
-#### 1 Redis简介
+#### 1 简介
 
-- redis是key-value型的nosql数据库，not only sql
-- redis将数据存在内存中，同时也能将数据持久化到磁盘上
-- redis常用于缓存，利用内存的高效提高程序的处理速度
+redis 是 key-value 型的 nosql 数据库，not only sql，不仅仅是 sql，作为非关系型数据库，不需要预定义严格的表结构（如行和列），数据可以以键值对、文档、图等形式存储，非常适合动态或不确定的数据模型
 
-#### 2 Redis安装
+redis 的数据是存储在内存中的，这意味着读取速度是非常快的，同时也能将数据持久化地存储到磁盘上
+
+综合以上优点，redis 常被用作系统中的缓存，充分利用内存的读取高效性提高数据的处理速度
+
+#### 2 安装
 
 ##### 2.1 Linux
 
-提前安装好gcc编译器，然后执行下面的命令
+提前安装好 gcc 编译器，然后执行如下命令
 
 ```sh
 wget https://download.redis.io/releases/redis-6.2.1.tar.gz
@@ -16,7 +18,7 @@ tar xzf redis-6.2.1.tar.gz
 cd redis-6.2.1
 make
 ```
-之后可以在redis安装目录下用命令启动
+之后可以在 redis 安装目录下使用命令启动
 
 ```sh
 ./src/redis-server redis.conf
@@ -26,13 +28,9 @@ make
 
 ###### 2.2.1 微软安装包
 
-redis 本身不支持 windows，但是微软为其提供了支持，只是已经很久没有更新了，可用来学习，生产环境用linux版本的redis
+redis 本身不支持 windows 系统的，但是微软为其提供了支持，只是已经很久没有更新了，但是不影响，生产环境一般都是使用 linux，[windows 版本](https://github.com/MicrosoftArchive/redis/releases) 可以用来学习，下载好后解压，双击`redis-server.exe`就可以运行了
 
-可以到 github 下载：https://github.com/MicrosoftArchive/redis/releases
-
-下载好后解压，双击`redis-server.exe`就可以运行了
-
-如果想加载指定配置文件，可以在redis目录下用命令行启动
+如果想在运行时加载指定的配置文件，可以在解压的 redis 目录下使用如下命令启动
 
 ```cmd
 redis-server redis.windows.conf
@@ -40,9 +38,9 @@ redis-server redis.windows.conf
 
 ###### 2.2.2 开源仓库
 
-另一个开源仓库：https://github.com/tporadowski/redis/releases
+redis 的另一个开源仓库是：https://github.com/tporadowski/redis/releases
 
-安装后到安装目录找到 `redis.windows.conf` 文件，查找 `requirepass foobared`  在其后设置密码
+下载安装后到安装目录找到 `redis.windows.conf` 文件，查找 `requirepass foobared`  在其后设置密码
 
 ```conf
 ################################## SECURITY ###################################
@@ -63,7 +61,7 @@ redis-server redis.windows.conf
 requirepass 123456
 ```
 
-在安装目录下执行命令指定配置文件启动 redis，后续可以编写成 bat 脚本文件方便启动
+在安装目录下执行命令指定配置文件启动 redis（后续可以编写成 bat 脚本文件方便启动）
 
 ```sh
 redis-server redis.windows.conf
@@ -89,19 +87,19 @@ set key "hello redis"
 get key
 ```
 
-然后可以安装 Another redis desktop manager 通过图形界面与 redis 进行交互了
+接下来就可以安装 Another redis desktop manager 通过图形界面与 redis 进行交互了
 
 #### 3 守护进程
 
-由于直接用命令启动redis，redis是在命令行的前台运行的，退出后redis就停止运行了，很不方便，因此需要让redis在后台运行
+由于直接用命令启动 redis，redis 是在命令行的前台运行的，退出命令行后 redis 就停止运行了，这样是不方便的，如果需要让 redis 在后台运行的话，可以进行如下步骤开启守护进程
 
-1. 编辑redis的配置文件`redis.conf`
+1. 编辑 redis 的配置文件 `redis.conf`
 
    ```sh
    vim redis.conf
    ```
 
-   找到守护进程设置，改为yes
+   找到守护进程的设置，将其改为 yes，变成开启状态
 
    ```config
    ################################# GENERAL #####################################
@@ -112,56 +110,56 @@ get key
    daemonize no
    ```
 
-2. 此时再用命令启动，redis就会在后台运行了，不会随着退出或终端关闭而结束运行
+2. 此时再用命令启动，redis 就会在后台运行了，不会随着退出命令行而结束运行
 
    ```sh
    ./src/redis-server redis.conf
    ```
-3. redis安装目录的src目录下有redis客户端`redis-cli`，可以运行它与redis交互，输入exit可以退出
+3. redis 安装目录的 src 目录下有 redis 客户端 `redis-cli`，可以运行它与 redis 进行交互，输入 exit 命令退出
 
    ```sh
    ./src/redis-cli
    ```
 
-   可以输入ping检查redis服务是否正常，PONG就是正常
+   可以输入 ping 检查 redis 服务是否正常，返回 PONG 代表正常
 
    ```sh
    127.0.0.1:6379> ping
    PONG
    ```
    
-   可以利用客户端正常关闭redis服务
+   可以利用客户端关闭 redis 服务
 
    ```sh
    ./src/redis-cli shutdown
    ```
 
-#### 4 Redis基本配置
+#### 4 基本配置
 
 ![](./imgs/redis常用配置.png)
 
-修改`redis.conf`配置文件可以修改常用配置
+修改 `redis.conf` 配置文件可以修改常用配置
 - port
 
-  port默认端口是6379，不过不建议使用默认端口，容易受到黑客攻击
+  port 默认端口是 6379，不过不建议使用默认端口，容易受到黑客攻击
 
   ```sh
   port 6379
   ```
-  修改端口后redis的客户端访问时需要指定修改的端口，否则会不能访问，因为默认访问的是6379端口
+  修改端口后 redis 的客户端访问时需要指定修改的端口，否则会不能访问，因为默认访问的是 6379 端口
   ```sh
   ./src/redis-cli -p 6380
   ```
   
 - logfile
 
-  logfile默认是空的，可以修改为
+  logfile 默认是空的，可以修改为
 
   ```sh
   logfile "redis.log"
   ```
 
-  这时启动redis后就会在redis安装目录下生成`redis.log`日志文件
+  这时启动 redis 后就会在 redis 安装目录下生成 `redis.log` 日志文件
 
 - databases
 
@@ -191,34 +189,34 @@ get key
   OK
   ```
 
-#### 5 Redis通用命令
+#### 5 通用命令
 
 ![](./imgs/redis通用命令.png)
 
 - 不同编号的数据库保存的数据彼此独立
 
-- set重复设置会覆盖以前的值
+- set 重复设置会覆盖以前的值
 
-- keys查询结果只显示key不显示value
+- keys 查询结果只显示 key 不显示 value
 
   ```sh
   keys * # 查询所有的key
   ```
   
-- expire设置key的过期时间，从expire命令生效的时间开始计算，单位s
+- expire 设置 key 的过期时间，从 expire 命令生效的时间开始计算，单位 s
 
   ```sh
   expire name 30
   ```
 
-  结合ttl来使用，ttl查看剩余过期时间
+  结合 ttl 来使用，ttl 查看剩余过期时间
 
   ```sh
   ttl name # (integer) 22
   ttl name # (integer) 18
   ttl name # (integer) 9
   ```
-#### 6 Redis数据类型
+#### 6 数据类型
 
 redis有5种数据类型，String、Hash、List、Set、Zset，下面分别讲解
 
@@ -275,36 +273,36 @@ redis有5种数据类型，String、Hash、List、Set、Zset，下面分别讲�
 
 #### 7 Jedis
 
-实际应用中，不管是mysql、oracle还是redis，都不会直接和数据库进行交互，而是通过与编程语言结合的方式，通过编程语言去操作数据库，Java里面操作redis的工具就是jedis，jedis是用java开发的redis客户端工具包，只是对redis命令的封装
+实际应用中，不管是 mysql、oracle 还是 redis，都不会 **直接使用命令** 的方式和数据库进行交互，而是通过与编程语言结合的方式，通过编程语言去操作数据库，java 里面操作 redis 的工具库名为 jedis，jedis 是用 java 开发的 redis 客户端工具包，只是对 redis 命令的封装
 
-1. 默认情况下，redis出于安全考虑，只允许本地访问，为了可以远程访问，需要修改redis配置文件
+1. 默认情况下，redis 出于安全考虑，只允许本地访问，为了可以远程访问，需要修改redis配置文件
 
    ```sh
    vim redis.conf
    ```
 
-   关闭保护模式，yes改为no
+   关闭保护模式，yes 改为 no
 
    ```sh
    protected-mode no
    ```
 
-   修改绑定的本地ip地址，`127.0.0.1`改为`0.0.0.0`，表示所有ip的主机都可以访问，但是生产环境不要这样写，应该指定特定的ip地址，防止别的机器连进来
+   修改绑定的本地 ip 地址，`127.0.0.1` 改为 `0.0.0.0`，表示所有 ip 的主机都可以访问 redis，但是生产环境不要这样写，应该填写特定的 ip 地址，防止其他机器连进来
 
    ```sh
    bind 0.0.0.0
    ```
 
-2. 修改防火墙，开放6379端口
+2. 修改防火墙，放开 6379 端口
 
    ```sh
    firewall-cmd --zone=public --permanent --add-port=6379/tcp
    firewall-cmd --reload
    ```
 
-3. 访问redis官网，找到client，选择java，访问jedis在github的项目，找到maven坐标，就可以在maven项目中使用了
+3. 访问 redis 官网，找到 client，选择 java，访问 jedis 在 github 上的项目，找到 maven 坐标，就可以在maven 项目中添加 jedis 库了
 
-4. 打开idea创建maven项目，引入jedis坐标，就可以编写java代码了，jedis的方法名和redis命令名几乎是一样的
+4. 打开 idea 创建 maven 项目，引入 jedis 的坐标，就可以编写java代码了，jedis的方法名和redis命令名几乎是一样的
 
    ```java
    package com.heeh.jedis;
@@ -356,7 +354,7 @@ redis有5种数据类型，String、Hash、List、Set、Zset，下面分别讲�
        }
    }
    ```
-   >redis保存中文及特殊符号采用Unicode进行存储，底层默认使用utf-8，utf-8中一个中文使用3个字节表达，所以在`redis-cli`中查询时中文的结果是Unicode编码，形如`"\xe5\xbc\xa0\xe4\xb8\x89"`，中文意思是`张三`，`\xe5`表示一个字节，这样存储可以避免中文乱码，jedis从redis中取出数据时会把Unicode转换为中文
+   >redis 保存中文及特殊符号采用 Unicode 编码进行存储，底层默认使用 utf-8，utf-8 中一个中文使用 3 个字节表达，所以在`redis-cli`中查询时中文的结果是 Unicode 编码，形如`"\xe5\xbc\xa0\xe4\xb8\x89"`，中文意思是`张三`，`\xe5`表示一个字节，这样存储可以避免中文乱码，jedis 从 redis 中取出数据时会把 Unicode 转换为中文
 
 
 #### 8 利用Redis缓存数据
