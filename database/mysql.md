@@ -237,7 +237,7 @@ UPDATE USER SET HOST='%' WHERE USER='xxx'; --修改xxx用户的连接方式为�
 
 ```mysql
 mysql -u user_name -p  -- 输入 password 登录 mysql
-mysql  -h 127.0.0.1 -u user_name -p  -- 登录本地的mysql
+mysql  -h 127.0.0.1 -u user_name -p  -- 登录本地的 mysql
 \q -- 退出登录
 ```
 
@@ -246,7 +246,7 @@ mysql  -h 127.0.0.1 -u user_name -p  -- 登录本地的mysql
 DDL(Data Definition Language 数据定义语言)
 
 ```mysql
-help ? \? ? SHOW  --  mysql命令帮助，SHOW命令帮助
+help ? \? ? SHOW  --  mysql 命令帮助，SHOW 命令帮助
 
 CREATE DATABASE db_name; --  创建数据库
 CREATE DATABASE IF NOT EXISTS db_name; --  如果不存在数据库则创建数据库，否则不创建
@@ -260,20 +260,20 @@ SHOW DATABASES;  --  显示当前用户使用的数据库
 SHOW CREATE DATABASE db_name;  --  显示创建数据库的语句，查看使用的字符集
 
 CREATE TABLE tb_name(  -- 创建数据表
-    id int primary key auto_increment,  -- no号，int类型，定义为主键，自增 
+    id int primary key auto_increment,  -- no 号，int 类型，定义为主键，自增 
     name varchar(10),  -- 名字 
-    sal double  -- 工资，double类型
+    sal double  -- 工资，double 类型
 );
 
 CREATE TABLE tb_name1 LIKE tb_name;  -- 创建一个表的复制表
 SHOW TABLES;  -- 显示当前数据库中的表
-SHOW CREATE TABLE tb_name;  -- 查看创建表的SQL语句
+SHOW CREATE TABLE tb_name;  -- 查看创建表的 SQL 语句
 DESC tb_name;  -- 查看数据表结构
 DROP TABLE tb_name;  -- 删除表
 DROP TABLE IF EXISTS tb_name;  -- 如果存在表则删除表
-ALTER TABLE tb_name RENAME TO tb_name1; -- 修改表名为tb_name1
+ALTER TABLE tb_name RENAME TO tb_name1; -- 修改表名为 tb_name1
 SHOW CREATE TABLE tb_name;  --  显示创建表的语句，查看使用的字符集
-ALTER TABLE tb_name CHARACTER SET utf8; -- 修改表的字符集为utf-8
+ALTER TABLE tb_name CHARACTER SET utf8; -- 修改表的字符集为 utf-8
 ALTER TABLE tb_name ADD col_name data_type;  -- 给表增加一列数据
 ALTER TABLE tb_name CHANGE col_name new_col_name new_data_type;  -- 修改列名及列类型
 ALTER TABLE tb_name MODIFY col_name new_col_name new_data_type;  -- 修改列名及列类型
@@ -285,71 +285,81 @@ ALTER TABLE tb_name DROP col_name;  -- 给表删除一列数据
 DML(Data Manipulation Language 数据操控语言)
 
 ###### 2.3.1 增
+
+
 ```mysql
--- 插入一条新记录，先列举字段名称，然后在VALUES中写出对应字段的值
--- 这里没有列出id字段，也没有列出id字段对应的值
--- 因为id字段是一个自增主键，它的值可以由数据库自己推算出来
+-- 插入一条新记录，先列举字段名称，然后在 VALUES 中写出对应字段的值
 INSERT INTO student (class_id, name, gender, score) VALUES (2, '大牛', 'M', 80);
+
 --  一次性添加多条新记录
 INSERT INTO student (class_id, name, gender, score) VALUES
   (1, '大宝', 'M', 87),
   (2, '二宝', 'M', 81);
--- 默认添加全部字段，值和字段要一一对应
+
+-- 不列举字段名称则默认添加全部字段，注意值的顺序和字段要一一对应
 INSERT INTO student VALUES(3, '三宝', 'F', 88);
 ```
+
+>示例没有列出 id 字段，也没有列出 id 字段对应的值，这是因为 id 字段是一个自增主键，它的值可以由数据库自己推算
+
 ###### 2.3.2 删
+
 ```mysql
--- 删除student表中id=1的记录
+-- 删除 student 表中 id=1 的记录
 DELETE FROM student WHERE id=1;
--- 删除id=5,6,7的记录
+-- 删除 id=5,6,7 的记录
 DELETE FROM student WHERE id>=5 AND id<=7;
--- 删除id为null的记录
+-- 删除 id 为 null 的记录
 DELETE FROM student WHERE id IS NULL;
--- 删除表中所有的记录，但是会执行很多次delete语句，效率不高
+-- 删除表中所有的记录，但是会执行很多次 delete 语句，效率不高
 DELETE FROM student；
 -- 更快的方法，原理是直接删除表，再创建一个一样的表来代替
 TRUNCATE TABLE student;
 ```
+
 ###### 2.3.3 改
+
 ```mysql
--- 修改id为1的学生信息
+-- 修改 id 为 1 的学生信息
 UPDATE student SET name='大牛', score=66 WHERE id=1;
 ```
+
 ###### 2.3.4 查
+
 DQL(Data Query Language 数据查询语言)
 ```mysql
 -- 查珣所有的记录
 SELECT * FROM student;
 -- 查询姓名和年龄
 SELECT name, age FROM student;
--- 如果查询到的结果集中有重复，可以添加distinct去除重复的查询结果
+-- 如果查询到的结果集中有重复，可以添加 distinct 去除重复的查询结果
 SELECT DISTINCT address FROM student;
 
--- 分数>=80，并且是男生，AND可以替换为&&，但推荐用AND，更清晰，在多种数据库之间也更加通用
+-- 分数 >=80，并且是男生，AND 可以替换为 &&，但推荐用 AND，语义更清晰，而且在多种数据库之间也更加通用
 SELECT * FROM student WHERE score >= 80 AND gender = 'M';
--- 分数>=80，或者是男生，OR可以替换为||
+-- 分数 >=80，或者是男生，OR 可以替换为 ||
 SELECT * FROM student WHERE score >= 80 OR gender = 'M';
--- 不是2班的学生,<>可以替换为!=，或者使用where not class_id = 2，not起到取反的作用
+-- 不是 2 班的学生,<> 可以替换为 !=，或者使用 where not class_id = 2，not 起到取反的作用
 SELECT * FROM student WHERE class_id <> 2;
--- 分数在80以下或者90以上，并且是男生
+-- 分数在 80 以下或者 90 以上，并且是男生
 SELECT * FROM student WHERE (score < 80 OR score > 90) AND gender = 'M';
 
 -- 查询可进行简单数值运算
--- 例如给所有的数学字段加5分
+-- 例如给所有的数学字段加 5 分
 SELECT math+5 FROM student;
--- 查询math + english的和，并且给结果起别名为总成绩，AS可以省略为空格
--- IFNULL()函数用于处理值为null的情况，将null值替换为传入的参数
+-- 查询 math + english 的和，并且给结果起别名为总成绩，AS 可以省略为空格
+-- IFNULL() 函数用于处理值为 null 的情况，将 null 值替换为传入的参数
 SELECT *,(math+IFNULL(english,0)) AS 总成绩 FROM student;
--- 查询id是1或3或5的学生
+-- 查询 id 是 1 或 3 或 5 的学生
 SELECT * FROM student WHERE id IN(1,3,5);
--- 查询id不是1或3或5的学生
+-- 查询 id 不是 1 或 3 或 5 的学生
 SELECT * FROM student WHERE id NOT IN(1,3,5);
--- 查询数学分数在75~90之间的学生，分数包含75和90
+-- 查询数学分数在 75~90 之间的学生，分数包含 75 和 90
 SELECT * FROM student WHERE math BETWEEN 75 AND 90;
 
--- 可使用like进行模糊查询
--- MySQL通配符
--- %：匹配0或多个字符
+-- 可使用 like 进行模糊查询
+-- MySQL 通配符
+-- %：匹配 0 或多个字符
 -- _：匹配单个字符
 -- 查询姓马的学生
 SELECT * FROM student WHERE name LIKE '马%';
@@ -362,20 +372,21 @@ SELECT * FROM student WHERE name LIKE '%德%';
 
 -- 排序
 
--- ASC，升序（ascend），不写ASC默认升序
+-- ASC，升序（ascend）
 -- DESC，降序（descend）
+-- 不写排序则默认升序
 SELECT * FROM student ORDER BY math;
 SELECT * FROM student ORDER BY math ASC;
 SELECT * FROM student ORDER BY math DESC;
 
--- 排序可以设定多条件查询，当前面的记录一样时，会计算后面的字段进行排序
+-- 排序可以设定多种条件查询，当前面的记录一样时，会根据后面的字段排序条件进行排序
 -- 前后条件不一样时，优先计算前面的条件
 -- 找出数学成绩一样，但是英语成绩更高的学生
 SELECT * FROM student ORDER BY math DESC, english DESC;
 
--- 聚合函数：将整列数据作为运算的范围，但是会排除值为null的值
--- count：计算整列的个数，一般选择非空的列，比如主键或者全选*，但全选*一般不推荐
--- 非要选择一般的列，可以采用IFNULL()函数解决null问题
+-- 聚合函数：将整列数据作为运算的范围，注意会排除数据为 null 的值
+-- count：计算整列的数量，一般选择非空的列，比如主键或者全选 *，但全选 * 一般是不推荐的
+-- 非要选择一般的列，可以采用 IFNULL() 函数解决值为 null 问题
 SELECT COUNT(id) FROM student;
 SELECT COUNT(*) FROM student;
 SELECT COUNT(IFNULL(english,0)) FROM student;
@@ -388,27 +399,27 @@ SELECT SUM(math) FROM student;
 -- avg：计算平均值
 SELECT AVG(math) FROM student;
 
--- 分组查询：用某个特征作为分组依据，对记录进行分组查询，比如按照性别分组
+-- 分组查询：以某个特征作为分组依据，对记录进行分组查询，比如按照性别进行分组查询
 -- 一般分组之后查询的字段：分组字段和聚合函数
--- 因为分组的目的一般是为了统计，如果查询其他的字段，查出来的结果会没有什么意义
+-- 因为分组查询的目的一般都是为了统计，如果查询其他的字段，查出来的结果会没有什么意义
 -- 查询分组字段是为了看到查询结果是属于哪个组的
 SELECT sex, AVG(math) FROM student GROUP BY sex;
--- 限制分组范围有where和having关键字，区别如下：
--- 1. 使用前后位置顺序区别，where用在分组之前，不满足where条件的记录不参与后续的分组
--- having会在分组之后对结果进行限制，满足having条件的才会最终显示结果
--- 2. where不能判断聚合函数，而having可以
--- 查询年龄>25岁，按性别分组，统计每组的人数，且只显示性别人数大于2的数据
+-- 限制分组范围有 where 和 having 关键字，区别如下：
+-- 1. 使用前后位置顺序区别，where 用在分组之前，不满足 where 条件的记录不参与后续的分组
+-- having 会在分组之后对结果进行限制，满足 having 条件的才会最终显示结果
+-- 2. where 不能判断聚合函数，而 having 可以
+-- 查询年龄 >25 岁，按性别分组，统计每组的人数，且只显示性别人数大于 2 的数据
 SELECT sex, COUNT(id) FROM student WHERE age > 25 GROUP BY sex HAVING COUNT(*) >2;
 
--- 分页查询：比如网页的分页，由于内容太多，一页展示不完，需要分许多页展示
--- 数据库也是一样，当查询结果过多无法展示时，可以考虑分页，与web技术配合可以开发网页分页效果
--- LIMIT 开始的索引（索引从0开始）, 每页查询的条数;
--- 分页查询公式：开始的索引=（当前页码 - 1） * 每页查询的条数
+-- 分页查询：比如网页的分页，由于内容太多，一页展示不完，需要分成很多页进行展示
+-- 数据库也是一样，当查询结果过多无法展示时，可以考虑分页，与 web 技术配合可以开发出网页分页效果
+-- LIMIT 开始的索引（索引从0开始）, 每页查询的条数
+-- 分页查询公式：开始的索引 =（当前页码 - 1） * 每页查询的条数
 -- 当前页码可由前端传过来，进而动态地计算出索引
--- 每页显示3条记录 
-SELECT * FROM student LIMIT 0,3;  -- 第1页
-SELECT * FROM student LIMIT 3,3;  -- 第2页
-SELECT * FROM student LIMIT 6,3;  -- 第3页
+-- 每页显示3条记录
+SELECT * FROM student LIMIT 0,3;  -- 第 1 页
+SELECT * FROM student LIMIT 3,3;  -- 第 2 页
+SELECT * FROM student LIMIT 6,3;  -- 第 3 页
 
 -- 多表查询
 -- 当我们要查询的信息分别位于多张表里面的时候，就需要使用多表查询
@@ -444,21 +455,22 @@ INSERT INTO emp ( ename, gender, salary, join_date, dept_id )
 VALUES ( '蜘蛛精', '女', 4500, '2011-03-14', 1 );
 
 -- 内连接查询
--- 隐式内连接（看不到join关键字，条件使用WHERE指定）
+-- 隐式内连接（看不到 JOIN 关键字，条件使用 WHERE 指定）
 -- 从员工和部门表里查询员工信息
 -- 由于多表查询存在笛卡尔积的问题，结果集会有无效数据，所以需要通过条件过滤掉无效数据
 SELECT * FROM emp e, dept d WHERE e.`dept_id` = d.`id`;
 
 -- 显式内连接
--- inner可以省略
+-- INNER 可以省略
 SELECT * FROM emp e [INNER] JOIN dept d ON e.`dept_id` = d.`id`;
 
 -- 外连接查询
--- 左外连接（用左表的记录去匹配右表的记录，如果符合条件的则显示，否则，显示NULL）
--- 外连接在内连接的基础上保证左表的数据全部显示(左表部门，右表员工)
+-- 左外连接（用左表（主表）的记录去匹配右表（从表）的记录，如果从表中有符合条件的则正常显示，否则显示为 NULL）
+-- 左外连接在内连接的基础上保证主表的数据完全显示(左表部门，右表员工)
+-- 可以和 WHERE 结合使用
 SELECT * FROM emp e LEFT [OUTER] JOIN dept d ON d.`id` = e.`dept_id`;
 
--- 右外连接，与左外连接类似，不过是表的位置发生变动，关键字相应地改变，结果是一样的
+-- 右外连接，与左外连接相反，某些数据库系统对左连接有更好的优化，因此建议使用左连接
 SELECT * FROM dept d RIGHT [OUTER] JOIN emp e ON d.`id` = e.`dept_id`;
 
 -- 子查询

@@ -38,9 +38,7 @@ redis-server redis.windows.conf
 
 ###### 2.2.2 开源仓库
 
-redis 的另一个开源仓库是：https://github.com/tporadowski/redis/releases
-
-下载安装后到安装目录找到 `redis.windows.conf` 文件，查找 `requirepass foobared`  在其后设置密码
+redis 的另一个 [开源仓库](https://github.com/tporadowski/redis/releases)，下载安装后到安装目录找到 `redis.windows.conf` 文件，查找 `requirepass foobared`  在其后设置密码
 
 ```conf
 ################################## SECURITY ###################################
