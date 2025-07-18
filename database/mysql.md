@@ -6,11 +6,13 @@
 
 ##### 1.1 mysql 安装
 
-1. 下载社区版解压并且添加 bin 目录到系统 path 环境变量
+1. 从 [mysql官网](https://dev.mysql.com/downloads/mysql/) 下载社区版解压到指定目录
 
-2. 在安装目录中创建目录 data 及创建文件 my.ini
+1. 添加安装目录下的 bin 目录到系统环境变量 path 中
 
-3. 将下面的内容写入文件 my.ini，注意目录的路径
+2. 在安装目录下创建 data 目录以及创建配置文件 my.ini
+
+3. 将下面的内容写入配置文件 my.ini，注意目录的路径
 
    ```ini
    [mysqld]
@@ -40,13 +42,13 @@
    default-character-set=utf8
    ```
 
-4. cd 到安装目录，执行
+4. 在安装目录下打开命令行执行如下命令
 
    ```sh
    mysqld -- initialize -- console
    ```
 
-   初始化 mysql，将命令行中生成的 root 密码记录下来
+   初始化 mysql，将命令行中生成的 root 密码临时记录下来
 
 5. 安装 mysql
 
@@ -90,19 +92,19 @@
     SHOW VARIABLES LIKE '%char%';
     ```
 
-11. 查看是否开启 autocommit，innodb 引擎默认开启，不用手动 commit
+11. 查看是否开启 autocommit，innodb 引擎是默认开启的，不用手动 commit
 
     ```sh
     SHOW VARIABLES LIKE '%autocommit%';
     ```
 
-##### 1.2 mysql 简易免安装
+##### 1.2 mysql 免安装版
 
-mysql 也可以免安装使用，可以方便地在不同的机器上移植
+mysql 也可以免安装使用，这样可以方便地在不同的机器上进行移植
 
 1. 首先在 mysql 官网下载免安装版本的 [zip archive](https://downloads.mysql.com/archives/community/)
 
-2. 解压 archive 到喜欢的地方
+2. 解压 archive 到指定目录
 
 3. 打开解压目录的 bin 目录，调用命令行执行如下命令初始化 mysql
 
@@ -134,7 +136,7 @@ mysql 也可以免安装使用，可以方便地在不同的机器上移植
 > **注意：** 在命令行里的mysql命令敲错不能回滚修改，只能`\c`清空当前输入
 > 如果想方便修改命令可以自己编写sql脚本，用`\. *.sql`执行脚本文件
 >
-> 在文件里面就可以修改命令了，或者使用图形化工具MySQL Workbench等
+> 在文件里面就可以修改命令了，或者使用图形化工具 MySQL Workbench 等
 
 DCL (Data Control Language 数据控制语句)
 
@@ -171,7 +173,7 @@ GRANT ALL PRIVILEGES ON db.* TO 'xxx'@'%'; -- 将db数据库的所有权限给�
 GRANT ALL ON *.* TO 'xxx'@'%'; --给予xxx用户所有数据库的所有权限 
 ```
 - `ERROR 1410 (42000): You are not allowed to create a user with GRANT`
-用户不允许使用grant创建用户（即授权）
+用户不允许使用 grant 创建用户（即授权）
 ```mysql
 USE mysql; --使用mysql数据库
 UPDATE USER SET HOST='%' WHERE USER='root'; --修改root用户的连接方式为所有 
@@ -234,8 +236,8 @@ UPDATE USER SET HOST='%' WHERE USER='xxx'; --修改xxx用户的连接方式为�
 ###### 2.1.1 登录
 
 ```mysql
-mysql -u user_name -p password  -- 登录mysql
-mysql  -h 127.0.0.1 -u user_name -p password  -- 登录本地的mysql
+mysql -u user_name -p  -- 输入 password 登录 mysql
+mysql  -h 127.0.0.1 -u user_name -p  -- 登录本地的mysql
 \q -- 退出登录
 ```
 
@@ -864,11 +866,11 @@ SET GLOBAL TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
 #### 9 phpstudy 启动失败
 
-phpstudy 是一款安装启动 MySQL 数据库的图形化软件，数据库的安装和启动都很方便，但有时安装后启动数据库会启动之后会立马停止
+phpstudy 是一款安装启动 MySQL 数据库的图形化软件，数据库的安装和启动都很方便，但有时安装后启动数据库会启动之后又马上停止
 
-原因一：可能是端口号占用冲突，对于这个原因修改端口号就行
+可能原因一：端口号占用冲突，修改端口号就行
 
-原因二：和之前安装的数据库冲突了，对于这种情况，需要卸载之前安装的数据库
+可能原因二：和之前安装的数据库冲突，对于这种情况，需要卸载之前安装的数据库
 
 搜索 cmd 以管理员身份打开 cmd，输入命令删除数据库服务，删除之前可以先暂停数据库服务
 
