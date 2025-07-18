@@ -1657,7 +1657,7 @@ app.use((err, req, res, next) => {
 
 ##### 13.3 npm 缓存
 
-npm 缓存有时候会导致，可以使用命令清除缓存
+npm 缓存有时候会导致问题，可以使用命令清除缓存
 
 ```sh
 npm cache verify
