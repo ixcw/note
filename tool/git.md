@@ -960,3 +960,77 @@ ipconfig/flushdns
 git config --global --unset http.proxy
 git config --global --unset https.proxy
 ```
+
+#### 7 仓库迁移
+
+由于 gitlab 的政策原因，需要将 gitlab 上的项目迁移到 github 上，记录一下迁移过程
+
+1. 克隆原 gitlab 上的项目
+
+   ```sh
+   git clone git@gitlab.com:start5024717/school-assistant.git
+   ```
+
+2. 拉取所有的分支和标签
+
+   ```sh
+   cd school-assistant
+   git fetch --all  # 拉取所有远程分支
+   git pull --all   # 更新所有分支（可选）
+   git fetch --tags # 拉取所有标签
+   ```
+
+3. 在 github 上新建一个空仓库 `school-assistant`，不要初始化 README 或 `.gitignore`
+
+4. 推送到 github
+
+   ```sh
+   git remote add github git@github.com:ixcw/school-assistant.git
+   git push --all github     # 推送所有分支
+   git push --tags github    # 推送所有标签
+   ```
+
+5. 此时已经基本完成迁移，但是如果原本的仓库不再使用，可以考虑将原本的 gitlab 远程关联删除，只保留 github，并且使其成为默认
+
+   ```sh
+   git remote -v  # 查看远程仓库
+   
+   # github  git@github.com:ixcw/school-assistant.git (fetch)
+   # github  git@github.com:ixcw/school-assistant.git (push)
+   # origin  git@gitlab.com:start5024717/school-assistant.git (fetch)
+   # origin  git@gitlab.com:start5024717/school-assistant.git (push)
+   ```
+
+   删除 origin 关联
+
+   ```sh
+   git remote remove origin
+   ```
+
+   将 github 关联重命名为 origin
+
+   ```sh
+   git remote rename github origin
+   
+   # Renaming remote references: 100% (1/1), done.
+   ```
+
+   重新关联远程分支
+
+   ```sh
+   git branch --set-upstream-to=origin/main main
+   
+   # branch 'main' set up to track 'origin/main'.
+   ```
+
+   此时再次查看远程仓库
+
+   ```sh
+   git remote -v
+   
+   # origin  git@github.com:ixcw/school-assistant.git (fetch)
+   # origin  git@github.com:ixcw/school-assistant.git (push)
+   ```
+
+   只剩 github 的 origin 仓库，至此，迁移完成
+
