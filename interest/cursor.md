@@ -1,6 +1,12 @@
 #### 1 vip 项目
 
-到 [2925](https://2925.com) 注册邮箱，下载运行 [cursor-free-vip](https://github.com/yeongpin/cursor-free-vip)，使用 2 自定义注册，支付宝订购 pro，然后取消自动续费，使用 1 重置机器码，登录新账号，开启 14 天的 pro 试用
+1. 官网下载安装 cursor
+2. 到 [2925](https://2925.com) 注册邮箱
+3. 下载运行 [cursor-free-vip](https://github.com/yeongpin/cursor-free-vip)，选择 2 自定义注册
+4. 支付宝订购 pro，然后取消自动续费
+4. 选择 1 重置机器码，登录新账号
+
+至此完成，开启 14 天的 pro 试用
 
 #### 2 账号
 
